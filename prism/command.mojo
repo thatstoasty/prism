@@ -83,15 +83,37 @@ struct Command(CollectionElement):
                     if valid == False:
                         raise Error("Invalid flag: " + input_flag.key.__str__())
 
+        # Traverse the arguments backwards
+        # Starting from the last argument passed, check if each arg is a valid child command.
+        # If met, all previous args are part of the command tree. All args after the first valid child are arguments.
+        for i in range(args.size - 1, -1, -1):
+            print(i)
+            print(args[i])
+
+            # TODO: Figure out how to check valid commands for all child commands too? Might need to map the commands first
+            for name in self.commands:
+                if args[i] == name:
+                    let position = i
+                    let command = command_map.__getitem__(args[i])
+
+                    # Unable to just take a slice of the args list, so I'm creating a new list and pushing the remaining args onto it.
+                    var remaining_args: DynamicVector[String] = DynamicVector[String]()
+                    for j in range(i):
+                        remaining_args.push_back(args[j])
+
+                    command.run(remaining_args, flags)
+
+                    return None
+
         # Because it's difficult to use recursive references to Command, I'm using an external command map to find the child command
         # If the first arg matches the name of one of the child commands, get the child command and pop that arg off the list.
-        for name in self.commands:
-            if args[0] == name:
-                let command = command_map[args[0]]
-                _ = args.pop_back()
-                command.run(args, flags)
+        # for name in self.commands:
+        #     if args[0] == name:
+        #         let command = command_map[args[0]]
+        #         _ = args.pop_back()
+        #         command.run(args, flags)
 
-                return None
+        #         return None
 
         self.run(args, flags)
 
