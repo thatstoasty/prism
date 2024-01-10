@@ -11,59 +11,16 @@ fn dummy(args: PositionalArgs, flags: InputFlags) raises -> None:
 
 
 # child command name : parent command name
-alias CommandTree = dict[HashableStr, String]
 alias CommandMap = dict[HashableStr, Command]
 
 
-fn validate_flags(input_flags: InputFlags, command_flags: Flags) raises -> None:
-    let length_of_command_flags = len(command_flags)
-    let length_of_input_flags = len(input_flags)
-
-    if length_of_input_flags > length_of_command_flags:
-        raise Error(
-            "Specified more flags than the command accepts, please check your command's"
-            " flags."
-        )
-
-    for input_flag in input_flags.items():
-        for i in range(length_of_command_flags):
-            if input_flag.key == command_flags[i].name:
-                break
-
-        raise Error("Invalid flags passed to command: " + input_flag.key.__str__())
+# TODO: Make this command map population more ergonomic. Difficult without having some sort of global context or top level scope.
+fn add_command(inout command: Command, inout parent_command: Command, inout command_map: CommandMap) -> None:
+    parent_command.add_command(command)
+    command_map[command.name] = command
 
 
-fn print_help(command: Command, command_map: CommandMap) -> None:
-    var child_commands: String = ""
-    for child in command_map.items():
-        if child.value.parent == command.name:
-            child_commands = child_commands + "  " + child.key.__str__() + "\n"
-
-    var flags: String = ""
-    for i in range(command.flags.size):
-        let command = command.flags[i]
-        flags = (
-            flags
-            + "  "
-            + "-"
-            + command.shorthand
-            + ", "
-            + "--"
-            + command.name
-            + "    "
-            + command.usage
-            + "\n"
-        )
-
-    var help = command.description + "\n\n"
-    let usage = "Usage:\n" + "  " + command.name + " [command] [args] [flags]\n\n"
-    let available_commands = "Available commands:\n" + child_commands + "\n"
-    let available_flags = "Available flags:\n" + flags + "\n"
-    let note = 'Use "' + command.name + ' [command] --help" for more information about a command.'
-    help = help + usage + available_commands + available_flags + note
-    print(help)
-
-
+# TODO: Add pre run, post run, and persistent flags
 @value
 struct Command(CollectionElement):
     var name: String
@@ -117,6 +74,55 @@ struct Command(CollectionElement):
         self.commands = existing.commands
         self.parent = existing.parent
 
+    # TODO: Need to find a way to include the parent commands as part of the help message.
+    # Right now, `prism say hello`` command's usage just shows `hello` in the usage section.
+    fn help(self, command_map: CommandMap) -> None:
+        var child_commands: String = ""
+        for child in command_map.items():
+            if child.value.parent == self.name:
+                child_commands = child_commands + "  " + child.key.__str__() + "\n"
+
+        var flags: String = ""
+        for i in range(self.flags.size):
+            let command = self.flags[i]
+            flags = (
+                flags
+                + "  "
+                + "-"
+                + command.shorthand
+                + ", "
+                + "--"
+                + command.name
+                + "    "
+                + command.usage
+                + "\n"
+            )
+
+        var help = self.description + "\n\n"
+        let usage = "Usage:\n" + "  " + self.name + " [command] [args] [flags]\n\n"
+        let available_commands = "Available commands:\n" + child_commands + "\n"
+        let available_flags = "Available flags:\n" + flags + "\n"
+        let note = 'Use "' + self.name + ' [command] --help" for more information about a command.'
+        help = help + usage + available_commands + available_flags + note
+        print(help)
+
+    fn validate_flags(self, input_flags: InputFlags) raises -> None:
+        let length_of_command_flags = self.flags.size
+        let length_of_input_flags = len(input_flags)
+
+        if length_of_input_flags > length_of_command_flags:
+            raise Error(
+                "Specified more flags than the command accepts, please check your command's"
+                " flags."
+            )
+
+        for input_flag in input_flags.items():
+            for i in range(length_of_command_flags):
+                if input_flag.key == self.flags[i].name:
+                    break
+
+            raise Error("Invalid flags passed to command: " + input_flag.key.__str__())
+
     fn execute(inout self, command_map: CommandMap) raises -> None:
         # Traverse the arguments backwards
         # Starting from the last argument passed, check if each arg is a valid child command.
@@ -133,13 +139,12 @@ struct Command(CollectionElement):
         # Check if the help flag was passed
         for item in self.input_flags.items():
             if item.key == "help":
-                print_help(command, command_map)
+                self.help(command_map)
                 return None
 
         # Check if the flags are valid
-        validate_flags(self.input_flags, command.flags)
+        self.validate_flags(self.input_flags)
         command.run(remaining_args, self.input_flags)
-        # self.run(self.args, self.input_flags)
 
     fn add_flag(inout self, flag: Flag):
         self.flags.append(flag)
@@ -152,7 +157,3 @@ struct Command(CollectionElement):
         """
         self.commands.append(command.name)
         command.set_parent(self.name)
-
-
-fn main():
-    pass
