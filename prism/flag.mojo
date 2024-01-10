@@ -22,9 +22,11 @@ fn get_args_and_flags(
     for i in range(len(input)):
         if i != 0:
             let argument = String(input[i])
-
             if argument.find("--") != -1:
-                let flag: PositionalArgs = argument.split("=")
-                flags[HashableStr(flag[0][2:])] = flag[1]
+                if argument.find("=") != -1:
+                    let flag: DynamicVector[String] = argument.split("=")
+                    flags[HashableStr(flag[0][2:])] = flag[1]
+                else:
+                    flags[HashableStr(argument[2:])] = ""
             else:
                 args.append(argument)

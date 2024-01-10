@@ -1,5 +1,6 @@
 from prism.stdlib.builtins import dict, HashableStr, list
-from prism.flag import Flag, Flags, InputFlags, PositionalArgs
+from prism.stdlib.builtins.vector import contains
+from prism.flag import Flag, Flags, InputFlags, PositionalArgs, get_args_and_flags
 
 
 alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
@@ -14,6 +15,55 @@ alias CommandTree = dict[HashableStr, String]
 alias CommandMap = dict[HashableStr, Command]
 
 
+fn validate_flags(input_flags: InputFlags, command_flags: Flags) raises -> None:
+    let length_of_command_flags = len(command_flags)
+    let length_of_input_flags = len(input_flags)
+
+    if length_of_input_flags > length_of_command_flags:
+        raise Error(
+            "Specified more flags than the command accepts, please check your command's"
+            " flags."
+        )
+
+    for input_flag in input_flags.items():
+        for i in range(length_of_command_flags):
+            if input_flag.key == command_flags[i].name:
+                break
+
+        raise Error("Invalid flags passed to command: " + input_flag.key.__str__())
+
+
+fn print_help(command: Command, command_map: CommandMap) -> None:
+    var child_commands: String = ""
+    for child in command_map.items():
+        if child.value.parent == command.name:
+            child_commands = child_commands + "  " + child.key.__str__() + "\n"
+
+    var flags: String = ""
+    for i in range(command.flags.size):
+        let command = command.flags[i]
+        flags = (
+            flags
+            + "  "
+            + "-"
+            + command.shorthand
+            + ", "
+            + "--"
+            + command.name
+            + "    "
+            + command.usage
+            + "\n"
+        )
+
+    var help = command.description + "\n\n"
+    let usage = "Usage:\n" + "  " + command.name + " [command] [args] [flags]\n\n"
+    let available_commands = "Available commands:\n" + child_commands + "\n"
+    let available_flags = "Available flags:\n" + flags + "\n"
+    let note = 'Use "' + command.name + ' [command] --help" for more information about a command.'
+    help = help + usage + available_commands + available_flags + note
+    print(help)
+
+
 @value
 struct Command(CollectionElement):
     var name: String
@@ -22,28 +72,28 @@ struct Command(CollectionElement):
 
     var args: PositionalArgs
     var flags: Flags
+    var input_flags: InputFlags
 
-    # var parent: Pointer[Self]
-    # var commands: Tuple[Pointer[Self]]
     var commands: list[String]
+    var parent: String
 
     fn __init__(
-        inout self,
-        name: String,
-        description: String,
-        run: CommandFunction,
-        args: PositionalArgs = PositionalArgs(),
-        flags: Flags = Flags(),
-    ):
+        inout self, name: String, description: String, run: CommandFunction
+    ) raises:
         self.name = name
         self.description = description
         self.run = run
 
-        self.args = args
-        self.flags = flags
-        # self.parent = Pointer[Command].get_null()
-        # self.commands = Tuple(Pointer[Command].get_null())
+        self.args = PositionalArgs()
+        self.flags = Flags()
+        self.flags.append(
+            Flag("help", "h", "Displays help information about the command.")
+        )
+        self.input_flags = InputFlags()
+        get_args_and_flags(self.args, self.input_flags)
+
         self.commands = list[String]()
+        self.parent = ""
 
     fn __copyinit__(inout self, existing: Self):
         self.name = existing.name
@@ -52,8 +102,9 @@ struct Command(CollectionElement):
 
         self.args = existing.args
         self.flags = existing.flags
-        # self.parent = existing.parent
+        self.input_flags = existing.input_flags
         self.commands = existing.commands
+        self.parent = existing.parent
 
     fn __moveinit__(inout self, owned existing: Self):
         self.name = existing.name
@@ -62,69 +113,45 @@ struct Command(CollectionElement):
 
         self.args = existing.args
         self.flags = existing.flags
-        # self.parent = existing.parent
+        self.input_flags = existing.input_flags
         self.commands = existing.commands
+        self.parent = existing.parent
 
-    fn execute(
-        self, inout args: PositionalArgs, flags: InputFlags, command_map: CommandMap
-    ) raises -> None:
-        # Check if the flags are valid
-        # TODO: Clean this up
-        let length_of_command_flags = len(self.flags)
-        let length_of_input_flags = len(self.flags)
-        for input_flag in flags.items():
-            let valid = False
-            for i in range(length_of_command_flags):
-                let command_flag = self.flags[i]
-                if input_flag.key == command_flag.name:
-                    break
-
-                if i == length_of_command_flags - 1:
-                    if valid == False:
-                        raise Error("Invalid flag: " + input_flag.key.__str__())
-
+    fn execute(inout self, command_map: CommandMap) raises -> None:
         # Traverse the arguments backwards
         # Starting from the last argument passed, check if each arg is a valid child command.
         # If met, all previous args are part of the command tree. All args after the first valid child are arguments.
-        for i in range(args.size - 1, -1, -1):
-            print(i)
-            print(args[i])
+        var command: Command = self
+        var remaining_args: DynamicVector[String] = DynamicVector[String]()
+        for i in range(self.args.size - 1, -1, -1):
+            if contains(command_map._keys, self.args[i]):
+                command = command_map.__getitem__(self.args[i])
+                break
+            else:
+                remaining_args.push_back(self.args[i])
 
-            # TODO: Figure out how to check valid commands for all child commands too? Might need to map the commands first
-            for name in self.commands:
-                if args[i] == name:
-                    let position = i
-                    let command = command_map.__getitem__(args[i])
+        # Check if the help flag was passed
+        for item in self.input_flags.items():
+            if item.key == "help":
+                print_help(command, command_map)
+                return None
 
-                    # Unable to just take a slice of the args list, so I'm creating a new list and pushing the remaining args onto it.
-                    var remaining_args: DynamicVector[String] = DynamicVector[String]()
-                    for j in range(i):
-                        remaining_args.push_back(args[j])
-
-                    command.run(remaining_args, flags)
-
-                    return None
-
-        # Because it's difficult to use recursive references to Command, I'm using an external command map to find the child command
-        # If the first arg matches the name of one of the child commands, get the child command and pop that arg off the list.
-        # for name in self.commands:
-        #     if args[0] == name:
-        #         let command = command_map[args[0]]
-        #         _ = args.pop_back()
-        #         command.run(args, flags)
-
-        #         return None
-
-        self.run(args, flags)
+        # Check if the flags are valid
+        validate_flags(self.input_flags, command.flags)
+        command.run(remaining_args, self.input_flags)
+        # self.run(self.args, self.input_flags)
 
     fn add_flag(inout self, flag: Flag):
         self.flags.append(flag)
 
+    fn set_parent(inout self, parent: String):
+        self.parent = parent
+
     fn add_command(inout self, inout command: Command):
         """Adds command as a child of self, by setting child's parent attribute to self.
         """
-        # command.parent = Pointer[Command].address_of(self)
         self.commands.append(command.name)
+        command.set_parent(self.name)
 
 
 fn main():
