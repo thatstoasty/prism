@@ -3,6 +3,13 @@ from prism.stdlib.builtins import dict, HashableStr, list
 from prism.stdlib.builtins.vector import to_string, contains
 
 
+fn contains_flag(vector: Flags, value: String) -> Bool:
+    for i in range(vector.size):
+        if String(vector[i].name) == value:
+            return True
+    return False
+
+
 # TODO: Add functions to get flag as a <TYPE>. Like get flag as int, get flag as bool, etc.
 @value
 struct Flag(CollectionElement, Stringable):
