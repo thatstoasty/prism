@@ -1,3 +1,8 @@
+"""
+The stdlib extensions were pulled in from https://github.com/gabrieldemarmiesse/mojo-stdlib-extensions/tree/master!
+I added a few convenience functions in the vector.mojo file, but the rest is from there.
+"""
+
 from ._list import list, list_to_str
 from ._bytes import bytes, to_bytes
 from ..syscalls.filesystem import read_from_stdin

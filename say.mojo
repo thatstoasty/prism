@@ -1,5 +1,4 @@
-from prism.flag import Flag, InputFlags, PositionalArgs, get_args_and_flags
-from prism.command import Command
+from prism import Flag, InputFlags, PositionalArgs, Command, CommandMap
 
 
 fn say(args: PositionalArgs, flags: InputFlags) raises -> None:
@@ -13,6 +12,7 @@ fn say_hello(args: PositionalArgs, flags: InputFlags) raises -> None:
         print("Flag: ", item.key, " Value: ", item.value)
     for i in range(len(args)):
         print("Arg: ", args[i])
+
 
 fn say_goodbye(args: PositionalArgs, flags: InputFlags) raises -> None:
     print("Goodbye World!")

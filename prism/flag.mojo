@@ -1,12 +1,36 @@
 from sys import argv
-from prism.stdlib.builtins import dict, HashableStr
+from prism.stdlib.builtins import dict, HashableStr, list
+from prism.stdlib.builtins.vector import to_string, contains
 
 
+# TODO: Add functions to get flag as a <TYPE>. Like get flag as int, get flag as bool, etc.
 @value
-struct Flag(CollectionElement):
-    var name: String
-    var shorthand: String
-    var usage: String
+struct Flag(CollectionElement, Stringable):
+    var name: StringLiteral
+    var shorthand: StringLiteral
+    var usage: StringLiteral
+
+    fn __str__(self) -> String:
+        return (
+            String("(Name: ")
+            + self.name
+            + String(", Shorthand: ")
+            + self.shorthand
+            + String(", Usage: ")
+            + self.usage
+            + String(")")
+        )
+
+    fn __repr__(self) -> String:
+        return (
+            String("(Name: ")
+            + self.name
+            + String(", Shorthand: ")
+            + self.shorthand
+            + String(", Usage: ")
+            + self.usage
+            + String(")")
+        )
 
 
 alias Flags = DynamicVector[Flag]
@@ -17,7 +41,15 @@ alias PositionalArgs = DynamicVector[String]
 fn get_args_and_flags(
     inout args: PositionalArgs, inout flags: InputFlags
 ) raises -> None:
-    """Parses flags and args from the args passed via the command line."""
+    """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
+
+    Args:
+        args: The positional args passed via the command line.
+        flags: The flags passed via the command line.
+
+    Raises:
+        Error: TODO
+    """
     let input = argv()
     for i in range(len(input)):
         if i != 0:

@@ -1,5 +1,4 @@
-from prism.flag import Flag, InputFlags, PositionalArgs, get_args_and_flags
-from prism.command import Command
+from prism import Flag, InputFlags, PositionalArgs, Command
 
 
 fn printer(args: PositionalArgs, flags: InputFlags) raises -> None:

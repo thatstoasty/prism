@@ -1,4 +1,3 @@
-from collections.vector import DynamicVector
 from ._list import list
 from ._hash import HashableCollectionElement
 from ._dict import HashableStr
@@ -54,13 +53,31 @@ fn contains(vector: list[HashableStr], value: HashableStr) raises -> Bool:
     return False
 
 
-fn main():
-    var vector = DynamicVector[String]()
-    vector.push_back("a")
-    vector.push_back("b")
-    vector.push_back("c")
+fn to_string(vector: DynamicVector[String]) -> String:
+    var result = String("[")
+    for i in range(vector.size):
+        result += vector[i]
+        if i < vector.size - 1:
+            result += String(", ")
+    result += String("]")
+    return result
 
-    let reversed = reverse(vector)
 
-    for i in range(reversed.size):
-        print(reversed[i])
+fn to_string(vector: DynamicVector[Flag]) -> String:
+    var result = String("[")
+    for i in range(vector.size):
+        result += vector[i].__str__()
+        if i < vector.size - 1:
+            result += String(", ")
+    result += String("]")
+    return result
+
+
+fn to_string(vector: list[String]) raises -> String:
+    var result = String("[")
+    for i in range(len(vector)):
+        result += vector[i]
+        if i < len(vector) - 1:
+            result += String(", ")
+    result += String("]")
+    return result
