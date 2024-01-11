@@ -93,6 +93,8 @@ Available flags:
 Use "cat_facts [command] --help" for more information about a command.
 ```
 
+There are examples of nested commands in the `root.mojo` file which I'm using for local development for now. I'll add an example down the line.
+
 ## TODO:
 ### Repository
 - [ ] Add a description
