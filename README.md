@@ -60,7 +60,7 @@ fn get_dog_breeds(args: PositionalArgs, flags: InputFlags) raises -> None:
 fn init() raises -> None:
     var command_map = CommandMap()
     var root_command = Command(
-        name        = "root", 
+        name        = "nested", 
         description = "Base command.", 
         run         = base
     )
@@ -142,7 +142,7 @@ You should get the same result as before! But, what about command information?
 Get some cat facts!
 
 Usage:
-  root get cat [args] [flags]
+  nested get cat [args] [flags]
 
 Available commands:
 

@@ -47,7 +47,7 @@ fn get_dog_breeds(args: PositionalArgs, flags: InputFlags) raises -> None:
 fn init() raises -> None:
     var command_map = CommandMap()
     var root_command = Command(
-        name        = "root", 
+        name        = "nested", 
         description = "Base command.", 
         run         = base
     )
