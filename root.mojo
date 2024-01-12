@@ -8,11 +8,6 @@ fn test(args: PositionalArgs, flags: InputFlags) raises -> None:
         print(item.key, item.value)
 
 
-fn test(command: Command, args: PositionalArgs) raises -> None:
-    for item in command.input_flags.items():
-        print(item.key, item.value)
-
-
 fn init() raises -> None:
     var command_map = CommandMap()
     var root_command = Command(

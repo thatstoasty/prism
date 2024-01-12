@@ -197,7 +197,7 @@ struct Command(CollectionElement):
                 return None
 
         # Check if the flags are valid
-        self.validate_flags(self.input_flags)
+        command.validate_flags(self.input_flags)
         command.run(remaining_args, self.input_flags)
 
     fn add_flag(inout self, flag: Flag) -> None:
