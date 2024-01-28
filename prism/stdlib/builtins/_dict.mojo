@@ -37,7 +37,7 @@ struct HashableInt(HashableCollectionElement, Intable):
 
 
 @value
-struct HashableStr(HashableCollectionElement, Stringable):
+struct StringKey(HashableCollectionElement, Stringable):
     var value: String
 
     fn __init__(inout self, value: StringLiteral):
@@ -49,7 +49,7 @@ struct HashableStr(HashableCollectionElement, Stringable):
     fn __hash__(self) -> Int:
         return hash(self.value)
 
-    fn __eq__(self, other: HashableStr) -> Bool:
+    fn __eq__(self, other: StringKey) -> Bool:
         return self.value == other.value
 
     fn __str__(self) -> String:

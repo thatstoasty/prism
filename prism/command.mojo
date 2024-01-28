@@ -1,30 +1,18 @@
-from prism.stdlib.builtins import dict, HashableStr, list
-from prism.stdlib.builtins.vector import contains, to_string
-from prism.flag import Flag, Flags, InputFlags, PositionalArgs, get_args_and_flags, contains_flag
+from collections.optional import Optional
+from prism.flag import (
+    Flag,
+    Flags,
+    InputFlags,
+    PositionalArgs,
+    get_args_and_flags,
+    contains_flag,
+)
 
+from prism.stdlib.builtins import dict, StringKey
+from prism.stdlib.builtins.vector import contains, to_string
 
 alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
 # alias CommandFunction = fn (command: Command, args: PositionalArgs) raises -> None
-
-
-# child command name : parent command name
-alias CommandMap = dict[HashableStr, Command]
-
-
-# TODO: Make this command map population more ergonomic. Difficult without having some sort of global context or top level scope.
-fn add_command(
-    inout command: Command, inout parent_command: Command, inout command_map: CommandMap
-) -> None:
-    """Sets the command's parent field to the name of the parent command, and adds the command to the command map.
-
-    Args:
-        command: The command to add to the command map.
-        parent_command: The parent command of the command to add.
-        command_map: The command map to add the command to.
-
-    """
-    parent_command.add_command(command)
-    command_map[command.name] = command
 
 
 # TODO: Add pre run, post run, and persistent flags
@@ -38,12 +26,13 @@ struct Command(CollectionElement):
     var flags: Flags
     var input_flags: InputFlags
 
-    var commands: list[String]
-    var parent: String
+    var commands: DynamicVector[Self]
+    var parent: Optional[Self]
 
     fn __init__(
         inout self, name: String, description: String, run: CommandFunction
     ) raises:
+        pass
         self.name = name
         self.description = description
         self.run = run
@@ -56,8 +45,8 @@ struct Command(CollectionElement):
         self.input_flags = InputFlags()
         get_args_and_flags(self.args, self.input_flags)
 
-        self.commands = list[String]()
-        self.parent = ""
+        self.commands = DynamicVector[Self]()
+        self.parent = None
 
     fn __copyinit__(inout self, existing: Self):
         self.name = existing.name
@@ -78,13 +67,16 @@ struct Command(CollectionElement):
         self.args = existing.args
         self.flags = existing.flags
         self.input_flags = existing.input_flags
-        self.commands = existing.commands
+        self.commands = existing.commands ^
         self.parent = existing.parent
 
     fn __str__(self) -> String:
         return "(Name: " + self.name + ", Description: " + self.description + ")"
 
     fn __repr__(self) raises -> String:
+        var parent: String = ""
+        if self.parent:
+            parent = self.parent.value().name
         return (
             "Name: "
             + self.name
@@ -97,26 +89,24 @@ struct Command(CollectionElement):
             + "\nCommands: "
             + to_string(self.commands)
             + "\nParent: "
-            + self.parent
+            + parent
         )
 
-    fn full_command(self, command_map: CommandMap) raises -> String:
-        if self.parent != "":
-            let ancestor: String = command_map[self.parent].full_command(command_map)
+    fn full_command(self) raises -> String:
+        if self.parent:
+            let ancestor: String = self.parent.value().full_command()
             return ancestor + " " + self.name
         else:
             return self.name
 
-    fn help(self, command_map: CommandMap) raises -> None:
+    fn help(self) raises -> None:
         """Prints the help information for the command.
-
-        Args:
-            command_map: The command map to use to find the command's children.
         """
         var child_commands: String = ""
-        for child in command_map.items():
-            if child.value.parent == self.name:
-                child_commands = child_commands + "  " + child.key.__str__() + "\n"
+
+        for i in range(len(self.commands)):
+            let child = self.commands[i]
+            child_commands = child_commands + "  " + child.name + "\n"
 
         var flags: String = ""
         for i in range(self.flags.size):
@@ -142,22 +132,15 @@ struct Command(CollectionElement):
             usage_arguments = usage_arguments + " [flags]"
 
         var help = self.description + "\n\n"
-        let usage = "Usage:\n" + "  " + self.full_command(
-            command_map
-        ) + usage_arguments + "\n\n"
+        let usage = "Usage:\n" + "  " + self.full_command() + usage_arguments + "\n\n"
         let available_commands = "Available commands:\n" + child_commands + "\n"
         let available_flags = "Available flags:\n" + flags + "\n"
-        let note = 'Use "' + self.full_command(
-            command_map
-        ) + ' [command] --help" for more information about a command.'
+        let note = 'Use "' + self.full_command() + ' [command] --help" for more information about a command.'
         help = help + usage + available_commands + available_flags + note
         print(help)
 
     fn validate_flags(self, input_flags: InputFlags) raises -> None:
         """Validates the flags passed to the command. Raises an error if an invalid flag is passed.
-
-        Args:
-            input_flags: The flags passed to the command.
         """
         let length_of_command_flags = self.flags.size
         let length_of_input_flags = len(input_flags)
@@ -170,22 +153,21 @@ struct Command(CollectionElement):
 
         for input_flag in input_flags.items():
             if not contains_flag(self.flags, input_flag.key.__str__()):
-                raise Error("Invalid flags passed to command: " + input_flag.key.__str__())
-        
-    fn execute(inout self, command_map: CommandMap) raises -> None:
-        """Traverses the arguments passed to the executable and executes the last command in the branch.
+                raise Error(
+                    "Invalid flags passed to command: " + input_flag.key.__str__()
+                )
 
-        Args:
-            command_map: The command map to use to find the command's children.
+    fn execute(inout self) raises -> None:
+        """Traverses the arguments passed to the executable and executes the last command in the branch.
         """
         # Traverse the arguments backwards
         # Starting from the last argument passed, check if each arg is a valid child command.
         # If met, all previous args are part of the command tree. All args after the first valid child are arguments.
         var command: Command = self
-        var remaining_args: DynamicVector[String] = DynamicVector[String]()
+        var remaining_args = DynamicVector[String]()
+        var full_command = self.full_command().split(" ")
         for i in range(self.args.size - 1, -1, -1):
-            if contains(command_map._keys, self.args[i]):
-                command = command_map.__getitem__(self.args[i])
+            if contains(full_command, self.args[i]):
                 break
             else:
                 remaining_args.push_back(self.args[i])
@@ -193,7 +175,7 @@ struct Command(CollectionElement):
         # Check if the help flag was passed
         for item in self.input_flags.items():
             if item.key == "help":
-                command.help(command_map)
+                command.help()
                 return None
 
         # Check if the flags are valid
@@ -208,7 +190,7 @@ struct Command(CollectionElement):
         """
         self.flags.append(flag)
 
-    fn set_parent(inout self, parent: String) -> None:
+    fn set_parent(inout self, parent: Self) -> None:
         """Sets the command's parent attribute to the given parent.
 
         Args:
@@ -222,5 +204,5 @@ struct Command(CollectionElement):
         Args:
             command: The command to add as a child of self.
         """
-        self.commands.append(command.name)
-        command.set_parent(self.name)
+        self.commands.append(command)
+        command.set_parent(self)

@@ -1,5 +1,5 @@
 from sys import argv
-from prism.stdlib.builtins import dict, HashableStr, list
+from prism.stdlib.builtins import dict, StringKey
 from prism.stdlib.builtins.vector import to_string, contains
 
 
@@ -41,7 +41,7 @@ struct Flag(CollectionElement, Stringable):
 
 
 alias Flags = DynamicVector[Flag]
-alias InputFlags = dict[HashableStr, String]
+alias InputFlags = dict[StringKey, String]
 alias PositionalArgs = DynamicVector[String]
 
 
@@ -64,8 +64,8 @@ fn get_args_and_flags(
             if argument.find("--") != -1:
                 if argument.find("=") != -1:
                     let flag: DynamicVector[String] = argument.split("=")
-                    flags[HashableStr(flag[0][2:])] = flag[1]
+                    flags[StringKey(flag[0][2:])] = flag[1]
                 else:
-                    flags[HashableStr(argument[2:])] = ""
+                    flags[StringKey(argument[2:])] = ""
             else:
                 args.append(argument)

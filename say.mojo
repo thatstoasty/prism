@@ -1,4 +1,4 @@
-from prism import Flag, InputFlags, PositionalArgs, Command, CommandMap
+from prism import Flag, InputFlags, PositionalArgs, Command
 
 
 fn say(args: PositionalArgs, flags: InputFlags) raises -> None:
