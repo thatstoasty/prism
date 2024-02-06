@@ -86,7 +86,7 @@ fn to_string(vector: list[String]) raises -> String:
 fn to_string(vector: DynamicVector[Command]) -> String:
     var result = String("[")
     for i in range(vector.size):
-        result += vector[i].__str__()
+        result += vector[i].name
         if i < vector.size - 1:
             result += String(", ")
     result += String("]")

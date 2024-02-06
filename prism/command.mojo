@@ -18,6 +18,7 @@ alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> N
 # TODO: Add pre run, post run, and persistent flags
 @value
 struct Command(CollectionElement):
+# struct Command[Lifetime: MutLifetime](CollectionElement):
     var name: String
     var description: String
     var run: CommandFunction
@@ -27,12 +28,12 @@ struct Command(CollectionElement):
     var input_flags: InputFlags
 
     var commands: DynamicVector[Self]
+    # var parent: Reference[Self, __mlir_attr.`0: i1`, Lifetime]
     var parent: Optional[Self]
 
     fn __init__(
         inout self, name: String, description: String, run: CommandFunction
     ) raises:
-        pass
         self.name = name
         self.description = description
         self.run = run
@@ -77,6 +78,13 @@ struct Command(CollectionElement):
         var parent: String = ""
         if self.parent:
             parent = self.parent.value().name
+        var commands: String = ""
+        for i in range(len(self.commands)):
+            let child = self.commands[i]
+            if i != 0:
+                commands += ", "
+
+            commands += child.name
         return (
             "Name: "
             + self.name
@@ -87,7 +95,7 @@ struct Command(CollectionElement):
             + "\nFlags: "
             + to_string(self.flags)
             + "\nCommands: "
-            + to_string(self.commands)
+            + commands
             + "\nParent: "
             + parent
         )
@@ -163,7 +171,7 @@ struct Command(CollectionElement):
         # Traverse the arguments backwards
         # Starting from the last argument passed, check if each arg is a valid child command.
         # If met, all previous args are part of the command tree. All args after the first valid child are arguments.
-        var command: Command = self
+        var command = self
         var remaining_args = DynamicVector[String]()
         var full_command = self.full_command().split(" ")
         for i in range(self.args.size - 1, -1, -1):
@@ -190,7 +198,7 @@ struct Command(CollectionElement):
         """
         self.flags.append(flag)
 
-    fn set_parent(inout self, parent: Self) -> None:
+    fn set_parent(inout self, parent: Command) -> None:
         """Sets the command's parent attribute to the given parent.
 
         Args:
