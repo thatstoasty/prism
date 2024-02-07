@@ -1,6 +1,6 @@
-from external.stdlib.builtins._generic_list import list
-from external.stdlib.builtins._hash import HashableCollectionElement
-from external.stdlib.builtins._dict import HashableStr
+from prism.external.stdlib.builtins._generic_list import list
+from prism.external.stdlib.builtins._hash import HashableCollectionElement
+from prism.external.stdlib.builtins._dict import HashableStr
 
 
 fn reverse[T: CollectionElement](vector: DynamicVector[T]) -> DynamicVector[T]:

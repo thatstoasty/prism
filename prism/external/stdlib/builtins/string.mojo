@@ -1,4 +1,4 @@
-from external.stdlib.builtins._generic_list import list
+from prism.external.stdlib.builtins._generic_list import list
 
 alias _ALL_WHITESPACES = " \t\n\r\x0b\f"
 

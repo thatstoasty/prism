@@ -1,6 +1,6 @@
-from external.stdlib.builtins import dict, HashableStr, list
-from external.stdlib.builtins.vector import contains, to_string
-from external.stdlib.builtins.string import join
+from prism.external.stdlib.builtins import dict, HashableStr, list
+from prism.external.stdlib.builtins.vector import contains, to_string
+from prism.external.stdlib.builtins.string import join
 from prism.flag import (
     Flag,
     Flags,

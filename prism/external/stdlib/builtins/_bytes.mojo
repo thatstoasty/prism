@@ -1,4 +1,4 @@
-from external.stdlib.builtins._generic_list import list
+from prism.external.stdlib.builtins._generic_list import list
 
 alias Byte = UInt8
 

@@ -1,6 +1,6 @@
 from sys import argv
-from external.stdlib.builtins import dict, HashableStr, list
-from external.stdlib.builtins.vector import contains
+from prism.external.stdlib.builtins import dict, HashableStr, list
+from prism.external.stdlib.builtins.vector import contains
 
 
 fn contains_flag(vector: Flags, value: String) -> Bool:
