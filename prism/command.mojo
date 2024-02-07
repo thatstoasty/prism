@@ -1,6 +1,14 @@
-from prism.stdlib.builtins import dict, HashableStr, list
-from prism.stdlib.builtins.vector import contains, to_string
-from prism.flag import Flag, Flags, InputFlags, PositionalArgs, get_args_and_flags, contains_flag
+from external.stdlib.builtins import dict, HashableStr, list
+from external.stdlib.builtins.vector import contains, to_string
+from prism.flag import (
+    Flag,
+    Flags,
+    InputFlags,
+    PositionalArgs,
+    get_args_and_flags,
+    contains_flag,
+    string,
+)
 
 
 alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
@@ -93,7 +101,7 @@ struct Command(CollectionElement):
             + "\nArgs: "
             + to_string(self.args)
             + "\nFlags: "
-            + to_string(self.flags)
+            + string(self.flags)
             + "\nCommands: "
             + to_string(self.commands)
             + "\nParent: "
@@ -170,8 +178,10 @@ struct Command(CollectionElement):
 
         for input_flag in input_flags.items():
             if not contains_flag(self.flags, input_flag.key.__str__()):
-                raise Error("Invalid flags passed to command: " + input_flag.key.__str__())
-        
+                raise Error(
+                    "Invalid flags passed to command: " + input_flag.key.__str__()
+                )
+
     fn execute(inout self, command_map: CommandMap) raises -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
 
