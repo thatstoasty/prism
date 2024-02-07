@@ -87,10 +87,8 @@ fn split(
 
 fn join(separator: String, iterable: list[String]) raises -> String:
     var result: String = ""
-    print(len(iterable))
     for i in range(iterable.__len__()):
         result += iterable[i]
-        print(iterable[i])
         if i != iterable.__len__() - 1:
             result += separator
     return result

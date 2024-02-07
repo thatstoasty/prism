@@ -3,7 +3,7 @@ from python import Python, PythonObject
 from mist import TerminalStyle
 
 fn printer(args: PositionalArgs, flags: InputFlags) raises -> None:
-    if args.size <= 0:
+    if len(args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
