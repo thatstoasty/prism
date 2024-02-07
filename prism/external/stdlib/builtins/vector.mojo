@@ -1,6 +1,6 @@
-from ._list import list
-from ._hash import HashableCollectionElement
-from ._dict import HashableStr
+from prism.external.stdlib.builtins._generic_list import list
+from prism.external.stdlib.builtins._hash import HashableCollectionElement
+from prism.external.stdlib.builtins._dict import HashableStr
 
 
 fn reverse[T: CollectionElement](vector: DynamicVector[T]) -> DynamicVector[T]:
@@ -57,16 +57,6 @@ fn to_string(vector: DynamicVector[String]) -> String:
     var result = String("[")
     for i in range(vector.size):
         result += vector[i]
-        if i < vector.size - 1:
-            result += String(", ")
-    result += String("]")
-    return result
-
-
-fn to_string(vector: DynamicVector[Flag]) -> String:
-    var result = String("[")
-    for i in range(vector.size):
-        result += vector[i].__str__()
         if i < vector.size - 1:
             result += String(", ")
     result += String("]")

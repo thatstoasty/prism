@@ -2,8 +2,8 @@
 awesome https://github.com/mzaks/mojo-hash"""
 
 from memory import memset_zero, memcpy
-from ._hash import hash, HashableCollectionElement
-from ._list import list
+from prism.external.stdlib.builtins._hash import hash, HashableCollectionElement
+from prism.external.stdlib.builtins._generic_list import list
 
 alias EMPTY_BUCKET = -1
 

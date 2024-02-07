@@ -1,4 +1,6 @@
-from ._list import list
+from prism.external.stdlib.builtins._generic_list import list
+
+alias Byte = UInt8
 
 
 fn get_mapping_byte_to_value() -> list[String]:
@@ -291,6 +293,17 @@ struct bytes(Stringable, Sized, CollectionElement):
 
     fn __getitem__(self, index: Int) -> UInt8:
         return self._vector[index]
+
+    fn __getitem__(self: Self, span: slice) -> bytes:
+        # TODO: Specifying no end to the span sets span end to this super large int for some reason.
+        # Set it to len of the vector if that happens.
+        var end = span.end
+        if span.end == 9223372036854775807:
+            end = len(self._vector)
+        var new_vector = DynamicVector[UInt8](capacity=end - span.start)
+        for i in range(span.start, end, span.step):
+            new_vector.push_back(self._vector[i])
+        return bytes(new_vector)
 
     fn __setitem__(inout self, index: Int, value: UInt8):
         self._vector[index] = value

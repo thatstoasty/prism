@@ -1,11 +1,18 @@
-from prism.stdlib.builtins import dict, HashableStr, list
-from prism.stdlib.builtins.vector import contains, to_string
-from prism.flag import Flag, Flags, InputFlags, PositionalArgs, get_args_and_flags, contains_flag
+from prism.external.stdlib.builtins import dict, HashableStr, list
+from prism.external.stdlib.builtins.vector import contains, to_string
+from prism.external.stdlib.builtins.string import join
+from prism.flag import (
+    Flag,
+    Flags,
+    InputFlags,
+    PositionalArgs,
+    get_args_and_flags,
+    contains_flag,
+    string
+)
 
 
 alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
-# alias CommandFunction = fn (command: Command, args: PositionalArgs) raises -> None
-
 
 # child command name : parent command name
 alias CommandMap = dict[HashableStr, Command]
@@ -93,7 +100,7 @@ struct Command(CollectionElement):
             + "\nArgs: "
             + to_string(self.args)
             + "\nFlags: "
-            + to_string(self.flags)
+            + string(self.flags)
             + "\nCommands: "
             + to_string(self.commands)
             + "\nParent: "
@@ -104,8 +111,8 @@ struct Command(CollectionElement):
         if self.parent != "":
             let ancestor: String = command_map[self.parent].full_command(command_map)
             return ancestor + " " + self.name
-        else:
-            return self.name
+
+        return self.name
 
     fn help(self, command_map: CommandMap) raises -> None:
         """Prints the help information for the command.
@@ -170,8 +177,10 @@ struct Command(CollectionElement):
 
         for input_flag in input_flags.items():
             if not contains_flag(self.flags, input_flag.key.__str__()):
-                raise Error("Invalid flags passed to command: " + input_flag.key.__str__())
-        
+                raise Error(
+                    "Invalid flags passed to command: " + input_flag.key.__str__()
+                )
+
     fn execute(inout self, command_map: CommandMap) raises -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
 
@@ -181,14 +190,18 @@ struct Command(CollectionElement):
         # Traverse the arguments backwards
         # Starting from the last argument passed, check if each arg is a valid child command.
         # If met, all previous args are part of the command tree. All args after the first valid child are arguments.
-        var command: Command = self
-        var remaining_args: DynamicVector[String] = DynamicVector[String]()
-        for i in range(self.args.size - 1, -1, -1):
+        var command = self
+        var remaining_args = list[String]()
+        for i in range(len(self.args) - 1, -1, -1):
             if contains(command_map._keys, self.args[i]):
                 command = command_map.__getitem__(self.args[i])
-                break
+
+                # Check if the full command branch of the child command matches what was passed in.
+                # full_command will traverse the parent commands to get the full command, while join is just joining the args.
+                if join(" ", self.args[:i+1]) == command.full_command(command_map):
+                    break
             else:
-                remaining_args.push_back(self.args[i])
+                remaining_args.append(self.args[i])
 
         # Check if the help flag was passed
         for item in self.input_flags.items():

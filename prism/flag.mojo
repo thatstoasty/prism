@@ -1,6 +1,6 @@
 from sys import argv
-from prism.stdlib.builtins import dict, HashableStr, list
-from prism.stdlib.builtins.vector import to_string, contains
+from prism.external.stdlib.builtins import dict, HashableStr, list
+from prism.external.stdlib.builtins.vector import contains
 
 
 fn contains_flag(vector: Flags, value: String) -> Bool:
@@ -8,6 +8,16 @@ fn contains_flag(vector: Flags, value: String) -> Bool:
         if String(vector[i].name) == value:
             return True
     return False
+
+
+fn string(vector: DynamicVector[Flag]) -> String:
+    var result = String("[")
+    for i in range(vector.size):
+        result += vector[i].__str__()
+        if i < vector.size - 1:
+            result += String(", ")
+    result += String("]")
+    return result
 
 
 # TODO: Add functions to get flag as a <TYPE>. Like get flag as int, get flag as bool, etc.
@@ -42,7 +52,7 @@ struct Flag(CollectionElement, Stringable):
 
 alias Flags = DynamicVector[Flag]
 alias InputFlags = dict[HashableStr, String]
-alias PositionalArgs = DynamicVector[String]
+alias PositionalArgs = list[String]
 
 
 fn get_args_and_flags(
@@ -63,7 +73,7 @@ fn get_args_and_flags(
             let argument = String(input[i])
             if argument.find("--") != -1:
                 if argument.find("=") != -1:
-                    let flag: DynamicVector[String] = argument.split("=")
+                    let flag = argument.split("=")
                     flags[HashableStr(flag[0][2:])] = flag[1]
                 else:
                     flags[HashableStr(argument[2:])] = ""
