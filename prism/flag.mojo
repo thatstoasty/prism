@@ -1,6 +1,6 @@
 from sys import argv
-from prism.stdlib.builtins import dict, HashableStr, list
-from prism.stdlib.builtins.vector import contains
+from external.stdlib.builtins import dict, HashableStr, list
+from external.stdlib.builtins.vector import contains
 
 
 fn contains_flag(vector: Flags, value: String) -> Bool:
@@ -52,7 +52,7 @@ struct Flag(CollectionElement, Stringable):
 
 alias Flags = DynamicVector[Flag]
 alias InputFlags = dict[HashableStr, String]
-alias PositionalArgs = DynamicVector[String]
+alias PositionalArgs = list[String]
 
 
 fn get_args_and_flags(
@@ -73,7 +73,7 @@ fn get_args_and_flags(
             let argument = String(input[i])
             if argument.find("--") != -1:
                 if argument.find("=") != -1:
-                    let flag: DynamicVector[String] = argument.split("=")
+                    let flag = argument.split("=")
                     flags[HashableStr(flag[0][2:])] = flag[1]
                 else:
                     flags[HashableStr(argument[2:])] = ""

@@ -1,4 +1,4 @@
-from ._generic_list import list
+from external.stdlib.builtins._generic_list import list
 
 alias Byte = UInt8
 
