@@ -1,6 +1,23 @@
 from sys import argv
-from prism.stdlib.builtins import dict, StringKey
-from prism.stdlib.builtins.vector import to_string, contains
+from collections.dict import Dict, KeyElement
+from .vector import to_string, contains
+
+
+@value
+struct StringKey(KeyElement):
+    var value: String
+
+    fn __init__(inout self, owned s: String):
+        self.value = s ^
+
+    fn __init__(inout self, s: StringLiteral):
+        self.value = String(s)
+
+    fn __hash__(self) -> Int:
+        return hash(self.value)
+
+    fn __eq__(self, other: Self) -> Bool:
+        return self.value == other.value
 
 
 fn contains_flag(vector: Flags, value: String) -> Bool:
@@ -41,7 +58,7 @@ struct Flag(CollectionElement, Stringable):
 
 
 alias Flags = DynamicVector[Flag]
-alias InputFlags = dict[StringKey, String]
+alias InputFlags = Dict[StringKey, String]
 alias PositionalArgs = DynamicVector[String]
 
 
@@ -57,13 +74,13 @@ fn get_args_and_flags(
     Raises:
         Error: TODO
     """
-    let input = argv()
-    for i in range(len(input)):
+    var arguments = argv()
+    for i in range(len(arguments)):
         if i != 0:
-            let argument = String(input[i])
+            var argument = String(arguments[i])
             if argument.find("--") != -1:
                 if argument.find("=") != -1:
-                    let flag: DynamicVector[String] = argument.split("=")
+                    var flag: DynamicVector[String] = argument.split("=")
                     flags[StringKey(flag[0][2:])] = flag[1]
                 else:
                     flags[StringKey(argument[2:])] = ""

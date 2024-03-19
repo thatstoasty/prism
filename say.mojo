@@ -9,7 +9,7 @@ fn say_hello(args: PositionalArgs, flags: InputFlags) raises -> None:
     print("Hello World!")
 
     for item in flags.items():
-        print("Flag: ", item.key, " Value: ", item.value)
+        print("Flag: ", item[].key.value, " Value: ", item[].value)
     for i in range(len(args)):
         print("Arg: ", args[i])
 

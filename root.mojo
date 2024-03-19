@@ -5,11 +5,10 @@ from printer import build_printer_command
 
 fn test(args: PositionalArgs, flags: InputFlags) raises -> None:
     for item in flags.items():
-        print(item.key, item.value)
+        print(item[].key.value, item[].value)
 
 
 fn init() raises -> None:
-    pass
     var root_command = Command(
         name        = "tones", 
         description = "This is a dummy command!", 
@@ -30,7 +29,7 @@ fn init() raises -> None:
     # var printer_command = build_printer_command()
     # root_command.add_command(printer_command)
 
-    # root_command.execute()
+    root_command.execute()
 
 
 fn main() raises -> None:

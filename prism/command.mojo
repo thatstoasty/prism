@@ -1,4 +1,6 @@
 from collections.optional import Optional
+from collections.dict import Dict, KeyElement
+from memory.unsafe import Reference
 from prism.flag import (
     Flag,
     Flags,
@@ -7,9 +9,11 @@ from prism.flag import (
     get_args_and_flags,
     contains_flag,
 )
+from .vector import contains, to_string
 
-from prism.stdlib.builtins import dict, StringKey
-from prism.stdlib.builtins.vector import contains, to_string
+alias i1 = __mlir_type.i1
+alias i1_1 = __mlir_attr.`1: i1`
+alias i1_0 = __mlir_attr.`0: i1`
 
 alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
 # alias CommandFunction = fn (command: Command, args: PositionalArgs) raises -> None
@@ -18,7 +22,6 @@ alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> N
 # TODO: Add pre run, post run, and persistent flags
 @value
 struct Command(CollectionElement):
-# struct Command[Lifetime: MutLifetime](CollectionElement):
     var name: String
     var description: String
     var run: CommandFunction
@@ -28,7 +31,6 @@ struct Command(CollectionElement):
     var input_flags: InputFlags
 
     var commands: DynamicVector[Self]
-    # var parent: Reference[Self, __mlir_attr.`0: i1`, Lifetime]
     var parent: Optional[Self]
 
     fn __init__(
@@ -80,7 +82,7 @@ struct Command(CollectionElement):
             parent = self.parent.value().name
         var commands: String = ""
         for i in range(len(self.commands)):
-            let child = self.commands[i]
+            var child = self.commands[i]
             if i != 0:
                 commands += ", "
 
@@ -102,7 +104,7 @@ struct Command(CollectionElement):
 
     fn full_command(self) raises -> String:
         if self.parent:
-            let ancestor: String = self.parent.value().full_command()
+            var ancestor: String = self.parent.value().full_command()
             return ancestor + " " + self.name
         else:
             return self.name
@@ -113,12 +115,12 @@ struct Command(CollectionElement):
         var child_commands: String = ""
 
         for i in range(len(self.commands)):
-            let child = self.commands[i]
+            var child = self.commands[i]
             child_commands = child_commands + "  " + child.name + "\n"
 
         var flags: String = ""
         for i in range(self.flags.size):
-            let command = self.flags[i]
+            var command = self.flags[i]
             flags = (
                 flags
                 + "  "
@@ -140,18 +142,18 @@ struct Command(CollectionElement):
             usage_arguments = usage_arguments + " [flags]"
 
         var help = self.description + "\n\n"
-        let usage = "Usage:\n" + "  " + self.full_command() + usage_arguments + "\n\n"
-        let available_commands = "Available commands:\n" + child_commands + "\n"
-        let available_flags = "Available flags:\n" + flags + "\n"
-        let note = 'Use "' + self.full_command() + ' [command] --help" for more information about a command.'
+        var usage = "Usage:\n" + "  " + self.full_command() + usage_arguments + "\n\n"
+        var available_commands = "Available commands:\n" + child_commands + "\n"
+        var available_flags = "Available flags:\n" + flags + "\n"
+        var note = 'Use "' + self.full_command() + ' [command] --help" for more information about a command.'
         help = help + usage + available_commands + available_flags + note
         print(help)
 
     fn validate_flags(self, input_flags: InputFlags) raises -> None:
         """Validates the flags passed to the command. Raises an error if an invalid flag is passed.
         """
-        let length_of_command_flags = self.flags.size
-        let length_of_input_flags = len(input_flags)
+        var length_of_command_flags = self.flags.size
+        var length_of_input_flags = len(input_flags)
 
         if length_of_input_flags > length_of_command_flags:
             raise Error(
@@ -160,9 +162,9 @@ struct Command(CollectionElement):
             )
 
         for input_flag in input_flags.items():
-            if not contains_flag(self.flags, input_flag.key.__str__()):
+            if not contains_flag(self.flags, input_flag[].key.value):
                 raise Error(
-                    "Invalid flags passed to command: " + input_flag.key.__str__()
+                    "Invalid flags passed to command: " + input_flag[].key.value
                 )
 
     fn execute(inout self) raises -> None:
@@ -182,7 +184,7 @@ struct Command(CollectionElement):
 
         # Check if the help flag was passed
         for item in self.input_flags.items():
-            if item.key == "help":
+            if item[].key == "help":
                 command.help()
                 return None
 
@@ -198,7 +200,7 @@ struct Command(CollectionElement):
         """
         self.flags.append(flag)
 
-    fn set_parent(inout self, parent: Command) -> None:
+    fn set_parent(inout self, inout parent: Command) -> None:
         """Sets the command's parent attribute to the given parent.
 
         Args:
