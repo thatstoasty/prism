@@ -1,6 +1,5 @@
 from collections.optional import Optional
 from collections.dict import Dict, KeyElement
-from memory.unsafe import Reference
 from prism.flag import (
     Flag,
     Flags,
@@ -11,13 +10,7 @@ from prism.flag import (
 )
 from .vector import contains, to_string
 
-alias i1 = __mlir_type.i1
-alias i1_1 = __mlir_attr.`1: i1`
-alias i1_0 = __mlir_attr.`0: i1`
-
 alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
-# alias CommandFunction = fn (command: Command, args: PositionalArgs) raises -> None
-
 
 # TODO: Add pre run, post run, and persistent flags
 @value

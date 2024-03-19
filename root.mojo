@@ -15,7 +15,7 @@ fn init() raises -> None:
         run         = test
     )
 
-    # root_command.add_flag(Flag("env", "e", "Environment."))
+    root_command.add_flag(Flag("env", "e", "Environment."))
 
     # var say_command = build_say_command()
     # root_command.add_command(say_command)
