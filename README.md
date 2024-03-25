@@ -3,6 +3,8 @@ A Budding CLI Library! Using this as a way to learn Mojo and to better understan
 
 Inspired by: `Cobra`!
 
+NOTE: May be broken in v24.1.1. Will fix as soon as the ergonomics of self referential structs are improved!
+
 ## Usage
 TODO
 
