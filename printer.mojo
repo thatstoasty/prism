@@ -10,7 +10,7 @@ fn printer(args: PositionalArgs, flags: InputFlags) raises -> None:
 
 
 fn build_printer_command() raises -> Command:
-    let cmd = Command(
+    var cmd = Command(
         name="printer",
         description="Print the first arg.",
         run=printer,

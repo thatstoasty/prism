@@ -5,7 +5,7 @@ from printer import build_printer_command
 
 fn test(args: PositionalArgs, flags: InputFlags) raises -> None:
     for item in flags.items():
-        print(item.key, item.value)
+        print(item[].key, item[].value)
 
 
 fn init() raises -> None:

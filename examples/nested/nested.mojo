@@ -11,18 +11,18 @@ fn print_information(args: PositionalArgs, flags: InputFlags) raises -> None:
 
 
 fn get_cat_fact(args: PositionalArgs, flags: InputFlags) raises -> None:
-    let requests = Python.import_module("requests")
+    var requests = Python.import_module("requests")
     # URL you want to send a GET request to
-    let url = 'https://cat-fact.herokuapp.com/facts/'
+    var url = 'https://cat-fact.herokuapp.com/facts/'
 
     # Send the GET request
-    let response = requests.get(url)
+    var response = requests.get(url)
 
     # Check if the request was successful (status code 200)
     if response.status_code == 200:
-        let count_flag = flags.get("count", "1")
-        let count = atol(count_flag)
-        let body = response.json()
+        var count_flag = flags.get("count", "1")
+        var count = atol(count_flag)
+        var body = response.json()
         for i in range(count):
             print(body[i]['text'])
     else:
@@ -30,12 +30,12 @@ fn get_cat_fact(args: PositionalArgs, flags: InputFlags) raises -> None:
 
 
 fn get_dog_breeds(args: PositionalArgs, flags: InputFlags) raises -> None:
-    let requests = Python.import_module("requests")
+    var requests = Python.import_module("requests")
     # URL you want to send a GET request to
-    let url = 'https://dog.ceo/api/breeds/list/all'
+    var url = 'https://dog.ceo/api/breeds/list/all'
 
     # Send the GET request
-    let response = requests.get(url)
+    var response = requests.get(url)
 
     # Check if the request was successful (status code 200)
     if response.status_code == 200:
