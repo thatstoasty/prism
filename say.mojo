@@ -19,7 +19,7 @@ fn say_goodbye(args: PositionalArgs, flags: InputFlags) raises -> None:
 
 # for some reason returning the command object without setting it to variable breaks the compiler
 fn build_say_command() raises -> Command:
-    let cmd = Command(
+    var cmd = Command(
         name="say",
         description="Say something to someone",
         run=say,
@@ -28,15 +28,16 @@ fn build_say_command() raises -> Command:
 
 
 fn build_hello_command() raises -> Command:
-    let cmd = Command(
+    var cmd = Command(
         name="hello",
         description="Say hello to someone",
         run=say_hello,
     )
     return cmd
 
+
 fn build_goodbye_command() raises -> Command:
-    let cmd = Command(
+    var cmd = Command(
         name="goodbye",
         description="Say goodbye to someone",
         run=say_goodbye,

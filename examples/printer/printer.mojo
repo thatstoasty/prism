@@ -7,8 +7,8 @@ fn printer(args: PositionalArgs, flags: InputFlags) raises -> None:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    let color = flags.get("color", "")
-    let formatting = flags.get("formatting", "")
+    var color = flags.get("color", "")
+    var formatting = flags.get("formatting", "")
     var style = TerminalStyle()
 
     if color != "":
