@@ -47,7 +47,7 @@ struct Command(CollectionElement):
     var flags: Flags
     var input_flags: InputFlags
 
-    var commands: List[Arc[Self]]
+    var children: List[Arc[Self]]
     var parent: Arc[Optional[Self]]
 
     fn __init__(
@@ -65,7 +65,7 @@ struct Command(CollectionElement):
         self.input_flags = InputFlags()
         get_args_and_flags(self.args, self.input_flags)
 
-        self.commands = List[Arc[Self]]()
+        self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
 
     fn __copyinit__(inout self, existing: Self):
@@ -76,7 +76,7 @@ struct Command(CollectionElement):
         self.args = existing.args
         self.flags = existing.flags
         self.input_flags = existing.input_flags
-        self.commands = existing.commands
+        self.children = existing.children
         self.parent = existing.parent
 
     fn __moveinit__(inout self, owned existing: Self):
@@ -87,7 +87,7 @@ struct Command(CollectionElement):
         self.args = existing.args ^
         self.flags = existing.flags ^
         self.input_flags = existing.input_flags ^
-        self.commands = existing.commands ^
+        self.children = existing.children ^
         self.parent = existing.parent ^
 
     fn __str__(self) -> String:
@@ -107,7 +107,7 @@ struct Command(CollectionElement):
             + "\nFlags: "
             + string(self.flags)
             + "\nCommands: "
-            + to_string(self.commands)
+            + to_string(self.children)
             + "\nParent: "
             + parent_name
         )
@@ -124,8 +124,8 @@ struct Command(CollectionElement):
         """
         var child_commands: String = ""
 
-        for i in range(len(self.commands)):
-            var child = self.commands[i]
+        for i in range(len(self.children)):
+            var child = self.children[i]
             child_commands = child_commands + "  " + child[] + "\n"
 
         var flags: String = ""
@@ -146,7 +146,7 @@ struct Command(CollectionElement):
 
         # Build usage statement arguments depending on the command's children and flags.
         var usage_arguments: String = " [args]"
-        if len(self.commands) > 0:
+        if len(self.children) > 0:
             usage_arguments = " [command]" + usage_arguments
         if self.flags.size > 0:
             usage_arguments = usage_arguments + " [flags]"
@@ -209,27 +209,29 @@ struct Command(CollectionElement):
         # Any additional arguments past the last matched command name are considered arguments.
         # TODO: Tree traversal is new to me, there's probably a better way to do this.
         # TODO: Passing no matching commands should by default run the root command, since the program will be run as a binary.
-        var command: Optional[Self] = None
-        var commands = self.commands
+        var command = self
+        var children = command.children
+        var leftover_args_start_index = 1 # Start at 1 to start slice at the first remaining arg, not the last child command.
+
         for arg in self.args:
-            for command_ref in commands:
+            for command_ref in children:
                 if command_ref[][].name == arg[]:
                     command = command_ref[][]
-                    commands = command.value().commands
+                    children = command.children
+                    leftover_args_start_index += 1
                     break
         
-        # TODO: Doesn't work for the root command atm.
-        var remaining_args = self.args[index_of(self.args, command.value().name):len(self.args)] 
+        var remaining_args = self.args[leftover_args_start_index:len(self.args)] 
         
         # Check if the help flag was passed
         for item in self.input_flags.items():
             if item[].key == "help":
-                command.value().help()
+                command.help()
                 return None
 
         # Check if the flags are valid
-        command.value().validate_flags(self.input_flags)
-        command.value().run(remaining_args, self.input_flags)
+        command.validate_flags(self.input_flags)
+        command.run(remaining_args, self.input_flags)
 
     fn add_flag(inout self, flag: Flag) -> None:
         """Adds a flag to the command's flags.
@@ -253,5 +255,5 @@ struct Command(CollectionElement):
         Args:
             command: The command to add as a child of self.
         """
-        self.commands.append(Arc(command))
+        self.children.append(Arc(command))
         command.set_parent(self)
