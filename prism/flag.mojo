@@ -32,22 +32,27 @@ fn contains_flag(vector: Flags, value: String) -> Bool:
     return False
 
 
-fn string(vector: List[Flag]) -> String:
-    var result = String("[")
-    for i in range(vector.size):
-        result += vector[i].__str__()
-        if i < vector.size - 1:
-            result += String(", ")
-    result += String("]")
-    return result
-
-
 # TODO: Add functions to get flag as a <TYPE>. Like get flag as int, get flag as bool, etc.
 @value
 struct Flag(CollectionElement, Stringable):
-    var name: StringLiteral
-    var shorthand: StringLiteral
-    var usage: StringLiteral
+    """Represents a flag that can be passed via the command line.
+    Flags are passed in via --name or -shorthand and can have a value associated with them.
+    """
+    var name: String
+    var shorthand: String
+    var usage: String
+
+    fn __init__(inout self, name: String, shorthand: String, usage: String) -> None:
+        """Initializes a new Flag.
+
+        Args:
+            name: The name of the flag.
+            shorthand: The shorthand of the flag.
+            usage: The usage of the flag.
+        """
+        self.name = name
+        self.shorthand = shorthand
+        self.usage = usage
 
     fn __str__(self) -> String:
         return (

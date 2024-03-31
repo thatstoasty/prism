@@ -1,7 +1,7 @@
-from prism import Flag, InputFlags, PositionalArgs, Command
+from prism import Flag, InputFlags, PositionalArgs, Command, CommandArc
 
 
-fn printer(args: PositionalArgs, flags: InputFlags) raises -> None:
+fn printer(command: CommandArc, args: PositionalArgs) raises -> None:
     if len(args) == 0:
         print("No args provided.")
         return None

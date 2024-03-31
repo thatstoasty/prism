@@ -8,14 +8,14 @@ from .flag import (
     StringKey,
     get_args_and_flags,
     contains_flag,
-    string,
 )
-from .vector import to_string, join
+from .vector import join, to_string
 from memory._arc import Arc
 
 
-alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
-
+# alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
+alias CommandFunction = fn(command: Arc[Command], args: PositionalArgs) raises -> None
+alias CommandArc = Arc[Command]
 
 # TODO: Add pre run, post run, and persistent flags
 @value
@@ -86,7 +86,7 @@ struct Command(CollectionElement):
             + "\nArgs: "
             + to_string(self.args)
             + "\nFlags: "
-            + string(self.flags)
+            + to_string(self.flags)
             + "\nCommands: "
             + to_string(self.children)
             + "\nParent: "
@@ -94,6 +94,7 @@ struct Command(CollectionElement):
         )
 
     fn full_command(self) -> String:
+        """Traverses up the parent command tree to build the full command as a string."""
         if self.parent[]:
             var ancestor: String = self.parent[].value().full_command()
             return ancestor + " " + self.name
@@ -103,7 +104,6 @@ struct Command(CollectionElement):
     fn help(self) -> None:
         """Prints the help information for the command."""
         var child_commands: String = ""
-
         for child in self.children:
             child_commands = child_commands + "  " + child[][] + "\n"
 
@@ -129,11 +129,12 @@ struct Command(CollectionElement):
         if self.flags.size > 0:
             usage_arguments = usage_arguments + " [flags]"
 
+        var full_command = self.full_command()
         var help = self.description + "\n\n"
-        var usage = "Usage:\n" + "  " + self.full_command() + usage_arguments + "\n\n"
+        var usage = "Usage:\n" + "  " + full_command + usage_arguments + "\n\n"
         var available_commands = "Available commands:\n" + child_commands + "\n"
         var available_flags = "Available flags:\n" + flags + "\n"
-        var note = 'Use "' + self.full_command() + ' [command] --help" for more information about a command.'
+        var note = 'Use "' + full_command + ' [command] --help" for more information about a command.'
         help = help + usage + available_commands + available_flags + note
         print(help)
 
@@ -174,7 +175,10 @@ struct Command(CollectionElement):
                     leftover_args_start_index += 1
                     break
 
-        var remaining_args = self.args[leftover_args_start_index : len(self.args)]
+        # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
+        var remaining_args = List[String]()
+        if len(self.args) >= leftover_args_start_index:
+            remaining_args = self.args[leftover_args_start_index : len(self.args)]
 
         # Check if the help flag was passed
         for item in self.input_flags.items():

@@ -28,7 +28,7 @@ fn to_string(vector: List[String]) -> String:
 fn to_string(vector: List[Flag]) -> String:
     var result = String("[")
     for i in range(vector.size):
-        result += vector[i].__str__()
+        result += str(vector[i])
         if i < vector.size - 1:
             result += String(", ")
     result += String("]")
