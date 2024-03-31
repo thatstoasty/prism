@@ -10,29 +10,11 @@ from .flag import (
     contains_flag,
     string,
 )
-from .vector import contains, to_string, join, get_slice
+from .vector import to_string, join
+from memory._arc import Arc
 
 
 alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
-
-# child command name : parent command name
-alias CommandMap = Dict[StringKey, Command]
-
-
-# TODO: Make this command map population more ergonomic. Difficult without having some sort of global context or top level scope.
-fn add_command(
-    inout command: Command, inout parent_command: Command, inout command_map: CommandMap
-) -> None:
-    """Sets the command's parent field to the name of the parent command, and adds the command to the command map.
-
-    Args:
-        command: The command to add to the command map.
-        parent_command: The parent command of the command to add.
-        command_map: The command map to add the command to.
-
-    """
-    parent_command.add_command(command)
-    command_map[command.name] = command
 
 
 # TODO: Add pre run, post run, and persistent flags
@@ -46,8 +28,8 @@ struct Command(CollectionElement):
     var flags: Flags
     var input_flags: InputFlags
 
-    var commands: List[String]
-    var parent: String
+    var children: List[Arc[Self]]
+    var parent: Arc[Optional[Self]]
 
     fn __init__(
         inout self, name: String, description: String, run: CommandFunction
@@ -64,8 +46,8 @@ struct Command(CollectionElement):
         self.input_flags = InputFlags()
         get_args_and_flags(self.args, self.input_flags)
 
-        self.commands = List[String]()
-        self.parent = ""
+        self.children = List[Arc[Self]]()
+        self.parent = Arc[Optional[Command]](None)
 
     fn __copyinit__(inout self, existing: Self):
         self.name = existing.name
@@ -75,7 +57,7 @@ struct Command(CollectionElement):
         self.args = existing.args
         self.flags = existing.flags
         self.input_flags = existing.input_flags
-        self.commands = existing.commands
+        self.children = existing.children
         self.parent = existing.parent
 
     fn __moveinit__(inout self, owned existing: Self):
@@ -86,13 +68,16 @@ struct Command(CollectionElement):
         self.args = existing.args ^
         self.flags = existing.flags ^
         self.input_flags = existing.input_flags ^
-        self.commands = existing.commands ^
+        self.children = existing.children ^
         self.parent = existing.parent ^
 
     fn __str__(self) -> String:
         return "(Name: " + self.name + ", Description: " + self.description + ")"
 
-    fn __repr__(self) raises -> String:
+    fn __repr__(self) -> String:
+        var parent_name: String = ""
+        if self.parent[]:
+            parent_name = self.parent[].value().name
         return (
             "Name: "
             + self.name
@@ -103,61 +88,52 @@ struct Command(CollectionElement):
             + "\nFlags: "
             + string(self.flags)
             + "\nCommands: "
-            + to_string(self.commands)
+            + to_string(self.children)
             + "\nParent: "
-            + self.parent
+            + parent_name
         )
 
-    fn full_command(self, command_map: CommandMap) raises -> String:
-        if self.parent != "":
-            var ancestor: String = command_map[self.parent].full_command(command_map)
+    fn full_command(self) -> String:
+        if self.parent[]:
+            var ancestor: String = self.parent[].value().full_command()
             return ancestor + " " + self.name
+        else:
+            return self.name
 
-        return self.name
-
-    fn help(self, command_map: CommandMap) raises -> None:
-        """Prints the help information for the command.
-
-        Args:
-            command_map: The command map to use to find the command's children.
-        """
+    fn help(self) -> None:
+        """Prints the help information for the command."""
         var child_commands: String = ""
-        for child in command_map.items():
-            if child[].value.parent == self.name:
-                child_commands = child_commands + "  " + str(child[].key) + "\n"
+
+        for child in self.children:
+            child_commands = child_commands + "  " + child[][] + "\n"
 
         var flags: String = ""
-        for i in range(self.flags.size):
-            var command = self.flags[i]
+        for command in self.flags:
             flags = (
                 flags
                 + "  "
                 + "-"
-                + command.shorthand
+                + command[].shorthand
                 + ", "
                 + "--"
-                + command.name
+                + command[].name
                 + "    "
-                + command.usage
+                + command[].usage
                 + "\n"
             )
 
         # Build usage statement arguments depending on the command's children and flags.
         var usage_arguments: String = " [args]"
-        if len(self.commands) > 0:
+        if len(self.children) > 0:
             usage_arguments = " [command]" + usage_arguments
         if self.flags.size > 0:
             usage_arguments = usage_arguments + " [flags]"
 
         var help = self.description + "\n\n"
-        var usage = "Usage:\n" + "  " + self.full_command(
-            command_map
-        ) + usage_arguments + "\n\n"
+        var usage = "Usage:\n" + "  " + self.full_command() + usage_arguments + "\n\n"
         var available_commands = "Available commands:\n" + child_commands + "\n"
         var available_flags = "Available flags:\n" + flags + "\n"
-        var note = 'Use "' + self.full_command(
-            command_map
-        ) + ' [command] --help" for more information about a command.'
+        var note = 'Use "' + self.full_command() + ' [command] --help" for more information about a command.'
         help = help + usage + available_commands + available_flags + note
         print(help)
 
@@ -178,40 +154,37 @@ struct Command(CollectionElement):
 
         for input_flag in input_flags.items():
             if not contains_flag(self.flags, str(input_flag[].key)):
-                raise Error(
-                    "Invalid flags passed to command: " + str(input_flag[].key)
-                )
+                raise Error("Invalid flags passed to command: " + str(input_flag[].key))
 
-    fn execute(self, command_map: CommandMap) raises -> None:
+    fn execute(self) raises -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
-
-        Args:
-            command_map: The command map to use to find the command's children.
         """
-        # Traverse the arguments backwards
-        # Starting from the last argument passed, check if each arg is a valid child command.
-        # If met, all previous args are part of the command tree. All args after the first valid child are arguments.
-        var remaining_args = List[String]()
-        for i in range(len(self.args) - 1, -1, -1):
-            if contains(command_map, self.args[i]):
-                var command = command_map[self.args[i]]
+        # Traverse from the root command through the children to find a match for the current argument.
+        # Any additional arguments past the last matched command name are considered arguments.
+        # TODO: Tree traversal is new to me, there's probably a better way to do this.
+        var command = self
+        var children = command.children
+        var leftover_args_start_index = 1  # Start at 1 to start slice at the first remaining arg, not the last child command.
 
-                # Check if the full command branch of the child command matches what was passed in.
-                # full_command will traverse the parent commands to get the full command, while join is just joining the args.
-                if join(" ", get_slice(self.args, Slice(0, i+1))) == command.full_command(command_map):
-                    # Check if the help flag was passed
-                    for item in self.input_flags.items():
-                        if item[].key == "help":
-                            command.help(command_map)
-                            return None
+        for arg in self.args:
+            for command_ref in children:
+                if command_ref[][].name == arg[]:
+                    command = command_ref[][]
+                    children = command.children
+                    leftover_args_start_index += 1
+                    break
 
-                    # Check if the flags are valid
-                    command.validate_flags(self.input_flags)
-                    command.run(remaining_args, self.input_flags)
-            else:
-                remaining_args.append(self.args[i])
+        var remaining_args = self.args[leftover_args_start_index : len(self.args)]
 
+        # Check if the help flag was passed
+        for item in self.input_flags.items():
+            if item[].key == "help":
+                command.help()
+                return None
 
+        # Check if the flags are valid
+        command.validate_flags(self.input_flags)
+        command.run(remaining_args, self.input_flags)
 
     fn add_flag(inout self, flag: Flag) -> None:
         """Adds a flag to the command's flags.
@@ -221,13 +194,13 @@ struct Command(CollectionElement):
         """
         self.flags.append(flag)
 
-    fn set_parent(inout self, parent: String) -> None:
+    fn set_parent(inout self, inout parent: Command) -> None:
         """Sets the command's parent attribute to the given parent.
 
         Args:
             parent: The name of the parent command.
         """
-        self.parent = parent
+        self.parent[] = parent
 
     fn add_command(inout self, inout command: Command):
         """Adds child command and set's child's parent attribute to self.
@@ -235,5 +208,5 @@ struct Command(CollectionElement):
         Args:
             command: The command to add as a child of self.
         """
-        self.commands.append(command.name)
-        command.set_parent(self.name)
+        self.children.append(Arc(command))
+        command.set_parent(self)

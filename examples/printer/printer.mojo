@@ -2,6 +2,7 @@ from prism import Flag, InputFlags, PositionalArgs, Command, CommandMap, add_com
 from python import Python, PythonObject
 from mist import TerminalStyle
 
+
 fn printer(args: PositionalArgs, flags: InputFlags) raises -> None:
     if len(args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
@@ -25,11 +26,7 @@ fn printer(args: PositionalArgs, flags: InputFlags) raises -> None:
 
 fn init() raises -> None:
     var command_map = CommandMap()
-    var root_command = Command(
-        name        = "printer", 
-        description = "Base command.", 
-        run         = printer
-    )
+    var root_command = Command(name="printer", description="Base command.", run=printer)
     root_command.add_flag(Flag("color", "c", "Text color"))
     root_command.add_flag(Flag("formatting", "f", "Text formatting"))
     command_map[root_command.name] = root_command

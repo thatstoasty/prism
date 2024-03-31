@@ -1,6 +1,5 @@
 from sys import argv
 from collections.dict import Dict, KeyElement
-from .vector import to_string, contains
 
 
 @value
@@ -18,10 +17,10 @@ struct StringKey(KeyElement):
 
     fn __eq__(self, other: Self) -> Bool:
         return self.s == other.s
-    
+
     fn __ne__(self, other: Self) -> Bool:
         return self.s != other.s
-    
+
     fn __str__(self) -> String:
         return self.s
 
@@ -62,15 +61,7 @@ struct Flag(CollectionElement, Stringable):
         )
 
     fn __repr__(self) -> String:
-        return (
-            String("(Name: ")
-            + self.name
-            + String(", Shorthand: ")
-            + self.shorthand
-            + String(", Usage: ")
-            + self.usage
-            + String(")")
-        )
+        return str(self)
 
 
 alias Flags = List[Flag]
