@@ -1,3 +1,6 @@
+from memory._arc import Arc
+
+
 fn contains(vector: List[String], value: String) -> Bool:
     for i in range(vector.size):
         if vector[i] == value:
@@ -39,10 +42,11 @@ fn to_string(vector: List[Flag]) -> String:
     return result
 
 
-fn to_string(vector: List[Command]) -> String:
+fn to_string(vector: List[Arc[Command]]) -> String:
     var result = String("[")
     for i in range(vector.size):
-        result += vector[i].name
+        var item = vector[i]
+        result += item[].name
         if i < vector.size - 1:
             result += String(", ")
     result += String("]")
@@ -73,3 +77,10 @@ fn get_slice[T: CollectionElement](vector: List[T], limits: Slice) -> List[T]:
         new.append(vector[i])
 
     return new
+
+
+fn index_of(vector: List[String], value: String) -> Int:
+    for i in range(vector.size):
+        if vector[i] == value:
+            return i
+    return -1

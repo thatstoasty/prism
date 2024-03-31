@@ -10,7 +10,7 @@ from .flag import (
     contains_flag,
     string,
 )
-from .vector import contains, to_string, join, get_slice
+from .vector import contains, to_string, join, get_slice, index_of
 from memory._arc import Arc
 
 
@@ -47,7 +47,7 @@ struct Command(CollectionElement):
     var flags: Flags
     var input_flags: InputFlags
 
-    var commands: List[String]
+    var commands: List[Arc[Self]]
     var parent: Arc[Optional[Self]]
 
     fn __init__(
@@ -65,7 +65,7 @@ struct Command(CollectionElement):
         self.input_flags = InputFlags()
         get_args_and_flags(self.args, self.input_flags)
 
-        self.commands = List[String]()
+        self.commands = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
 
     fn __copyinit__(inout self, existing: Self):
@@ -126,7 +126,7 @@ struct Command(CollectionElement):
 
         for i in range(len(self.commands)):
             var child = self.commands[i]
-            child_commands = child_commands + "  " + child + "\n"
+            child_commands = child_commands + "  " + child[] + "\n"
 
         var flags: String = ""
         for i in range(self.flags.size):
@@ -180,37 +180,56 @@ struct Command(CollectionElement):
                     "Invalid flags passed to command: " + str(input_flag[].key)
                 )
 
-    fn execute(self, command_map: CommandMap) raises -> None:
-        """Traverses the arguments passed to the executable and executes the last command in the branch.
+    fn _match_command_from_args(self, args: PositionalArgs) -> Optional[Self]:
+        """Matches the command from the args passed to the executable.
 
         Args:
-            command_map: The command map to use to find the command's children.
+            args: The arguments passed to the executable.
+
+        Returns:
+            The command that matches the args passed to the executable.
         """
-        # Traverse the arguments backwards
-        # Starting from the last argument passed, check if each arg is a valid child command.
-        # If met, all previous args are part of the command tree. All args after the first valid child are arguments.
+        var command: Optional[Self] = None
         var remaining_args = List[String]()
-        for i in range(len(self.args) - 1, -1, -1):
-            if contains(command_map, self.args[i]):
-                var command = command_map[self.args[i]]
+        # for arg in self.args:
+        #     for command_ref in self.commands:
+        #         if command_ref[][].name == arg[]:
+        #             current_command += arg[]
+                
+        #         if command_ref[][].full_command() == current_command:
+        #             command = command_ref[][]
+        #             return command
 
-                # Check if the full command branch of the child command matches what was passed in.
-                # full_command will traverse the parent commands to get the full command, while join is just joining the args.
-                if join(" ", get_slice(self.args, Slice(0, i+1))) == command.full_command():
-                    # Check if the help flag was passed
-                    for item in self.input_flags.items():
-                        if item[].key == "help":
-                            command.help()
-                            return None
+        return None
 
-                    # Check if the flags are valid
-                    command.validate_flags(self.input_flags)
-                    command.run(remaining_args, self.input_flags)
-                    return
-            else:
-                remaining_args.append(self.args[i])
+    fn execute(self) raises -> None:
+        """Traverses the arguments passed to the executable and executes the last command in the branch.
+        """
+        # Traverse from the root command through the children to find a match for the current argument.
+        # Any additional arguments past the last matched command name are considered arguments.
+        # TODO: Tree traversal is new to me, there's probably a better way to do this.
+        # TODO: Passing no matching commands should by default run the root command, since the program will be run as a binary.
+        var command: Optional[Self] = None
+        var commands = self.commands
+        for arg in self.args:
+            for command_ref in commands:
+                if command_ref[][].name == arg[]:
+                    command = command_ref[][]
+                    commands = command.value().commands
+                    break
+        
+        # TODO: Doesn't work for the root command atm.
+        var remaining_args = self.args[index_of(self.args, command.value().name):len(self.args)] 
+        
+        # Check if the help flag was passed
+        for item in self.input_flags.items():
+            if item[].key == "help":
+                command.value().help()
+                return None
 
-
+        # Check if the flags are valid
+        command.value().validate_flags(self.input_flags)
+        command.value().run(remaining_args, self.input_flags)
 
     fn add_flag(inout self, flag: Flag) -> None:
         """Adds a flag to the command's flags.
@@ -234,5 +253,5 @@ struct Command(CollectionElement):
         Args:
             command: The command to add as a child of self.
         """
-        self.commands.append(command.name)
+        self.commands.append(Arc(command))
         command.set_parent(self)
