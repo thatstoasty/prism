@@ -13,7 +13,7 @@ fn print_information(args: PositionalArgs, flags: InputFlags) raises -> None:
 fn get_cat_fact(args: PositionalArgs, flags: InputFlags) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
-    var url = 'https://cat-fact.herokuapp.com/facts/'
+    var url = "https://cat-fact.herokuapp.com/facts/"
 
     # Send the GET request
     var response = requests.get(url)
@@ -24,15 +24,15 @@ fn get_cat_fact(args: PositionalArgs, flags: InputFlags) raises -> None:
         var count = atol(count_flag)
         var body = response.json()
         for i in range(count):
-            print(body[i]['text'])
+            print(body[i]["text"])
     else:
-        raise Error('Request failed!')
+        raise Error("Request failed!")
 
 
 fn get_dog_breeds(args: PositionalArgs, flags: InputFlags) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
-    var url = 'https://dog.ceo/api/breeds/list/all'
+    var url = "https://dog.ceo/api/breeds/list/all"
 
     # Send the GET request
     var response = requests.get(url)
@@ -41,23 +41,19 @@ fn get_dog_breeds(args: PositionalArgs, flags: InputFlags) raises -> None:
     if response.status_code == 200:
         print(response.json()["message"])
     else:
-        raise Error('Request failed!')
+        raise Error("Request failed!")
 
 
 fn init() raises -> None:
     var command_map = CommandMap()
-    var root_command = Command(
-        name        = "nested", 
-        description = "Base command.", 
-        run         = base
-    )
+    var root_command = Command(name="nested", description="Base command.", run=base)
 
     command_map[root_command.name] = root_command
 
     var get_command = Command(
-        name        = "get", 
-        description = "Base command for getting some data.", 
-        run         = print_information
+        name="get",
+        description="Base command for getting some data.",
+        run=print_information,
     )
     add_command(get_command, root_command, command_map)
 

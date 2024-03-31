@@ -1,4 +1,4 @@
-from prism import Flag, InputFlags, PositionalArgs, Command, CommandMap
+from prism import Flag, InputFlags, PositionalArgs, Command
 
 
 fn say(args: PositionalArgs, flags: InputFlags) raises -> None:
@@ -16,6 +16,7 @@ fn say_hello(args: PositionalArgs, flags: InputFlags) raises -> None:
 
 fn say_goodbye(args: PositionalArgs, flags: InputFlags) raises -> None:
     print("Goodbye World!")
+
 
 # for some reason returning the command object without setting it to variable breaks the compiler
 fn build_say_command() raises -> Command:

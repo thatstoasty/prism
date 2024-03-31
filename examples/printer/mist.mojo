@@ -1,11 +1,14 @@
 from time import sleep
 
+
 fn sgr_format(n: String) -> String:
-    """SGR formatting: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_(Select_Graphic_Rendition)_parameters."""
+    """SGR formatting: https://en.wikipedia.org/wiki/ANSI_escape_code#SGR_(Select_Graphic_Rendition)_parameters.
+    """
     return chr(27) + String("[") + n + String("m")
 
+
 @value
-struct Properties():
+struct Properties:
     # Text colors
     var escape: String
     var BLUE: String
@@ -111,9 +114,9 @@ struct Properties():
             code = self.RED
         else:
             code = self.RESET
-        
+
         return sgr_format(code)
-    
+
     fn get_formatting(self, type: StringLiteral) -> String:
         var code: String = ""
         if type == "bold":
@@ -134,10 +137,9 @@ struct Properties():
             code = self.INVERT
         else:
             code = self.RESET
-        
+
         return sgr_format(code)
 
-    
     fn get_background_color(self, type: StringLiteral) -> String:
         var code: String = ""
         if type == "black":
@@ -158,9 +160,9 @@ struct Properties():
             code = self.BACKGROUND_WHITE
         else:
             code = self.RESET
-        
+
         return code
-        
+
     fn get_foreground_color(self, type: StringLiteral) -> String:
         var code: String = ""
         if type == "black":
@@ -181,7 +183,7 @@ struct Properties():
             code = self.FOREGROUND_WHITE
         else:
             code = self.RESET
-        
+
         return code
 
     fn get_other(self, type: StringLiteral) -> String:
@@ -197,26 +199,26 @@ struct Properties():
 
 
 @value
-struct TerminalStyle():
+struct TerminalStyle:
     var styles: DynamicVector[String]
     var properties: Properties
 
     fn __init__(inout self):
         self.properties = Properties()
         self.styles = DynamicVector[String]()
-    
+
     fn color(inout self, color: String) -> None:
         self.styles.push_back(self.properties.get_color(color))
-    
+
     fn bold(inout self) -> None:
         self.styles.push_back(self.properties.BOLD)
-    
+
     fn italic(inout self) -> None:
         self.styles.push_back(self.properties.ITALIC)
-    
+
     fn underline(inout self) -> None:
         self.styles.push_back(self.properties.UNDERLINE)
-    
+
     fn blink(inout self) -> None:
         self.styles.push_back(self.properties.BLINK)
 
@@ -225,16 +227,16 @@ struct TerminalStyle():
 
     fn crossout(inout self) -> None:
         self.styles.push_back(self.properties.CROSSOUT)
-    
+
     fn overline(inout self) -> None:
         self.styles.push_back(self.properties.OVERLINE)
-    
+
     fn invert(inout self) -> None:
         self.styles.push_back(self.properties.INVERT)
-    
+
     fn background(inout self, color: StringLiteral) -> None:
         self.styles.push_back(self.properties.get_background_color(color))
-    
+
     fn foreground(inout self, color: StringLiteral) -> None:
         self.styles.push_back(self.properties.get_foreground_color(color))
 
