@@ -184,15 +184,17 @@ struct Command(CollectionElement):
 
         # Check if the flags are valid
         command.validate_flags(self.input_flags)
-        command.run(remaining_args, self.input_flags)
+        command.run(Arc(self), remaining_args)
 
-    fn add_flag(inout self, flag: Flag) -> None:
+    fn add_flag(inout self, *, name: String, shorthand: String = "", usage: String = "") -> None:
         """Adds a flag to the command's flags.
 
         Args:
-            flag: The flag to add to the command's flags.
+            name: The name of the flag.
+            shorthand: The shorthand name of the flag.
+            usage: The usage information for the flag.
         """
-        self.flags.append(flag)
+        self.flags.append(Flag(name, shorthand, usage))
 
     fn set_parent(inout self, inout parent: Command) -> None:
         """Sets the command's parent attribute to the given parent.
@@ -210,3 +212,4 @@ struct Command(CollectionElement):
         """
         self.children.append(Arc(command))
         command.set_parent(self)
+
