@@ -32,16 +32,6 @@ fn contains_flag(vector: Flags, value: String) -> Bool:
     return False
 
 
-fn string(vector: List[Flag]) -> String:
-    var result = String("[")
-    for i in range(vector.size):
-        result += vector[i].__str__()
-        if i < vector.size - 1:
-            result += String(", ")
-    result += String("]")
-    return result
-
-
 # TODO: Add functions to get flag as a <TYPE>. Like get flag as int, get flag as bool, etc.
 @value
 struct Flag(CollectionElement, Stringable):

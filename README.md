@@ -1,4 +1,5 @@
 # prism
+
 A Budding CLI Library! Using this as a way to learn Mojo and to better understand CLI tooling development.
 
 Inspired by: `Cobra`!
@@ -6,12 +7,15 @@ Inspired by: `Cobra`!
 NOTE: May be broken in v24.1.1. Will fix as soon as the ergonomics of self referential structs are improved!
 
 ## Usage
+
 TODO
 
 ## Examples
+
 Try out the `nested` example in the examples directory!
 
 Here's the script copied over from the main file.
+
 ```py
 from prism import Flag, InputFlags, PositionalArgs, Command, CommandMap, add_command
 from python import Python, PythonObject
@@ -102,24 +106,28 @@ Start by navigating to the `nested` example directory.
 `cd examples/nested`
 
 Run the example by using the following command, we're not specifying a subcommand so we should be executing the root command.
+
 ```bash
 mojo run nested.mojo
 This is the base command!
 ```
 
 Now try running it with a subcommand.
+
 ```bash
 mojo run nested.mojo get
 Pass cat or dog as a subcommand, and see what you get!
 ```
 
 Let's follow the suggestion and add the cat subcommand.
+
 ```bash
 mojo run nested.mojo get cat
 Owning a cat can reduce the risk of stroke and heart attack by a third.
 ```
 
 Now try running it with a flag to get up to five facts.
+
 ```bash
 mojo run nested.mojo get cat --count=5
 Owning a cat can reduce the risk of stroke and heart attack by a third.
@@ -139,6 +147,7 @@ Now run the previous command, but with the binary instead.
 `./nested --count=3`
 
 You should get the same result as before! But, what about command information?
+
 ```bash
 ./nested get cat --help
 Get some cat facts!
@@ -157,15 +166,20 @@ Use "root get cat [command] --help" for more information about a command.
 
 Usage information will be printed the console by passing the `--help` flag.
 
-## TODO:
+## TODO
+
 ### Repository
+
 - [ ] Add a description
 - [ ] Add examples
 
 ### Documentation
 
 ### Features
+
 - Add pre run, post run, and persistent flags to Command struct
-- Find better solution to command map usage.
-- Switch to passing commands to command run functions instead of passing flags and args.
-  - Refactor get flag as type functions when commands after the above change.
+- Refactor get flag as type functions when commands after the above change.
+- Add support for shorthand command flags.
+- Map --help flag to configurable help function.
+- Positional and custom arguments.
+  
