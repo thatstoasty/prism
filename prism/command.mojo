@@ -22,7 +22,10 @@ alias CommandArc = Arc[Command]
 struct Command(CollectionElement):
     var name: String
     var description: String
+
+    var pre_run: Optional[CommandFunction]
     var run: CommandFunction
+    var post_run: Optional[CommandFunction]
 
     var args: PositionalArgs
     var flags: FlagSet
@@ -31,11 +34,19 @@ struct Command(CollectionElement):
     var parent: Arc[Optional[Self]]
 
     fn __init__(
-        inout self, name: String, description: String, run: CommandFunction
+        inout self, 
+        name: String, 
+        description: String, 
+        run: CommandFunction,
+        pre_run: Optional[CommandFunction] = None,
+        post_run: Optional[CommandFunction] = None,
     ) raises:
         self.name = name
         self.description = description
+
+        self.pre_run = pre_run
         self.run = run
+        self.post_run = post_run
 
         self.args = PositionalArgs()
         self.flags = Flags()
@@ -49,7 +60,10 @@ struct Command(CollectionElement):
     fn __copyinit__(inout self, existing: Self):
         self.name = existing.name
         self.description = existing.description
+
+        self.pre_run = existing.pre_run
         self.run = existing.run
+        self.post_run = existing.post_run
 
         self.args = existing.args
         self.flags = existing.flags
@@ -59,7 +73,10 @@ struct Command(CollectionElement):
     fn __moveinit__(inout self, owned existing: Self):
         self.name = existing.name ^
         self.description = existing.description ^
+
+        self.pre_run = existing.pre_run ^
         self.run = existing.run
+        self.post_run = existing.post_run ^
 
         self.args = existing.args ^
         self.flags = existing.flags ^
@@ -184,7 +201,13 @@ struct Command(CollectionElement):
 
         # Check if the flags are valid
         command.validate_flag_set(command.flags)
-        command.run(Arc(self), remaining_args)
+
+        # Run the function's commands.
+        if command.pre_run:
+            command.pre_run.value()(Arc(command), remaining_args)
+        command.run(Arc(command), remaining_args)
+        if command.post_run:
+            command.post_run.value()(Arc(command), remaining_args)
 
     fn add_flag(inout self, flag: Flag) -> None:
         """Adds a flag to the command's flags.
