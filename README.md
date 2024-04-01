@@ -6,7 +6,7 @@ Inspired by: `Cobra`!
 
 ## Usage
 
-TODO
+WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples and referencing the Cobra documentation. The `external` directory is only for the examples at the moment, so you should be able to build the package by running `mojo package prism`.
 
 ## Examples
 
