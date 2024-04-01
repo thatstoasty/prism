@@ -1,7 +1,7 @@
 from prism import Flag, InputFlags, PositionalArgs, Command
 from prism.vector import to_string
-from .say import build_say_command, build_hello_command, build_goodbye_command
-from .printer import build_printer_command
+from examples.hello_world.say import build_say_command, build_hello_command, build_goodbye_command
+from examples.hello_world.printer import build_printer_command
 from memory._arc import Arc
 
 
