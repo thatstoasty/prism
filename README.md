@@ -104,28 +104,28 @@ Start by navigating to the `nested` example directory.
 Run the example by using the following command, we're not specifying a subcommand so we should be executing the root command.
 
 ```bash
-mojo run nested.mojo
+mojo run examples/nested/nested.mojo
 This is the base command!
 ```
 
 Now try running it with a subcommand.
 
 ```bash
-mojo run nested.mojo get
+mojo run examples/nested/nested.mojo get
 Pass cat or dog as a subcommand, and see what you get!
 ```
 
 Let's follow the suggestion and add the cat subcommand.
 
 ```bash
-mojo run nested.mojo get cat
+mojo run examples/nested/nested.mojo get cat
 Owning a cat can reduce the risk of stroke and heart attack by a third.
 ```
 
 Now try running it with a flag to get up to five facts.
 
 ```bash
-mojo run nested.mojo get cat --count=5
+mojo run examples/nested/nested.mojo get cat --count=5
 Owning a cat can reduce the risk of stroke and heart attack by a third.
 Most cats are lactose intolerant, and milk can cause painful stomach cramps and diarrhea. It's best to forego the milk and just give your cat the standard: clean, cool drinking water.
 Domestic cats spend about 70 percent of the day sleeping and 15 percent of the day grooming.
@@ -137,7 +137,7 @@ Let's try running it from a compiled binary instead. Start by setting your `MOJO
 `export MOJO_PYTHON_LIBRARY=$(which python3)`
 
 Compile the example file into a binary.
-`mojo build nested.mojo`
+`mojo build examples/nested/nested.mojo`
 
 Now run the previous command, but with the binary instead.
 `./nested --count=3`
@@ -186,6 +186,7 @@ Usage information will be printed the console by passing the `--help` flag.
 - It is difficult to have recursive relationships, not passing the command to the arg validator for now.
 - Until `Error` is implements `CollectionElement`, `ArgValidator` functions return a string and throw the error from the caller.
 - Fix naive argument parsing to handle hyphens in the argument itself.
+- Non string flags without a value or default value will fail unless empty string can be converted to that type. Will update flags so they're typed.
 
 ### Bugs
 
