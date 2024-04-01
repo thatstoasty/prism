@@ -1,38 +1,42 @@
-from prism import Flag, InputFlags, PositionalArgs, Command, CommandMap, add_command
+from prism import Flag, InputFlags, PositionalArgs, Command, CommandArc
 from python import Python, PythonObject
-from mist import TerminalStyle
+from examples.printer.mist import TerminalStyle
 
 
-fn printer(args: PositionalArgs, flags: InputFlags) raises -> None:
+fn printer(command: CommandArc, args: PositionalArgs) raises -> None:
     if len(args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    var color = flags.get("color", "")
-    var formatting = flags.get("formatting", "")
+    var flags = command[].get_all_flags()[]
+    var color = flags.get_as_string("color")
+    var formatting = flags.get_as_string("formatting")
     var style = TerminalStyle()
 
-    if color != "":
-        style.color(color)
-    if formatting == "bold":
+    if not color:
+        color = String("")
+    if not formatting:
+        formatting = String("")
+
+    if color.value() != "":
+        style.color(color.value())
+    if formatting.value() == "bold":
         style.bold()
-    elif formatting == "underline":
+    elif formatting.value() == "underline":
         style.underline()
-    elif formatting == "italic":
+    elif formatting.value() == "italic":
         style.italic()
 
     print(style.render(args[0]))
 
 
 fn init() raises -> None:
-    var command_map = CommandMap()
     var root_command = Command(name="printer", description="Base command.", run=printer)
-    root_command.add_flag(Flag("color", "c", "Text color"))
-    root_command.add_flag(Flag("formatting", "f", "Text formatting"))
-    command_map[root_command.name] = root_command
+    root_command.add_flag(name="color", shorthand="c", usage="Text color")
+    root_command.add_flag(name="formatting", shorthand="f", usage="Text formatting")
 
-    root_command.execute(command_map)
+    root_command.execute()
 
 
 fn main() raises -> None:
-    _ = init()
+    init()

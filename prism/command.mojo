@@ -3,11 +3,11 @@ from collections.dict import Dict, KeyElement
 from .flag import (
     Flag,
     Flags,
+    FlagSet,
     InputFlags,
     PositionalArgs,
     StringKey,
-    get_args_and_flags,
-    contains_flag,
+    get_args_and_flags
 )
 from .vector import join, to_string
 from memory._arc import Arc
@@ -25,8 +25,7 @@ struct Command(CollectionElement):
     var run: CommandFunction
 
     var args: PositionalArgs
-    var flags: Flags
-    var input_flags: InputFlags
+    var flags: FlagSet
 
     var children: List[Arc[Self]]
     var parent: Arc[Optional[Self]]
@@ -40,11 +39,9 @@ struct Command(CollectionElement):
 
         self.args = PositionalArgs()
         self.flags = Flags()
-        self.flags.append(
+        self.flags.add_flag(
             Flag("help", "h", "Displays help information about the command.")
         )
-        self.input_flags = InputFlags()
-        get_args_and_flags(self.args, self.input_flags)
 
         self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
@@ -56,7 +53,6 @@ struct Command(CollectionElement):
 
         self.args = existing.args
         self.flags = existing.flags
-        self.input_flags = existing.input_flags
         self.children = existing.children
         self.parent = existing.parent
 
@@ -67,7 +63,6 @@ struct Command(CollectionElement):
 
         self.args = existing.args ^
         self.flags = existing.flags ^
-        self.input_flags = existing.input_flags ^
         self.children = existing.children ^
         self.parent = existing.parent ^
 
@@ -86,7 +81,7 @@ struct Command(CollectionElement):
             + "\nArgs: "
             + to_string(self.args)
             + "\nFlags: "
-            + to_string(self.flags)
+            + str(self.flags)
             + "\nCommands: "
             + to_string(self.children)
             + "\nParent: "
@@ -108,17 +103,17 @@ struct Command(CollectionElement):
             child_commands = child_commands + "  " + child[][] + "\n"
 
         var flags: String = ""
-        for command in self.flags:
+        for command in self.flags.get_flags():
             flags = (
                 flags
                 + "  "
                 + "-"
-                + command[].shorthand
+                + command[][].shorthand
                 + ", "
                 + "--"
-                + command[].name
+                + command[][].name
                 + "    "
-                + command[].usage
+                + command[][].usage
                 + "\n"
             )
 
@@ -126,7 +121,7 @@ struct Command(CollectionElement):
         var usage_arguments: String = " [args]"
         if len(self.children) > 0:
             usage_arguments = " [command]" + usage_arguments
-        if self.flags.size > 0:
+        if len(self.flags) > 0:
             usage_arguments = usage_arguments + " [flags]"
 
         var full_command = self.full_command()
@@ -138,14 +133,14 @@ struct Command(CollectionElement):
         help = help + usage + available_commands + available_flags + note
         print(help)
 
-    fn validate_flags(self, input_flags: InputFlags) raises -> None:
+    fn validate_flag_set(self, flag_set: FlagSet) raises -> None:
         """Validates the flags passed to the command. Raises an error if an invalid flag is passed.
 
         Args:
-            input_flags: The flags passed to the command.
+            flag_set: The flags passed to the command.
         """
-        var length_of_command_flags = self.flags.size
-        var length_of_input_flags = len(input_flags)
+        var length_of_command_flags = len(self.flags)
+        var length_of_input_flags = len(flag_set)
 
         if length_of_input_flags > length_of_command_flags:
             raise Error(
@@ -153,16 +148,17 @@ struct Command(CollectionElement):
                 " command's flags."
             )
 
-        for input_flag in input_flags.items():
-            if not contains_flag(self.flags, str(input_flag[].key)):
-                raise Error("Invalid flags passed to command: " + str(input_flag[].key))
+        for flag in flag_set.flags:
+            if flag[] not in self.flags:
+                raise Error(String("Invalid flags passed to command: ") + flag[].name)
 
-    fn execute(self) raises -> None:
+    fn execute(inout self) raises -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
         """
         # Traverse from the root command through the children to find a match for the current argument.
         # Any additional arguments past the last matched command name are considered arguments.
         # TODO: Tree traversal is new to me, there's probably a better way to do this.
+        get_args_and_flags(self.args, self.flags)
         var command = self
         var children = command.children
         var leftover_args_start_index = 1  # Start at 1 to start slice at the first remaining arg, not the last child command.
@@ -181,13 +177,13 @@ struct Command(CollectionElement):
             remaining_args = self.args[leftover_args_start_index : len(self.args)]
 
         # Check if the help flag was passed
-        for item in self.input_flags.items():
-            if item[].key == "help":
+        for flag in self.flags.get_flags_with_values():
+            if flag[][].name == "help":
                 command.help()
                 return None
 
         # Check if the flags are valid
-        command.validate_flags(self.input_flags)
+        command.validate_flag_set(command.flags)
         command.run(Arc(self), remaining_args)
 
     fn add_flag(inout self, *, name: String, shorthand: String = "", usage: String = "") -> None:
@@ -198,7 +194,15 @@ struct Command(CollectionElement):
             shorthand: The shorthand name of the flag.
             usage: The usage information for the flag.
         """
-        self.flags.append(Flag(name, shorthand, usage))
+        self.flags.add_flag(Flag(name, shorthand, usage))
+    
+    fn get_all_flags(self) -> Arc[FlagSet]:
+        """Returns all flags for the command and persistent flags from its parent.
+
+        Returns:
+            The flags for the command and its children.
+        """
+        return Arc(self.flags)
 
     fn set_parent(inout self, inout parent: Command) -> None:
         """Sets the command's parent attribute to the given parent.

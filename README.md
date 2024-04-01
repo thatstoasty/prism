@@ -4,8 +4,6 @@ A Budding CLI Library! Using this as a way to learn Mojo and to better understan
 
 Inspired by: `Cobra`!
 
-NOTE: May be broken in v24.1.1. Will fix as soon as the ergonomics of self referential structs are improved!
-
 ## Usage
 
 TODO
@@ -182,4 +180,5 @@ Usage information will be printed the console by passing the `--help` flag.
 - Add support for shorthand command flags.
 - Map --help flag to configurable help function.
 - Positional and custom arguments.
+- Figure out how to return mutable references.
   

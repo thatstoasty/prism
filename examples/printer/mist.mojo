@@ -200,45 +200,45 @@ struct Properties:
 
 @value
 struct TerminalStyle:
-    var styles: DynamicVector[String]
+    var styles: List[String]
     var properties: Properties
 
     fn __init__(inout self):
         self.properties = Properties()
-        self.styles = DynamicVector[String]()
+        self.styles = List[String]()
 
     fn color(inout self, color: String) -> None:
-        self.styles.push_back(self.properties.get_color(color))
+        self.styles.append(self.properties.get_color(color))
 
     fn bold(inout self) -> None:
-        self.styles.push_back(self.properties.BOLD)
+        self.styles.append(self.properties.BOLD)
 
     fn italic(inout self) -> None:
-        self.styles.push_back(self.properties.ITALIC)
+        self.styles.append(self.properties.ITALIC)
 
     fn underline(inout self) -> None:
-        self.styles.push_back(self.properties.UNDERLINE)
+        self.styles.append(self.properties.UNDERLINE)
 
     fn blink(inout self) -> None:
-        self.styles.push_back(self.properties.BLINK)
+        self.styles.append(self.properties.BLINK)
 
     fn reverse(inout self) -> None:
-        self.styles.push_back(self.properties.REVERSE)
+        self.styles.append(self.properties.REVERSE)
 
     fn crossout(inout self) -> None:
-        self.styles.push_back(self.properties.CROSSOUT)
+        self.styles.append(self.properties.CROSSOUT)
 
     fn overline(inout self) -> None:
-        self.styles.push_back(self.properties.OVERLINE)
+        self.styles.append(self.properties.OVERLINE)
 
     fn invert(inout self) -> None:
-        self.styles.push_back(self.properties.INVERT)
+        self.styles.append(self.properties.INVERT)
 
     fn background(inout self, color: StringLiteral) -> None:
-        self.styles.push_back(self.properties.get_background_color(color))
+        self.styles.append(self.properties.get_background_color(color))
 
     fn foreground(inout self, color: StringLiteral) -> None:
-        self.styles.push_back(self.properties.get_foreground_color(color))
+        self.styles.append(self.properties.get_foreground_color(color))
 
     fn render(self, input: String) -> String:
         var styling = String("")

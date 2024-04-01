@@ -1,12 +1,13 @@
 from prism import Flag, InputFlags, PositionalArgs, Command
-from say import build_say_command, build_hello_command, build_goodbye_command
-from printer import build_printer_command
+from prism.vector import to_string
+from .say import build_say_command, build_hello_command, build_goodbye_command
+from .printer import build_printer_command
 from memory._arc import Arc
 
 
 fn test(command: Arc[Command], args: PositionalArgs) raises -> None:
-    for item in command[].input_flags.items():
-        print(item[].key, item[].value)
+    for item in command[].get_all_flags()[].flags:
+        print(item[].name, item[].value)
 
 
 fn init() raises -> None:
@@ -14,11 +15,7 @@ fn init() raises -> None:
         name="tones", description="This is a dummy command!", run=test
     )
 
-    root_command.add_flag(
-        name="env", 
-        shorthand="e", 
-        usage="Environment."
-    )
+    root_command.add_flag(name="env", shorthand="e", usage="Environment.")
 
     var say_command = build_say_command()
     var hello_command = build_hello_command()

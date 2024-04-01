@@ -35,6 +35,17 @@ fn to_string(vector: List[Flag]) -> String:
     return result
 
 
+fn to_string(vector: List[Arc[Flag]]) -> String:
+    var result = String("[")
+    for i in range(vector.size):
+        var flag = vector[i]
+        result += str(flag[])
+        if i < vector.size - 1:
+            result += String(", ")
+    result += String("]")
+    return result
+
+
 fn to_string(vector: List[Arc[Command]]) -> String:
     var result = String("[")
     for i in range(vector.size):
