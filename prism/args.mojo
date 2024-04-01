@@ -163,6 +163,6 @@ fn get_args() -> List[String]:
         if i != 0:
             # Argument is not a shorthand or full flag.
             var argument = String(arguments[i])
-            if argument.find("-") == -1 and argument.find("--") == -1:
+            if not (argument.startswith("-", 0, 1)):
                 args.append(argument)
     return args

@@ -307,7 +307,7 @@ fn get_flags(inout flags: FlagSet) raises -> None:
     for i in range(len(arguments)):
         if i != 0:
             var argument = String(arguments[i])
-            if argument.find("--") != -1:
+            if argument.startswith("--", 0, 2):
                 if argument.find("=") != -1:
                     var flag = argument.split("=")
                     var name = flag[0][2:]
@@ -328,7 +328,7 @@ fn get_flags(inout flags: FlagSet) raises -> None:
                             + e
                         )
 
-            elif argument.find("-") != -1:
+            elif argument.startswith("-", 0, 1):
                 if argument.find("=") != -1:
                     var flag = argument.split("=")
                     var shorthand = flag[0][1:]

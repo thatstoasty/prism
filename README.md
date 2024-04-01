@@ -185,7 +185,6 @@ Usage information will be printed the console by passing the `--help` flag.
 - Once we have kwarg unpacking, update add_flag to pass kwargs along.
 - It is difficult to have recursive relationships, not passing the command to the arg validator for now.
 - Until `Error` is implements `CollectionElement`, `ArgValidator` functions return a string and throw the error from the caller.
-- Fix naive argument parsing to handle hyphens in the argument itself.
 - Non string flags without a value or default value will fail unless empty string can be converted to that type. Will update flags so they're typed.
 
 ### Bugs
