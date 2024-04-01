@@ -140,7 +140,7 @@ Compile the example file into a binary.
 `mojo build examples/nested/nested.mojo`
 
 Now run the previous command, but with the binary instead.
-`./nested --count=3`
+`./examples/nested/nested --count=3`
 
 You should get the same result as before! But, what about command information?
 
