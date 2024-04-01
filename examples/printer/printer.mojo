@@ -30,10 +30,28 @@ fn printer(command: CommandArc, args: PositionalArgs) raises -> None:
     print(style.render(args[0]))
 
 
+fn pre_hook(command: CommandArc, args: PositionalArgs) raises -> None:
+    print("Pre-hook executed!")
+
+
+fn post_hook(command: CommandArc, args: PositionalArgs) raises -> None:
+    print("Post-hook executed!")
+
+
 fn init() raises -> None:
-    var root_command = Command(name="printer", description="Base command.", run=printer)
-    root_command.add_flag(Flag(name="color", shorthand="c", usage="Text color", default="blue"))
-    root_command.add_flag(Flag(name="formatting", shorthand="f", usage="Text formatting"))
+    var root_command = Command(
+        name="printer",
+        description="Base command.",
+        pre_run=pre_hook,
+        run=printer,
+        post_run=post_hook,
+    )
+    root_command.add_flag(
+        Flag(name="color", shorthand="c", usage="Text color", default="blue")
+    )
+    root_command.add_flag(
+        Flag(name="formatting", shorthand="f", usage="Text formatting")
+    )
 
     root_command.execute()
 
