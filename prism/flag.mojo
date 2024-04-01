@@ -163,6 +163,12 @@ struct FlagSet(Stringable, Sized):
             result.append(flag[].name)
         return result
     
+    fn get_shorthands(self) -> List[String]:
+        var result = List[String]()
+        for flag in self.flags:
+            result.append(flag[].shorthand)
+        return result
+
     fn add_flag(inout self, flag: Flag) -> None:
         self.flags.append(flag)
     
@@ -170,7 +176,7 @@ struct FlagSet(Stringable, Sized):
     # Calling get_flag, dereferencing, and then setting the value does not persist.
     fn set_flag_value(inout self, name: String, value: String) raises -> None:
         for i in range(len(self.flags)):
-            if self.flags[i].name == name:
+            if self.flags[i].name == name or self.flags[i].shorthand == name:
                 self.flags[i].value = value
                 return
         
@@ -242,6 +248,7 @@ alias InputFlags = Dict[StringKey, String]
 alias PositionalArgs = List[String]
 
 
+# TODO: This parsing is dirty atm, will come back around and clean it up.
 fn get_args_and_flags(
     inout args: PositionalArgs, inout flags: FlagSet
 ) raises -> None:
@@ -264,9 +271,30 @@ fn get_args_and_flags(
                     var name = flag[0][2:]
                     var value = flag[1]
 
+                    if name not in flags:
+                        raise Error("Command does not accept the flag supplied: " + name)
+
                     try:
                         flags.set_flag_value(name, value)
                     except e:
                         raise Error("Command does not accept the flag supplied: " + name + "; " + e)
+
+            elif argument.find("-") != -1:
+                if argument.find("=") != -1:
+                    var flag = argument.split("=")
+                    var shorthand = flag[0][1:]
+                    var value = flag[1]
+
+                    var shorthands = flags.get_shorthands()
+                    for i in range(len(shorthands)):
+                        if shorthands[i] == shorthand:
+                            break
+                        elif i == len(shorthands) - 1:
+                            raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
+
+                    try:
+                        flags.set_flag_value(shorthand, value)
+                    except e:
+                        raise Error("Command does not accept the flag supplied: " + shorthand + "; " + e)
             else:
                 args.append(argument)
