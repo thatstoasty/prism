@@ -1,7 +1,7 @@
 from collections.optional import Optional
 from collections.dict import Dict, KeyElement
 from memory._arc import Arc
-from .flag import Flag, Flags, FlagSet, StringKey, get_flags
+from .flag import Flag, FlagSet, StringKey, get_flags
 
 from .args import arbitrary_args, ArgValidator, get_args
 from .vector import join, to_string, contains
@@ -48,7 +48,7 @@ struct Command(CollectionElement):
 
         self.arg_validator = arbitrary_args
         self.valid_args = valid_args
-        self.flags = Flags()
+        self.flags = FlagSet()
         self.flags.add_flag(
             Flag("help", "h", "Displays help information about the command.")
         )
@@ -76,7 +76,7 @@ struct Command(CollectionElement):
 
         self.arg_validator = arg_validator
         self.valid_args = valid_args
-        self.flags = Flags()
+        self.flags = FlagSet()
         self.flags.add_flag(
             Flag("help", "h", "Displays help information about the command.")
         )

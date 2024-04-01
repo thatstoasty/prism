@@ -64,6 +64,12 @@ fn str_to_float(s: String) raises -> Float64:
 struct FlagSet(Stringable, Sized):
     var flags: List[Flag]
 
+    fn __init__(
+        inout self,
+        flags: List[Flag] = List[Flag](),
+    ) -> None:
+        self.flags = flags
+
     fn __str__(self) -> String:
         var result = String("Flags: [")
         for i in range(self.flags.size):
