@@ -1,9 +1,8 @@
-from prism import Flag, InputFlags, PositionalArgs, Command, CommandArc
-from python import Python, PythonObject
+from prism import Flag, Command, CommandArc, exact_args
 from examples.printer.mist import TerminalStyle
 
 
-fn printer(command: CommandArc, args: PositionalArgs) raises -> None:
+fn printer(command: CommandArc, args: List[String]) raises -> None:
     if len(args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
@@ -30,11 +29,11 @@ fn printer(command: CommandArc, args: PositionalArgs) raises -> None:
     print(style.render(args[0]))
 
 
-fn pre_hook(command: CommandArc, args: PositionalArgs) raises -> None:
+fn pre_hook(command: CommandArc, args: List[String]) raises -> None:
     print("Pre-hook executed!")
 
 
-fn post_hook(command: CommandArc, args: PositionalArgs) raises -> None:
+fn post_hook(command: CommandArc, args: List[String]) raises -> None:
     print("Post-hook executed!")
 
 
@@ -42,6 +41,7 @@ fn init() raises -> None:
     var root_command = Command(
         name="printer",
         description="Base command.",
+        arg_validator=exact_args[1](),
         pre_run=pre_hook,
         run=printer,
         post_run=post_hook,
