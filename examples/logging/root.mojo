@@ -17,7 +17,7 @@ fn handler(command: CommandArc, args: List[String]) raises -> None:
 
 fn init() raises -> None:
     var root_command = Command(
-        name="printer",
+        name="logger",
         description="Base command.",
         run=handler,
         arg_validator=minimum_n_args[1]()

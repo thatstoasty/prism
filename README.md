@@ -175,8 +175,9 @@ Usage information will be printed the console by passing the `--help` flag.
 
 - Introduce persistent flags and commands to `Command` struct
 - Add support for flags that don't need a value set, just passing of a flag. Like `--help`.
-- Map --help flag to configurable help function.
+- Map `--help` flag to configurable help function.
 - Add find suggestion logic to `Command` struct.
+- Enable required flags.
 
 ### Improvements
 
@@ -186,6 +187,7 @@ Usage information will be printed the console by passing the `--help` flag.
 - It is difficult to have recursive relationships, not passing the command to the arg validator for now.
 - Until `Error` is implements `CollectionElement`, `ArgValidator` functions return a string and throw the error from the caller.
 - Non string flags without a value or default value will fail unless empty string can be converted to that type. Will update flags so they're typed.
+- Switch arg parsing algorithm to not require an `=` for flag assignment
 
 ### Bugs
 
