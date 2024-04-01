@@ -15,7 +15,7 @@ fn init() raises -> None:
         name="tones", description="This is a dummy command!", run=test
     )
 
-    root_command.add_flag(name="env", shorthand="e", usage="Environment.")
+    root_command.add_flag(Flag(name="env", shorthand="e", usage="Environment."))
 
     var say_command = build_say_command()
     var hello_command = build_hello_command()

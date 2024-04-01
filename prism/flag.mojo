@@ -102,32 +102,44 @@ struct FlagSet(Stringable, Sized):
     
     fn get_as_string(self, name: String) -> Optional[String]:
         try:
-            var flag = self.get_flag(name)
-            return flag[].value
+            var flag = self.get_flag(name)[]
+            if flag.value == "" and flag.default != "":
+                return flag.default
+            
+            return flag.value
         except e:
             print(e)
             return None
     
     fn get_as_bool(self, name: String) -> Optional[Bool]:
         try:
-            var flag = self.get_flag(name)
-            return string_to_bool(flag[].value)
+            var flag = self.get_flag(name)[]
+            if flag.value == "" and flag.default != "":
+                return string_to_bool(flag.default)
+            
+            return string_to_bool(flag.value)
         except e:
             print(e)
             return None
     
     fn get_as_int(self, name: String) raises -> Optional[Int]:
         try:
-            var flag = self.get_flag(name)
-            return atol(flag[].value)
+            var flag = self.get_flag(name)[]
+            if flag.value == "" and flag.default != "":
+                return atol(flag.default)
+            
+            return atol(flag.value)
         except e:
             print(e)
             return None
     
     fn get_as_float(self, name: String) raises -> Optional[Float64]:
         try:
-            var flag = self.get_flag(name)
-            return str_to_float(flag[].value)
+            var flag = self.get_flag(name)[]
+            if flag.value == "" and flag.default != "":
+                return str_to_float(flag.default)
+            
+            return str_to_float(flag.value)
         except e:
             print(e)
             return None
@@ -175,13 +187,15 @@ struct Flag(CollectionElement, Stringable):
     var shorthand: String
     var usage: String
     var value: String
+    var default: String
 
     fn __init__(
         inout self,
         name: String, 
         shorthand: String, 
         usage: String,
-        value: String = ""
+        value: String = "",
+        default: String = "",
     ) -> None:
         """Initializes a new Flag.
 
@@ -190,11 +204,13 @@ struct Flag(CollectionElement, Stringable):
             shorthand: The shorthand of the flag.
             usage: The usage of the flag.
             value: The value of the flag.
+            default: The default value of the flag.
         """
         self.name = name
         self.shorthand = shorthand
         self.usage = usage
         self.value = value
+        self.default = default
 
     fn __str__(self) -> String:
         return (
@@ -214,7 +230,8 @@ struct Flag(CollectionElement, Stringable):
         return self.name == other.name and \
         self.shorthand == other.shorthand and \
         self.usage == other.usage and \
-        self.value == other.value
+        self.value == other.value and \
+        self.default == other.default
     
     fn __ne__(self, other: Self) -> Bool:
         return not self == other

@@ -32,8 +32,8 @@ fn printer(command: CommandArc, args: PositionalArgs) raises -> None:
 
 fn init() raises -> None:
     var root_command = Command(name="printer", description="Base command.", run=printer)
-    root_command.add_flag(name="color", shorthand="c", usage="Text color")
-    root_command.add_flag(name="formatting", shorthand="f", usage="Text formatting")
+    root_command.add_flag(Flag(name="color", shorthand="c", usage="Text color", default="blue"))
+    root_command.add_flag(Flag(name="formatting", shorthand="f", usage="Text formatting"))
 
     root_command.execute()
 

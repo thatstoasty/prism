@@ -186,15 +186,13 @@ struct Command(CollectionElement):
         command.validate_flag_set(command.flags)
         command.run(Arc(self), remaining_args)
 
-    fn add_flag(inout self, *, name: String, shorthand: String = "", usage: String = "") -> None:
+    fn add_flag(inout self, flag: Flag) -> None:
         """Adds a flag to the command's flags.
 
         Args:
-            name: The name of the flag.
-            shorthand: The shorthand name of the flag.
-            usage: The usage information for the flag.
+            flag: The flag to add to the command.
         """
-        self.flags.add_flag(Flag(name, shorthand, usage))
+        self.flags.add_flag(flag)
     
     fn get_all_flags(self) -> Arc[FlagSet]:
         """Returns all flags for the command and persistent flags from its parent.

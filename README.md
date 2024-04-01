@@ -176,9 +176,8 @@ Usage information will be printed the console by passing the `--help` flag.
 ### Features
 
 - Add pre run, post run, and persistent flags to Command struct
-- Refactor get flag as type functions when commands after the above change.
 - Add support for shorthand command flags.
 - Map --help flag to configurable help function.
 - Positional and custom arguments.
 - Figure out how to return mutable references.
-  
+- Once we have kwarg unpacking, update add_flag to pass kwargs along.
