@@ -1,21 +1,16 @@
 from collections.optional import Optional
 from collections.dict import Dict, KeyElement
-from .flag import (
-    Flag,
-    Flags,
-    FlagSet,
-    InputFlags,
-    PositionalArgs,
-    StringKey,
-    get_args_and_flags
-)
-from .vector import join, to_string
 from memory._arc import Arc
+from .flag import Flag, Flags, FlagSet, InputFlags, StringKey, get_args_and_flags
+
+# from .args import arbitrary_args
+from .vector import join, to_string, contains
+from .fmt import sprintf
 
 
-# alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
-alias CommandFunction = fn(command: Arc[Command], args: PositionalArgs) raises -> None
+alias CommandFunction = fn (command: Arc[Command], args: List[String]) raises -> None
 alias CommandArc = Arc[Command]
+
 
 # TODO: Add pre run, post run, and persistent flags
 @value
@@ -28,16 +23,19 @@ struct Command(CollectionElement):
     var post_run: Optional[CommandFunction]
 
     var args: PositionalArgs
+    var valid_args: List[String]
     var flags: FlagSet
 
     var children: List[Arc[Self]]
     var parent: Arc[Optional[Self]]
 
     fn __init__(
-        inout self, 
-        name: String, 
-        description: String, 
+        inout self,
+        name: String,
+        description: String,
         run: CommandFunction,
+        args: PositionalArgs = arbitrary_args,
+        valid_args: List[String] = List[String](),
         pre_run: Optional[CommandFunction] = None,
         post_run: Optional[CommandFunction] = None,
     ) raises:
@@ -48,7 +46,8 @@ struct Command(CollectionElement):
         self.run = run
         self.post_run = post_run
 
-        self.args = PositionalArgs()
+        self.args = args
+        self.valid_args = valid_args
         self.flags = Flags()
         self.flags.add_flag(
             Flag("help", "h", "Displays help information about the command.")
@@ -66,6 +65,7 @@ struct Command(CollectionElement):
         self.post_run = existing.post_run
 
         self.args = existing.args
+        self.valid_args = existing.valid_args
         self.flags = existing.flags
         self.children = existing.children
         self.parent = existing.parent
@@ -79,6 +79,7 @@ struct Command(CollectionElement):
         self.post_run = existing.post_run ^
 
         self.args = existing.args ^
+        self.valid_args = existing.valid_args ^
         self.flags = existing.flags ^
         self.children = existing.children ^
         self.parent = existing.parent ^
@@ -96,7 +97,7 @@ struct Command(CollectionElement):
             + "\nDescription: "
             + self.description
             + "\nArgs: "
-            + to_string(self.args)
+            + to_string(self.valid_args)
             + "\nFlags: "
             + str(self.flags)
             + "\nCommands: "
@@ -106,7 +107,8 @@ struct Command(CollectionElement):
         )
 
     fn full_command(self) -> String:
-        """Traverses up the parent command tree to build the full command as a string."""
+        """Traverses up the parent command tree to build the full command as a string.
+        """
         if self.parent[]:
             var ancestor: String = self.parent[].value().full_command()
             return ancestor + " " + self.name
@@ -175,12 +177,12 @@ struct Command(CollectionElement):
         # Traverse from the root command through the children to find a match for the current argument.
         # Any additional arguments past the last matched command name are considered arguments.
         # TODO: Tree traversal is new to me, there's probably a better way to do this.
-        get_args_and_flags(self.args, self.flags)
+        var args = get_args_and_flags(self.flags)
         var command = self
         var children = command.children
         var leftover_args_start_index = 1  # Start at 1 to start slice at the first remaining arg, not the last child command.
 
-        for arg in self.args:
+        for arg in args:
             for command_ref in children:
                 if command_ref[][].name == arg[]:
                     command = command_ref[][]
@@ -190,8 +192,8 @@ struct Command(CollectionElement):
 
         # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
         var remaining_args = List[String]()
-        if len(self.args) >= leftover_args_start_index:
-            remaining_args = self.args[leftover_args_start_index : len(self.args)]
+        if len(args) >= leftover_args_start_index:
+            remaining_args = args[leftover_args_start_index : len(args)]
 
         # Check if the help flag was passed
         for flag in self.flags.get_flags_with_values():
@@ -216,7 +218,7 @@ struct Command(CollectionElement):
             flag: The flag to add to the command.
         """
         self.flags.add_flag(flag)
-    
+
     fn get_all_flags(self) -> Arc[FlagSet]:
         """Returns all flags for the command and persistent flags from its parent.
 
@@ -242,3 +244,158 @@ struct Command(CollectionElement):
         self.children.append(Arc(command))
         command.set_parent(self)
 
+
+alias PositionalArgs = fn (
+    command: Arc[Command], args: List[String]
+) escaping -> Optional[Error]
+
+
+fn no_args(command: Arc[Command], args: List[String]) -> Optional[Error]:
+    """Returns an error if the command has any arguments.
+
+    Args:
+        command: The command to check.
+        args: The arguments to check.
+    """
+    if len(args) > 0:
+        return Error("Command " + command[].name + "does not take any arguments")
+    return None
+
+
+fn valid_args(command: Arc[Command], args: List[String]) -> Optional[Error]:
+    """Returns an error if threre are any positional args that are not in the command's valid_args.
+
+    Args:
+        command: The command to check.
+        args: The arguments to check.
+    """
+    if len(command[].valid_args) > 0:
+        for arg in args:
+            if not contains(command[].valid_args, arg[]):
+                return Error(
+                    "Invalid argument " + arg[] + " for command " + command[].name
+                )
+    return None
+
+
+fn arbitrary_args(command: Arc[Command], args: List[String]) -> Optional[Error]:
+    """Never returns an error.
+
+    Args:
+        command: The command to check.
+        args: The arguments to check.
+    """
+    return None
+
+
+fn minimum_n_args[n: Int]() -> PositionalArgs:
+    """Returns an error if there is not at least n arguments.
+
+    Params:
+        n: The minimum number of arguments.
+
+    Returns:
+        A function that checks the number of arguments.
+    """
+
+    fn less_than_n_args(command: Arc[Command], args: List[String]) -> Optional[Error]:
+        if len(args) < n:
+            return Error(
+                sprintf(
+                    "Command %s accepts at least %d arguments. Received: %d.",
+                    command[].name,
+                    n,
+                    len(args),
+                )
+            )
+        return None
+
+    return less_than_n_args
+
+
+fn maximumn_args[n: Int]() -> PositionalArgs:
+    """Returns an error if there are more than n arguments.
+
+    Params:
+        n: The maximum number of arguments.
+
+    Returns:
+        A function that checks the number of arguments.
+    """
+
+    fn more_than_n_args(command: Arc[Command], args: List[String]) -> Optional[Error]:
+        if len(args) > n:
+            return Error(
+                "Command "
+                + command[].name
+                + " accepts at most "
+                + n
+                + " arguments. Received: "
+                + len(args)
+            )
+        return None
+
+    return more_than_n_args
+
+
+fn exact_args[n: Int]() -> PositionalArgs:
+    """Returns an error if there are not exactly n arguments.
+
+    Params:
+        n: The number of arguments.
+
+    Returns:
+        A function that checks the number of arguments.
+    """
+
+    fn exactly_n_args(command: Arc[Command], args: List[String]) -> Optional[Error]:
+        if len(args) == n:
+            return Error(
+                "Command "
+                + command[].name
+                + " accepts exactly "
+                + n
+                + " arguments. Received: "
+                + len(args)
+            )
+        return None
+
+    return exactly_n_args
+
+
+fn range_args[minimum: Int, maximum: Int]() -> PositionalArgs:
+    """Returns an error if there are not exactly n arguments.
+
+    Params:
+        minimum: The minimum number of arguments.
+        maximum: The maximum number of arguments.
+
+    Returns:
+        A function that checks the number of arguments.
+    """
+
+    fn range_n_args(command: Arc[Command], args: List[String]) -> Optional[Error]:
+        if len(args) < minimum or len(args) > maximum:
+            return Error(
+                "Command "
+                + command[].name
+                + " accepts between "
+                + str(minimum)
+                + "and "
+                + str(maximum)
+                + " arguments. Received: "
+                + len(args)
+            )
+        return None
+
+    return range_n_args
+
+
+# fn match_all[*arg_validators: PositionalArgs]() -> PositionalArgs:
+#     fn match_all_args(command: Arc[Command], args: List[String]) -> Optional[Error]:
+#         for arg_validator in arg_validators:
+#             var error = arg_validator(command, args):
+#             if error:
+#                 return error
+#         return None
+#     return match_all_args

@@ -181,3 +181,4 @@ Usage information will be printed the console by passing the `--help` flag.
 - Positional and custom arguments.
 - Figure out how to return mutable references.
 - Once we have kwarg unpacking, update add_flag to pass kwargs along.
+- Add find suggestion logic to `Command` struct.
