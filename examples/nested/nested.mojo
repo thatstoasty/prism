@@ -1,16 +1,16 @@
-from prism import Flag, InputFlags, PositionalArgs, Command, CommandArc
+from prism import Flag, Command, CommandArc
 from python import Python, PythonObject
 
 
-fn base(command: CommandArc, args: PositionalArgs) raises -> None:
+fn base(command: CommandArc, args: List[String]) raises -> None:
     print("This is the base command!")
 
 
-fn print_information(command: CommandArc, args: PositionalArgs) raises -> None:
+fn print_information(command: CommandArc, args: List[String]) raises -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
 
 
-fn get_cat_fact(command: CommandArc, args: PositionalArgs) raises -> None:
+fn get_cat_fact(command: CommandArc, args: List[String]) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = "https://cat-fact.herokuapp.com/facts/"
@@ -31,7 +31,7 @@ fn get_cat_fact(command: CommandArc, args: PositionalArgs) raises -> None:
         raise Error("Request failed!")
 
 
-fn get_dog_breeds(command: CommandArc, args: PositionalArgs) raises -> None:
+fn get_dog_breeds(command: CommandArc, args: List[String]) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = "https://dog.ceo/api/breeds/list/all"

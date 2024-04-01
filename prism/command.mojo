@@ -1,23 +1,18 @@
 from collections.optional import Optional
 from collections.dict import Dict, KeyElement
-from .flag import (
-    Flag,
-    Flags,
-    FlagSet,
-    InputFlags,
-    PositionalArgs,
-    StringKey,
-    get_args_and_flags
-)
-from .vector import join, to_string
 from memory._arc import Arc
+from .flag import Flag, Flags, FlagSet, StringKey, get_flags
+
+from .args import arbitrary_args, ArgValidator, get_args
+from .vector import join, to_string, contains
+from .fmt import sprintf
 
 
-# alias CommandFunction = fn (args: PositionalArgs, flags: InputFlags) raises -> None
-alias CommandFunction = fn(command: Arc[Command], args: PositionalArgs) raises -> None
 alias CommandArc = Arc[Command]
+alias CommandFunction = fn (command: Arc[Command], args: List[String]) raises -> None
 
-# TODO: Add pre run, post run, and persistent flags
+
+# TODO: Add persistent flags
 @value
 struct Command(CollectionElement):
     var name: String
@@ -27,20 +22,23 @@ struct Command(CollectionElement):
     var run: CommandFunction
     var post_run: Optional[CommandFunction]
 
-    var args: PositionalArgs
+    var arg_validator: ArgValidator
+    var valid_args: List[String]
     var flags: FlagSet
 
     var children: List[Arc[Self]]
     var parent: Arc[Optional[Self]]
 
     fn __init__(
-        inout self, 
-        name: String, 
-        description: String, 
+        inout self,
+        name: String,
+        description: String,
         run: CommandFunction,
+        # arg_validator: ArgValidator = arbitrary_args,
+        valid_args: List[String] = List[String](),
         pre_run: Optional[CommandFunction] = None,
         post_run: Optional[CommandFunction] = None,
-    ) raises:
+    ):
         self.name = name
         self.description = description
 
@@ -48,7 +46,36 @@ struct Command(CollectionElement):
         self.run = run
         self.post_run = post_run
 
-        self.args = PositionalArgs()
+        self.arg_validator = arbitrary_args
+        self.valid_args = valid_args
+        self.flags = Flags()
+        self.flags.add_flag(
+            Flag("help", "h", "Displays help information about the command.")
+        )
+
+        self.children = List[Arc[Self]]()
+        self.parent = Arc[Optional[Command]](None)
+
+    # TODO: Why do we have 2 almost indentical init functions? Setting a default arg_validator value, breaks the compiler as of 24.2.
+    fn __init__(
+        inout self,
+        name: String,
+        description: String,
+        run: CommandFunction,
+        arg_validator: ArgValidator,
+        valid_args: List[String] = List[String](),
+        pre_run: Optional[CommandFunction] = None,
+        post_run: Optional[CommandFunction] = None,
+    ):
+        self.name = name
+        self.description = description
+
+        self.pre_run = pre_run
+        self.run = run
+        self.post_run = post_run
+
+        self.arg_validator = arg_validator
+        self.valid_args = valid_args
         self.flags = Flags()
         self.flags.add_flag(
             Flag("help", "h", "Displays help information about the command.")
@@ -65,7 +92,8 @@ struct Command(CollectionElement):
         self.run = existing.run
         self.post_run = existing.post_run
 
-        self.args = existing.args
+        self.arg_validator = existing.arg_validator
+        self.valid_args = existing.valid_args
         self.flags = existing.flags
         self.children = existing.children
         self.parent = existing.parent
@@ -78,7 +106,8 @@ struct Command(CollectionElement):
         self.run = existing.run
         self.post_run = existing.post_run ^
 
-        self.args = existing.args ^
+        self.arg_validator = existing.arg_validator ^
+        self.valid_args = existing.valid_args ^
         self.flags = existing.flags ^
         self.children = existing.children ^
         self.parent = existing.parent ^
@@ -96,7 +125,7 @@ struct Command(CollectionElement):
             + "\nDescription: "
             + self.description
             + "\nArgs: "
-            + to_string(self.args)
+            + to_string(self.valid_args)
             + "\nFlags: "
             + str(self.flags)
             + "\nCommands: "
@@ -106,7 +135,8 @@ struct Command(CollectionElement):
         )
 
     fn full_command(self) -> String:
-        """Traverses up the parent command tree to build the full command as a string."""
+        """Traverses up the parent command tree to build the full command as a string.
+        """
         if self.parent[]:
             var ancestor: String = self.parent[].value().full_command()
             return ancestor + " " + self.name
@@ -175,12 +205,15 @@ struct Command(CollectionElement):
         # Traverse from the root command through the children to find a match for the current argument.
         # Any additional arguments past the last matched command name are considered arguments.
         # TODO: Tree traversal is new to me, there's probably a better way to do this.
-        get_args_and_flags(self.args, self.flags)
+        var args = get_args()
+        var error_message = self.arg_validator(args)
+        if error_message:
+            raise Error(error_message.value())
         var command = self
         var children = command.children
-        var leftover_args_start_index = 1  # Start at 1 to start slice at the first remaining arg, not the last child command.
+        var leftover_args_start_index = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
 
-        for arg in self.args:
+        for arg in args:
             for command_ref in children:
                 if command_ref[][].name == arg[]:
                     command = command_ref[][]
@@ -190,11 +223,14 @@ struct Command(CollectionElement):
 
         # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
         var remaining_args = List[String]()
-        if len(self.args) >= leftover_args_start_index:
-            remaining_args = self.args[leftover_args_start_index : len(self.args)]
+        if len(args) >= leftover_args_start_index:
+            remaining_args = args[leftover_args_start_index : len(args)]
+
+        # Get the flags for the command to be executed.
+        get_flags(command.flags)
 
         # Check if the help flag was passed
-        for flag in self.flags.get_flags_with_values():
+        for flag in command.flags.get_flags_with_values():
             if flag[][].name == "help":
                 command.help()
                 return None
@@ -216,7 +252,7 @@ struct Command(CollectionElement):
             flag: The flag to add to the command.
         """
         self.flags.add_flag(flag)
-    
+
     fn get_all_flags(self) -> Arc[FlagSet]:
         """Returns all flags for the command and persistent flags from its parent.
 
@@ -241,4 +277,3 @@ struct Command(CollectionElement):
         """
         self.children.append(Arc(command))
         command.set_parent(self)
-

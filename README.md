@@ -15,19 +15,19 @@ Try out the `nested` example in the examples directory!
 Here's the script copied over from the main file.
 
 ```py
-from prism import Flag, InputFlags, PositionalArgs, Command, CommandMap, add_command
+from prism import Flag, InputFlags, ArgValidator, Command, CommandMap, add_command
 from python import Python, PythonObject
 
 
-fn base(args: PositionalArgs, flags: InputFlags) raises -> None:
+fn base(args: ArgValidator, flags: InputFlags) raises -> None:
     print("This is the base command!")
 
 
-fn print_information(args: PositionalArgs, flags: InputFlags) raises -> None:
+fn print_information(args: ArgValidator, flags: InputFlags) raises -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
 
 
-fn get_cat_fact(args: PositionalArgs, flags: InputFlags) raises -> None:
+fn get_cat_fact(args: ArgValidator, flags: InputFlags) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = 'https://cat-fact.herokuapp.com/facts/'
@@ -46,7 +46,7 @@ fn get_cat_fact(args: PositionalArgs, flags: InputFlags) raises -> None:
         raise Error('Request failed!')
 
 
-fn get_dog_breeds(args: PositionalArgs, flags: InputFlags) raises -> None:
+fn get_dog_breeds(args: ArgValidator, flags: InputFlags) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = 'https://dog.ceo/api/breeds/list/all'
@@ -178,6 +178,18 @@ Usage information will be printed the console by passing the `--help` flag.
 - Introduce persistent flags and commands to `Command` struct
 - Add support for flags that don't need a value set, just passing of a flag. Like `--help`.
 - Map --help flag to configurable help function.
-- Positional and custom arguments.
+- Add find suggestion logic to `Command` struct.
+
+### Improvements
+
+- Tree traversal improvements.
 - Figure out how to return mutable references.
 - Once we have kwarg unpacking, update add_flag to pass kwargs along.
+- It is difficult to have recursive relationships, not passing the command to the arg validator for now.
+- Until `Error` is implements `CollectionElement`, `ArgValidator` functions return a string and throw the error from the caller.
+- Fix naive argument parsing to handle hyphens in the argument itself.
+
+### Bugs
+
+- Using `CommandArc` instead of `Arc[Command]` works for `Command.run` functions. But using `Arc[Command]` causes a recursive relationship error?
+- `Command` has 2 almost indentical init functions because setting a default `arg_validator` value, breaks the compiler as of 24.2.
