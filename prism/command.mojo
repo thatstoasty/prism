@@ -201,7 +201,13 @@ struct Command(CollectionElement):
 
         # Check if the flags are valid
         command.validate_flag_set(command.flags)
-        command.run(Arc(self), remaining_args)
+
+        # Run the function's commands.
+        if command.pre_run:
+            command.pre_run.value()(Arc(command), remaining_args)
+        command.run(Arc(command), remaining_args)
+        if command.post_run:
+            command.post_run.value()(Arc(command), remaining_args)
 
     fn add_flag(inout self, flag: Flag) -> None:
         """Adds a flag to the command's flags.
