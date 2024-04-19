@@ -40,11 +40,7 @@ struct TimeZone(Stringable):
         if utc_str[p] == "+" or utc_str[p] == "-":
             p += 1
 
-        if (
-            len(utc_str) < p + 2
-            or not isdigit(ord(utc_str[p]))
-            or not isdigit(ord(utc_str[p + 1]))
-        ):
+        if len(utc_str) < p + 2 or not isdigit(ord(utc_str[p])) or not isdigit(ord(utc_str[p + 1])):
             raise Error("utc_str format is invalid")
         var hours: Int = atol(utc_str[p : p + 2])
         p += 2

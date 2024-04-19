@@ -1,5 +1,6 @@
 from sys import exit
 
+
 fn panic[T: Stringable](message: T, code: Int = 1):
     """Panics the program with the given message and exit code.
 

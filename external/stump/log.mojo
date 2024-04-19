@@ -97,9 +97,9 @@ struct BoundLogger[L: Logger]():
         styles: fn () -> Styles = get_default_styles,
         apply_styles: Bool = True,
     ):
-        self._logger = logger ^
+        self._logger = logger^
         self.name = name
-        self.context = context ^
+        self.context = context^
         self.level = self._logger.get_level()
         self.formatter = formatter
         self.processors = processors
@@ -107,10 +107,10 @@ struct BoundLogger[L: Logger]():
         self.apply_styles = apply_styles
 
     fn __moveinit__(inout self, owned other: BoundLogger[L]):
-        self._logger = other._logger ^
+        self._logger = other._logger^
         self.name = other.name
         self.level = other.level
-        self.context = other.context ^
+        self.context = other.context^
         self.formatter = other.formatter
         self.processors = other.processors
         self.styles = other.styles
@@ -174,9 +174,7 @@ struct BoundLogger[L: Logger]():
             new_context[key] = value
         return new_context
 
-    fn _transform_message(
-        self, message: String, level: Int, message_kvs: Dict[String, ValidArgType]
-    ) -> String:
+    fn _transform_message(self, message: String, level: Int, message_kvs: Dict[String, ValidArgType]) -> String:
         """Copy context, merge in new keys, apply processors, format message and return.
 
         Args:
@@ -318,7 +316,7 @@ struct BoundLogger[L: Logger]():
 
     fn bind(inout self, context: Context):
         """Bind a new key value pair to the logger context.
-        NOT USABLE until Mojo adds support for file level scope. 
+        NOT USABLE until Mojo adds support for file level scope.
         Usable if the logger is built at runtime as a variable, but not as an alias.
 
         Args:

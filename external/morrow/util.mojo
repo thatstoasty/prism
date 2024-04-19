@@ -44,9 +44,7 @@ def normalize_timestamp(timestamp: Float64) -> Float64:
         elif timestamp < MAX_TIMESTAMP_US:
             timestamp /= 1_000_000
         else:
-            raise Error(
-                "The specified timestamp " + String(timestamp) + "is too large."
-            )
+            raise Error("The specified timestamp " + String(timestamp) + "is too large.")
     return timestamp
 
 

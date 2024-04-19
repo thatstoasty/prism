@@ -74,9 +74,7 @@ struct TimeDelta(Stringable):
 
     fn total_seconds(self) -> Float64:
         """Total seconds in the duration."""
-        return (
-            (self.days * 86400 + self.seconds) * 10**6 + self.microseconds
-        ) / 10**6
+        return ((self.days * 86400 + self.seconds) * 10**6 + self.microseconds) / 10**6
 
     @always_inline
     fn __add__(self, other: Self) -> Self:
@@ -134,11 +132,7 @@ struct TimeDelta(Stringable):
         return Self(0, 0, r)
 
     fn __eq__(self, other: Self) -> Bool:
-        return (
-            self.days == other.days
-            and self.seconds == other.seconds
-            and self.microseconds == other.microseconds
-        )
+        return self.days == other.days and self.seconds == other.seconds and self.microseconds == other.microseconds
 
     @always_inline
     fn __le__(self, other: Self) -> Bool:
@@ -147,10 +141,7 @@ struct TimeDelta(Stringable):
         elif self.days == other.days:
             if self.seconds < other.seconds:
                 return True
-            elif (
-                self.seconds == other.seconds
-                and self.microseconds <= other.microseconds
-            ):
+            elif self.seconds == other.seconds and self.microseconds <= other.microseconds:
                 return True
         return False
 
@@ -161,9 +152,7 @@ struct TimeDelta(Stringable):
         elif self.days == other.days:
             if self.seconds < other.seconds:
                 return True
-            elif (
-                self.seconds == other.seconds and self.microseconds < other.microseconds
-            ):
+            elif self.seconds == other.seconds and self.microseconds < other.microseconds:
                 return True
         return False
 

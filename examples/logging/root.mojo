@@ -17,14 +17,9 @@ fn handler(command: CommandArc, args: List[String]) raises -> None:
 
 fn init() raises -> None:
     var root_command = Command(
-        name="logger",
-        description="Base command.",
-        run=handler,
-        arg_validator=minimum_n_args[1]()
+        name="logger", description="Base command.", run=handler, arg_validator=minimum_n_args[1]()
     )
-    root_command.add_flag(
-        Flag(name="type", shorthand="t", usage="Formatting type: [json, custom]", default="json")
-    )
+    root_command.add_flag(Flag(name="type", shorthand="t", usage="Formatting type: [json, custom]", default="json"))
 
     root_command.execute()
 

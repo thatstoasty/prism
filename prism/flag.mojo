@@ -11,7 +11,7 @@ struct StringKey(KeyElement):
     var s: String
 
     fn __init__(inout self, owned s: String):
-        self.s = s ^
+        self.s = s^
 
     fn __init__(inout self, s: StringLiteral):
         self.s = String(s)
@@ -184,8 +184,7 @@ struct FlagSet(Stringable, Sized):
         return result
 
     fn get_flags_with_values(self) -> List[Arc[Flag]]:
-        """Returns a list of references to all flags in the flag set that have values set.
-        """
+        """Returns a list of references to all flags in the flag set that have values set."""
         var result = List[Arc[Flag]]()
         for flag in self.flags:
             if flag[].value != "":
@@ -314,19 +313,12 @@ fn get_flags(inout flags: FlagSet) raises -> None:
                     var value = flag[1]
 
                     if name not in flags:
-                        raise Error(
-                            "Command does not accept the flag supplied: " + name
-                        )
+                        raise Error("Command does not accept the flag supplied: " + name)
 
                     try:
                         flags.set_flag_value(name, value)
                     except e:
-                        raise Error(
-                            "Command does not accept the flag supplied: "
-                            + name
-                            + "; "
-                            + e
-                        )
+                        raise Error("Command does not accept the flag supplied: " + name + "; " + e)
 
             elif argument.startswith("-", 0, 1):
                 if argument.find("=") != -1:
@@ -339,17 +331,9 @@ fn get_flags(inout flags: FlagSet) raises -> None:
                         if shorthands[i] == shorthand:
                             break
                         elif i == len(shorthands) - 1:
-                            raise Error(
-                                "Command does not accept the shorthand flag supplied: "
-                                + shorthand
-                            )
+                            raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
 
                     try:
                         flags.set_flag_value(shorthand, value)
                     except e:
-                        raise Error(
-                            "Command does not accept the flag supplied: "
-                            + shorthand
-                            + "; "
-                            + e
-                        )
+                        raise Error("Command does not accept the flag supplied: " + shorthand + "; " + e)

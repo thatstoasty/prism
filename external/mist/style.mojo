@@ -28,9 +28,7 @@ alias escape = chr(27)  # Escape character
 alias bel = "\a"  # Bell
 alias csi = escape + "["  # Control Sequence Introducer
 alias osc = escape + "]"  # Operating System Command
-alias st = escape + chr(
-    92
-)  # String Terminator - Might not work, haven't tried. 92 should be a raw backslash
+alias st = escape + chr(92)  # String Terminator - Might not work, haven't tried. 92 should be a raw backslash
 
 # clear terminal and return cursor to top left
 alias clear = escape + "[2J" + escape + "[H"
@@ -94,8 +92,7 @@ struct TerminalStyle:
         return Self(styles=styles)
 
     fn copy(self) -> Self:
-        """Creates a deepcopy of Self and returns that. Immutability instead of mutating the object.
-        """
+        """Creates a deepcopy of Self and returns that. Immutability instead of mutating the object."""
         return Self(self.profile, styles=self.get_styles())
 
     fn _add_style(self, style: String) -> Self:
@@ -133,8 +130,7 @@ struct TerminalStyle:
         return self._add_style(blink)
 
     fn reverse(self) -> Self:
-        """Makes the text have reversed background and foreground colors when rendered.
-        """
+        """Makes the text have reversed background and foreground colors when rendered."""
         return self._add_style(reverse)
 
     fn crossout(self) -> Self:
