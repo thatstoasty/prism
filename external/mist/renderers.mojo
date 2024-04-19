@@ -13,7 +13,8 @@ alias GRAY = "#B9BFCA"
 
 # Convenience functions for quick style application
 fn as_color(text: String, color: String) -> String:
-    return TerminalStyle.new().foreground(color).render(text)
+    var profile = Profile()
+    return TerminalStyle.new().foreground(profile.color(color)).render(text)
 
 
 fn red(text: String) -> String:
@@ -52,7 +53,8 @@ fn gray(text: String) -> String:
 
 
 fn with_background_color(text: String, color: String) -> String:
-    return TerminalStyle.new().background(color).render(text)
+    var profile = Profile()
+    return TerminalStyle.new().background(profile.color(color)).render(text)
 
 
 fn red_background(text: String) -> String:

@@ -43,16 +43,21 @@ struct Styles:
 fn get_default_styles() -> Styles:
     # Log level styles, by default just set colors
     var levels = Sections()
-    levels["FATAL"] = TerminalStyle.new(Profile(TRUE_COLOR)).foreground("#d4317d")
-    levels["ERROR"] = TerminalStyle.new(Profile(TRUE_COLOR)).foreground("#d48244")
-    levels["INFO"] = TerminalStyle.new(Profile(TRUE_COLOR)).foreground("#13ed84")
-    levels["WARN"] = TerminalStyle.new(Profile(TRUE_COLOR)).foreground("#decf2f")
-    levels["DEBUG"] = TerminalStyle.new(Profile(TRUE_COLOR)).foreground("#bd37db")
+    levels["FATAL"] = TerminalStyle.new().foreground("#d4317d")
+    levels["ERROR"] = TerminalStyle.new().foreground("#d48244")
+    levels["INFO"] = TerminalStyle.new().foreground("#13ed84")
+    levels["WARN"] = TerminalStyle.new().foreground("#decf2f")
+    levels["DEBUG"] = TerminalStyle.new().foreground("#bd37db")
 
     return Styles(
+        timestamp=TerminalStyle.new(),
+        message=TerminalStyle.new(),
+        key=TerminalStyle.new().faint(),
+        value=TerminalStyle.new(),
+        separator=TerminalStyle.new().faint(),
         levels=levels,
-        key=TerminalStyle.new(Profile(TRUE_COLOR)).faint(),
-        separator=TerminalStyle.new(Profile(TRUE_COLOR)).faint(),
+        keys=Dict[StringKey, TerminalStyle](),
+        values=Dict[StringKey, TerminalStyle](),
     )
 
 

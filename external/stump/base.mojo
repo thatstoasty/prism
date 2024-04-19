@@ -1,6 +1,5 @@
 from collections.dict import Dict, KeyElement, DictEntry
 
-
 alias FATAL = 0
 alias ERROR = 1
 alias WARN = 2
@@ -14,7 +13,6 @@ alias LEVEL_MAPPING = List[String](
     "INFO",
     "DEBUG",
 )
-
 
 @value
 struct StringKey(KeyElement):

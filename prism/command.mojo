@@ -13,6 +13,7 @@ alias CommandFunction = fn (command: Arc[Command], args: List[String]) raises ->
 
 
 # TODO: Add persistent flags
+# TODO: For parent Arc[Optional[Self]] works but Optional[Arc[Self]] causes compiler issues.
 @value
 struct Command(CollectionElement):
     var name: String

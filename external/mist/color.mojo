@@ -1,6 +1,6 @@
 from collections.dict import Dict, KeyElement
 from utils.variant import Variant
-from external.hue import RGB
+import external.hue
 from external.hue.math import max_float64
 from .ansi_colors import ANSI_HEX_CODES
 
@@ -10,7 +10,7 @@ struct StringKey(KeyElement):
     var s: String
 
     fn __init__(inout self, owned s: String):
-        self.s = s ^
+        self.s = s^
 
     fn __init__(inout self, s: StringLiteral):
         self.s = String(s)
@@ -96,9 +96,8 @@ struct ANSIColor(Color, Stringable):
         """String returns the ANSI Sequence for the color and the text."""
         return ANSI_HEX_CODES[self.value]
 
-    fn convert_to_rgb(self) -> RGB:
-        """Converts an ANSI color to RGB by looking up the hex value and converting it.
-        """
+    fn convert_to_rgb(self) -> hue.Color:
+        """Converts an ANSI color to hue.Color by looking up the hex value and converting it."""
         var hex: String = ANSI_HEX_CODES[self.value]
 
         return hex_to_rgb(hex)
@@ -132,9 +131,8 @@ struct ANSI256Color(Color, Stringable):
         """String returns the ANSI Sequence for the color and the text."""
         return ANSI_HEX_CODES[self.value]
 
-    fn convert_to_rgb(self) -> RGB:
-        """Converts an ANSI color to RGB by looking up the hex value and converting it.
-        """
+    fn convert_to_rgb(self) -> hue.Color:
+        """Converts an ANSI color to hue.Color by looking up the hex value and converting it."""
         var hex: String = ANSI_HEX_CODES[self.value]
 
         return hex_to_rgb(hex)
@@ -182,22 +180,22 @@ fn convert_base16_to_base10(value: String) -> Int:
     # We assume mapping.find always returns a value considering the value passed in is a valid hex value
     # and the mapping has all the values.
     var length = len(value)
-    var sum: Int = 0
+    var total: Int = 0
     for i in range(length - 1, -1, -1):
         var exponent = length - 1 - i
-        sum += mapping.find(value[i]).value() * (16**exponent)
+        total += mapping.find(value[i]).value() * (16**exponent)
 
-    return sum
+    return total
 
 
-fn hex_to_rgb(value: String) -> RGB:
-    """Converts a hex color to RGB.
+fn hex_to_rgb(value: String) -> hue.Color:
+    """Converts a hex color to hue.Color.
 
     Args:
         value: Hex color value.
 
     Returns:
-        RGB color.
+        hue.Color color.
     """
     var hex = value[1:]
     var indices = List[Int](0, 2, 4)
@@ -205,7 +203,7 @@ fn hex_to_rgb(value: String) -> RGB:
     for i in indices:
         results.append(convert_base16_to_base10(hex[i[] : i[] + 2]))
 
-    return RGB(results[0], results[1], results[2])
+    return hue.Color(results[0], results[1], results[2])
 
 
 @value
@@ -235,18 +233,10 @@ struct RGBColor(Color):
         if is_background:
             prefix = background
 
-        return (
-            prefix
-            + String(";2;")
-            + String(int(rgb.R))
-            + ";"
-            + String(int(rgb.G))
-            + ";"
-            + String(int(rgb.B))
-        )
+        return prefix + String(";2;") + String(int(rgb.R)) + ";" + String(int(rgb.G)) + ";" + String(int(rgb.B))
 
-    fn convert_to_rgb(self) -> RGB:
-        """Converts the Hex code value to RGB."""
+    fn convert_to_rgb(self) -> hue.Color:
+        """Converts the Hex code value to hue.Color."""
         return hex_to_rgb(self.value)
 
 
@@ -284,11 +274,11 @@ fn v2ci(value: Float64) -> Int:
         return int((value - 35) / 40)
 
 
-fn hex_to_ansi256(color: RGB) -> ANSI256Color:
+fn hex_to_ansi256(color: hue.Color) -> ANSI256Color:
     """Converts a hex code to a ANSI256 color.
 
     Args:
-        color: RGB hex code.
+        color: hue.Color hex code.
     """
     # Calculate the nearest 0-based color index at 16..231
     # Originally had * 255 in each of these
@@ -314,8 +304,8 @@ fn hex_to_ansi256(color: RGB) -> ANSI256Color:
 
     # Return the one which is nearer to the original input rgb value
     # Originall had / 255.0 for r, g, and b in each of these
-    var c2 = RGB(cr, cg, cb)
-    var g2 = RGB(gv, gv, gv)
+    var c2 = hue.Color(cr, cg, cb)
+    var g2 = hue.Color(gv, gv, gv)
     var color_dist = color.distance_HSLuv(c2)
     var gray_dist = color.distance_HSLuv(g2)
 
