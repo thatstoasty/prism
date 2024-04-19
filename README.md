@@ -181,6 +181,7 @@ Usage information will be printed the console by passing the `--help` flag.
 
 ### Improvements
 
+- Help flags should be processed first, currently it's being checked after validating args and other flags.
 - Tree traversal improvements.
 - Figure out how to return mutable references.
 - Once we have kwarg unpacking, update add_flag to pass kwargs along.
