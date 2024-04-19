@@ -1,24 +1,53 @@
 from external.gojo.strings import StringBuilder
-from external.gojo.fmt import sprintf
+from external.gojo.fmt.fmt import sprintf_str, sprintf
 from .base import Context, ContextPair, LEVEL_MAPPING
 from .style import Styles
-
 
 
 # Formatter options
 alias Formatter = UInt8
 alias DEFAULT_FORMAT: Formatter = 0
 alias JSON_FORMAT: Formatter = 1
+alias LOGFMT_FORMAT: Formatter = 2
+
+
+fn join(separator: String, iterable: List[String]) raises -> String:
+    var result: String = ""
+    for i in range(iterable.__len__()):
+        result += iterable[i]
+        if i != iterable.__len__() - 1:
+            result += separator
+    return result
 
 
 fn default_formatter(context: Context) raises -> String:
+    """Default formatter for log messages.
+
+    Args:
+        context: The context to format.
+
+    Returns:
+        The formatted log message.
+    """
+    # TODO: Probably need a better algorithm for this formatting process.
     var new_context = Context(context)
-    var timestamp = new_context.pop("timestamp")
-    var level = new_context.pop("level")
-    var message = new_context.pop("message")
+    var format = List[String]()
+    var args = List[String]()
+
+    # timestamp then level, then message, then other context keys
+    if "timestamp" in new_context:
+        args.append(new_context.pop("timestamp"))
+        format.append("%s")
+
+    if "level" in new_context:
+        args.append(new_context.pop("level"))
+        format.append("%s")
+
+    args.append(new_context.pop("message"))
+    format.append("%s")
 
     # Add the rest of the context delimited by a space.
-    var delimiter = " "
+    var delimiter: String = " "
     var builder = StringBuilder()
     _ = builder.write_string(delimiter)
     var pair_count = new_context.size
@@ -30,17 +59,10 @@ fn default_formatter(context: Context) raises -> String:
             _ = builder.write_string(delimiter)
         current_index += 1
 
-    # timestamp then level, then message, then other context keys
-    return sprintf("%s %s %s", timestamp, level, message) + str(builder)
+    return sprintf_str(join(" ", format), args=args) + str(builder)
 
 
 fn json_formatter(context: Context) raises -> String:
-    var new_context = Context(context)
-    var timestamp = new_context.pop("timestamp")
-    var level = new_context.pop("level")
-    var message = new_context.pop("message")
-
-    # timestamp then level, then message, then other context keys
     return stringify_context(context)
 
 
@@ -74,14 +96,36 @@ fn stringify_context(data: Context) -> String:
 
         # Add comma for all elements except last
         if key_index != key_count - 1:
-            _ = builder.write_string(",")
+            _ = builder.write_string(", ")
             key_index += 1
 
     _ = builder.write_string("}")
     return str(builder)
 
 
+fn logfmt_formatter(context: Context) raises -> String:
+    var new_context = Context(context)
+
+    # Add all the keys in the context in KV format.
+    var delimiter = " "
+    var builder = StringBuilder()
+    var pair_count = new_context.size
+    var current_index = 0
+    for pair in new_context.items():
+        _ = builder.write_string(stringify_kv_pair(pair[]))
+
+        if current_index < pair_count - 1:
+            _ = builder.write_string(delimiter)
+        current_index += 1
+
+    # timestamp then level, then message, then other context keys
+    return str(builder)
+
+
 fn format(formatter: Formatter, context: Context) raises -> String:
     if formatter == JSON_FORMAT:
         return json_formatter(context)
+    elif formatter == LOGFMT_FORMAT:
+        return logfmt_formatter(context)
+
     return default_formatter(context)

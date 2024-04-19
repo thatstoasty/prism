@@ -8,37 +8,43 @@ from collections.vector import InlinedFixedVector
 
 alias simd_width_i8 = simdwidthof[DType.int8]()
 
-fn vectorize_and_exit[simd_width: Int, workgroup_function: fn[i: Int](Int) capturing -> Bool](size: Int):
+
+fn vectorize_and_exit[simd_width: Int, workgroup_function: fn[i: Int] (Int) capturing -> Bool](size: Int):
     var loops = size // simd_width
     for i in range(loops):
         if workgroup_function[simd_width](i * simd_width):
             return
-    
+
     var rest = size & (simd_width - 1)
+
     @parameter
     if simd_width >= 64:
         if rest >= 32:
             if workgroup_function[32](size - rest):
                 return
             rest -= 32
+
     @parameter
     if simd_width >= 32:
         if rest >= 16:
             if workgroup_function[16](size - rest):
                 return
             rest -= 16
+
     @parameter
     if simd_width >= 16:
         if rest >= 8:
             if workgroup_function[8](size - rest):
                 return
             rest -= 8
+
     @parameter
     if simd_width >= 8:
         if rest >= 4:
             if workgroup_function[4](size - rest):
                 return
             rest -= 4
+
     @parameter
     if simd_width >= 4:
         if rest >= 2:
@@ -47,7 +53,7 @@ fn vectorize_and_exit[simd_width: Int, workgroup_function: fn[i: Int](Int) captu
             rest -= 2
 
     if rest == 1:
-        _= workgroup_function[1](size - rest)
+        _ = workgroup_function[1](size - rest)
 
 
 fn find_indices(s: String, c: String) -> List[UInt64]:
@@ -70,7 +76,11 @@ fn find_indices(s: String, c: String) -> List[UInt64]:
             var current_len = len(result)
             result.reserve(current_len + occurrence_count)
             result.resize(current_len + occurrence_count, 0)
-            compressed_store(offsets, DTypePointer[DType.uint64](result.data.value).offset(current_len), occurrence)
+            compressed_store(
+                offsets,
+                DTypePointer[DType.uint64](result.data).offset(current_len),
+                occurrence,
+            )
 
     vectorize[find, simd_width_i8](size)
     return result
@@ -139,7 +149,7 @@ fn string_from_pointer(p: DTypePointer[DType.int8], length: Int) -> String:
 
 
 fn print_v(v: List[UInt64]):
-    print("(" +  str(len(v)) + ")[")
+    print("(" + str(len(v)) + ")[")
     for i in range(len(v)):
         var end = ", " if i < len(v) - 1 else "]\n"
         print(v[i], ",")

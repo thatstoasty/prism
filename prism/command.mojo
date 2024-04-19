@@ -13,6 +13,7 @@ alias CommandFunction = fn (command: Arc[Command], args: List[String]) raises ->
 
 
 # TODO: Add persistent flags
+# TODO: For parent Arc[Optional[Self]] works but Optional[Arc[Self]] causes compiler issues.
 @value
 struct Command(CollectionElement):
     var name: String
@@ -49,9 +50,7 @@ struct Command(CollectionElement):
         self.arg_validator = arbitrary_args
         self.valid_args = valid_args
         self.flags = FlagSet()
-        self.flags.add_flag(
-            Flag("help", "h", "Displays help information about the command.")
-        )
+        self.flags.add_flag(Flag("help", "h", "Displays help information about the command."))
 
         self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
@@ -77,9 +76,7 @@ struct Command(CollectionElement):
         self.arg_validator = arg_validator
         self.valid_args = valid_args
         self.flags = FlagSet()
-        self.flags.add_flag(
-            Flag("help", "h", "Displays help information about the command.")
-        )
+        self.flags.add_flag(Flag("help", "h", "Displays help information about the command."))
 
         self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
@@ -99,18 +96,18 @@ struct Command(CollectionElement):
         self.parent = existing.parent
 
     fn __moveinit__(inout self, owned existing: Self):
-        self.name = existing.name ^
-        self.description = existing.description ^
+        self.name = existing.name^
+        self.description = existing.description^
 
-        self.pre_run = existing.pre_run ^
+        self.pre_run = existing.pre_run^
         self.run = existing.run
-        self.post_run = existing.post_run ^
+        self.post_run = existing.post_run^
 
-        self.arg_validator = existing.arg_validator ^
-        self.valid_args = existing.valid_args ^
-        self.flags = existing.flags ^
-        self.children = existing.children ^
-        self.parent = existing.parent ^
+        self.arg_validator = existing.arg_validator^
+        self.valid_args = existing.valid_args^
+        self.flags = existing.flags^
+        self.children = existing.children^
+        self.parent = existing.parent^
 
     fn __str__(self) -> String:
         return "(Name: " + self.name + ", Description: " + self.description + ")"
@@ -135,8 +132,7 @@ struct Command(CollectionElement):
         )
 
     fn full_command(self) -> String:
-        """Traverses up the parent command tree to build the full command as a string.
-        """
+        """Traverses up the parent command tree to build the full command as a string."""
         if self.parent[]:
             var ancestor: String = self.parent[].value().full_command()
             return ancestor + " " + self.name
@@ -190,18 +186,14 @@ struct Command(CollectionElement):
         var length_of_input_flags = len(flag_set)
 
         if length_of_input_flags > length_of_command_flags:
-            raise Error(
-                "Specified more flags than the command accepts, please check your"
-                " command's flags."
-            )
+            raise Error("Specified more flags than the command accepts, please check your command's flags.")
 
         for flag in flag_set.flags:
             if flag[] not in self.flags:
                 raise Error(String("Invalid flags passed to command: ") + flag[].name)
 
     fn execute(inout self) raises -> None:
-        """Traverses the arguments passed to the executable and executes the last command in the branch.
-        """
+        """Traverses the arguments passed to the executable and executes the last command in the branch."""
         # Traverse from the root command through the children to find a match for the current argument.
         # Any additional arguments past the last matched command name are considered arguments.
         # TODO: Tree traversal is new to me, there's probably a better way to do this.

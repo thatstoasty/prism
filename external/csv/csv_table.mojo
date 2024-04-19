@@ -65,7 +65,7 @@ struct CsvTable:
                 offset += 1
 
         if self._inner_string[length - 1] == "\n":
-            _ = self._starts.pop_back()
+            _ = self._starts.pop()
         else:
             self._ends.append(length)
 
@@ -88,14 +88,12 @@ struct CsvTable:
             var crs = chars == CR
 
             var offsets = iota[DType.uint8, simd_width]()
-            var sp: DTypePointer[DType.uint8] = stack_allocation[
-                simd_width, UInt8, simd_width
-            ]()
+            var sp: DTypePointer[DType.uint8] = stack_allocation[simd_width, UInt8, simd_width]()
             compressed_store(offsets, sp, all_bits)
             var all_len = reduce_bit_count(all_bits)
 
             for i in range(all_len):
-                var index = sp.load(i).to_int()
+                var index = int(sp.load(i))
                 if quotes[index]:
                     in_quotes = not in_quotes
                     continue
@@ -104,9 +102,9 @@ struct CsvTable:
                 var current_offset = index + offset
                 var rs_compensation: Int
                 if index > 0:
-                    rs_compensation = (lfs[index] & crs[index - 1]).to_int()
+                    rs_compensation = int(lfs[index] & crs[index - 1])
                 else:
-                    rs_compensation = (lfs[index] & last_chunk__ends_on_cr).to_int()
+                    rs_compensation = int(lfs[index] & last_chunk__ends_on_cr)
                 self._ends.append(current_offset - rs_compensation)
                 self._starts.append(current_offset + 1)
                 if self.column_count == -1 and lfs[index]:
@@ -115,7 +113,7 @@ struct CsvTable:
 
         vectorize[find_indicies, simd_width_u8](string_byte_length)
         if self._inner_string[string_byte_length - 1] == "\n":
-            _ = self._starts.pop_back()
+            _ = self._starts.pop()
         else:
             self._ends.append(string_byte_length)
 
@@ -127,10 +125,7 @@ struct CsvTable:
         if index >= len(self._ends):
             return ""
 
-        if (
-            self._inner_string[self._starts[index]] == '"'
-            and self._inner_string[self._ends[index] - 1] == '"'
-        ):
+        if self._inner_string[self._starts[index]] == '"' and self._inner_string[self._ends[index] - 1] == '"':
             var start = self._starts[index] + 1
             var length = (self._ends[index] - 1) - start
             var p1 = Pointer[Int8].alloc(length + 1)
@@ -145,15 +140,15 @@ struct CsvTable:
             var length2 = length - (quotes_count >> 1)
             var p2 = Pointer[Int8].alloc(length2 + 1)
             var offset2 = 0
-            memcpy(p2, p, quote_indices[0].to_int())
-            offset2 += quote_indices[0].to_int()
+            memcpy(p2, p, int(quote_indices[0]))
+            offset2 += int(quote_indices[0])
 
             for i in range(2, quotes_count, 2):
-                var start = quote_indices[i - 1].to_int()
-                var size = quote_indices[i].to_int() - start
+                var start = int(quote_indices[i - 1])
+                var size = int(quote_indices[i]) - start
                 memcpy(p2.offset(offset2), p.offset(start), size)
                 offset2 += size
-            var last = quote_indices[quotes_count - 1].to_int()
+            var last = int(quote_indices[quotes_count - 1])
             memcpy(p2.offset(offset2), p.offset(last), length - last)
             _inner_string._strref_keepalive()
             return string_from_pointer(p2, length - (quotes_count >> 1) + 1)

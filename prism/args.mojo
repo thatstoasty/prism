@@ -67,9 +67,7 @@ fn maximum_n_args[n: Int]() -> ArgValidator:
 
     fn more_than_n_args(args: List[String]) -> Optional[String]:
         if len(args) > n:
-            return sprintf(
-                "Command accepts at most %d arguments. Received: %d", n, len(args)
-            )
+            return sprintf("Command accepts at most %d arguments. Received: %d", n, len(args))
         return None
 
     return more_than_n_args
@@ -87,9 +85,7 @@ fn exact_args[n: Int]() -> ArgValidator:
 
     fn exactly_n_args(args: List[String]) -> Optional[String]:
         if len(args) != n:
-            return sprintf(
-                "Command accepts at exactly %d arguments. Received: %d", n, len(args)
-            )
+            return sprintf("Command accepts at exactly %d arguments. Received: %d", n, len(args))
         return None
 
     return exactly_n_args

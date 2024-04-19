@@ -16,24 +16,22 @@ from external.stump import (
 )
 
 
-fn add_my_name(context: Context) -> Context:
+fn add_my_name(context: Context, level: String) -> Context:
     var new_context = Context(context)
     new_context["name"] = "Name"
     return new_context
 
 
 fn my_processors() -> List[Processor]:
-    return List[Processor](
-        add_log_level, add_timestamp_with_format["YYYY"](), add_my_name
-    )
+    return List[Processor](add_log_level, add_timestamp_with_format["YYYY"](), add_my_name)
 
 
 # The loggers are compiled at runtime, so we can reuse it.
 alias LOG_LEVEL = DEBUG
 alias inner_logger = PrintLogger(LOG_LEVEL)
-alias logger = bound_logger(inner_logger)
-alias default_logger = bound_default_logger(inner_logger)
-alias json_logger = bound_json_logger(inner_logger)
+alias logger = BoundLogger(inner_logger, formatter=DEFAULT_FORMAT, processors=my_processors)
+alias default_logger = BoundLogger(inner_logger, formatter=DEFAULT_FORMAT)
+alias json_logger = BoundLogger(inner_logger, formatter=JSON_FORMAT)
 
 
 # Build a basic print logger
@@ -41,21 +39,18 @@ alias json_logger = bound_json_logger(inner_logger)
 #     return PrintLogger(LOG_LEVEL)
 
 
-# Build a bound logger with custom processors and styling
-fn bound_logger(logger: PrintLogger) -> BoundLogger[PrintLogger]:
-    var bound_log = BoundLogger(
-        logger, formatter=DEFAULT_FORMAT, processors=my_processors,
-    )
-    return bound_log
+# # Build a bound logger with custom processors and styling
+# fn bound_logger(logger: PrintLogger) -> BoundLogger[PrintLogger]:
+#     return BoundLogger(
+#         logger, formatter=DEFAULT_FORMAT, processors=my_processors,
+#     )
 
 
-# Build a bound logger with default processors and styling
-fn bound_default_logger(logger: PrintLogger) -> BoundLogger[PrintLogger]:
-    var bound_log = BoundLogger(logger, formatter=DEFAULT_FORMAT)
-    return bound_log
+# # Build a bound logger with default processors and styling
+# fn bound_default_logger(logger: PrintLogger) -> BoundLogger[PrintLogger]:
+#     return BoundLogger(logger, formatter=DEFAULT_FORMAT)
 
 
-# Build a bound logger with json formatting
-fn bound_json_logger(logger: PrintLogger) -> BoundLogger[PrintLogger]:
-    var bound_log = BoundLogger(logger, formatter=JSON_FORMAT)
-    return bound_log
+# # Build a bound logger with json formatting
+# fn bound_json_logger(logger: PrintLogger) -> BoundLogger[PrintLogger]:
+#     return BoundLogger(logger, formatter=JSON_FORMAT)

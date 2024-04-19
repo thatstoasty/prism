@@ -1,5 +1,5 @@
 from prism import Flag, Command, CommandArc, exact_args
-from examples.printer.mist import TerminalStyle
+from external.mist import TerminalStyle
 
 
 fn printer(command: CommandArc, args: List[String]) raises -> None:
@@ -18,13 +18,13 @@ fn printer(command: CommandArc, args: List[String]) raises -> None:
         formatting = String("")
 
     if color.value() != "":
-        style.color(color.value())
+        style = style.foreground(style.profile.color(color.value()))
     if formatting.value() == "bold":
-        style.bold()
+        style = style.bold()
     elif formatting.value() == "underline":
-        style.underline()
+        style = style.underline()
     elif formatting.value() == "italic":
-        style.italic()
+        style = style.italic()
 
     print(style.render(args[0]))
 
@@ -46,12 +46,8 @@ fn init() raises -> None:
         run=printer,
         post_run=post_hook,
     )
-    root_command.add_flag(
-        Flag(name="color", shorthand="c", usage="Text color", default="blue")
-    )
-    root_command.add_flag(
-        Flag(name="formatting", shorthand="f", usage="Text formatting")
-    )
+    root_command.add_flag(Flag(name="color", shorthand="c", usage="Text color", default="#3464eb"))
+    root_command.add_flag(Flag(name="formatting", shorthand="f", usage="Text formatting"))
 
     root_command.execute()
 

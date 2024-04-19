@@ -43,7 +43,7 @@ struct Str:
         return result
 
     fn __enter__(owned self: Self) -> Self:
-        return self ^
+        return self^
 
 
 # Adapted from https://github.com/crisadamo/mojo-Libc . Huge thanks to Cristian!
@@ -383,9 +383,7 @@ struct addrinfo:
     var ai_next: Pointer[c_void]
 
     fn __init__() -> Self:
-        return Self(
-            0, 0, 0, 0, 0, Pointer[sockaddr](), Pointer[c_char](), Pointer[c_void]()
-        )
+        return Self(0, 0, 0, 0, 0, Pointer[sockaddr](), Pointer[c_char](), Pointer[c_void]())
 
 
 fn strlen(s: Pointer[c_char]) -> c_size_t:
@@ -446,9 +444,7 @@ fn ntohs(netshort: c_ushort) -> c_ushort:
     return external_call["ntohs", c_ushort, c_ushort](netshort)
 
 
-fn inet_ntop(
-    af: c_int, src: Pointer[c_void], dst: Pointer[c_char], size: socklen_t
-) -> Pointer[c_char]:
+fn inet_ntop(af: c_int, src: Pointer[c_void], dst: Pointer[c_char], size: socklen_t) -> Pointer[c_char]:
     """Libc POSIX `inet_ntop` function
     Reference: https://man7.org/linux/man-pages/man3/inet_ntop.3p.html.
     Fn signature: const char *inet_ntop(int af, const void *restrict src, char *restrict dst, socklen_t size).
@@ -523,9 +519,7 @@ fn socket(domain: c_int, type: c_int, protocol: c_int) -> c_int:
         protocol: The protocol to use.
     Returns: A File Descriptor or -1 in case of failure.
     """
-    return external_call[
-        "socket", c_int, c_int, c_int, c_int  # FnName, RetType  # Args
-    ](domain, type, protocol)
+    return external_call["socket", c_int, c_int, c_int, c_int](domain, type, protocol)  # FnName, RetType  # Args
 
 
 fn setsockopt(
@@ -562,9 +556,9 @@ fn bind(socket: c_int, address: Pointer[sockaddr], address_len: socklen_t) -> c_
     Reference: https://man7.org/linux/man-pages/man3/bind.3p.html
     Fn signature: int bind(int socket, const struct sockaddr *address, socklen_t address_len).
     """
-    return external_call[
-        "bind", c_int, c_int, Pointer[sockaddr], socklen_t  # FnName, RetType  # Args
-    ](socket, address, address_len)
+    return external_call["bind", c_int, c_int, Pointer[sockaddr], socklen_t](  # FnName, RetType  # Args
+        socket, address, address_len
+    )
 
 
 fn listen(socket: c_int, backlog: c_int) -> c_int:
@@ -579,9 +573,7 @@ fn listen(socket: c_int, backlog: c_int) -> c_int:
     return external_call["listen", c_int, c_int, c_int](socket, backlog)
 
 
-fn accept(
-    socket: c_int, address: Pointer[sockaddr], address_len: Pointer[socklen_t]
-) -> c_int:
+fn accept(socket: c_int, address: Pointer[sockaddr], address_len: Pointer[socklen_t]) -> c_int:
     """Libc POSIX `accept` function
     Reference: https://man7.org/linux/man-pages/man3/accept.3p.html
     Fn signature: int accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len).
@@ -610,14 +602,12 @@ fn connect(socket: c_int, address: Pointer[sockaddr], address_len: socklen_t) ->
         address_len: The size of the address.
     Returns: 0 on success, -1 on error.
     """
-    return external_call[
-        "connect", c_int, c_int, Pointer[sockaddr], socklen_t  # FnName, RetType  # Args
-    ](socket, address, address_len)
+    return external_call["connect", c_int, c_int, Pointer[sockaddr], socklen_t](  # FnName, RetType  # Args
+        socket, address, address_len
+    )
 
 
-fn recv(
-    socket: c_int, buffer: Pointer[c_void], length: c_size_t, flags: c_int
-) -> c_ssize_t:
+fn recv(socket: c_int, buffer: Pointer[c_void], length: c_size_t, flags: c_int) -> c_ssize_t:
     """Libc POSIX `recv` function
     Reference: https://man7.org/linux/man-pages/man3/recv.3p.html
     Fn signature: ssize_t recv(int socket, void *buffer, size_t length, int flags).
@@ -632,9 +622,7 @@ fn recv(
     ](socket, buffer, length, flags)
 
 
-fn send(
-    socket: c_int, buffer: Pointer[c_void], length: c_size_t, flags: c_int
-) -> c_ssize_t:
+fn send(socket: c_int, buffer: Pointer[c_void], length: c_size_t, flags: c_int) -> c_ssize_t:
     """Libc POSIX `send` function
     Reference: https://man7.org/linux/man-pages/man3/send.3p.html
     Fn signature: ssize_t send(int socket, const void *buffer, size_t length, int flags).
@@ -664,9 +652,7 @@ fn shutdown(socket: c_int, how: c_int) -> c_int:
         how: How to shutdown the socket.
     Returns: 0 on success, -1 on error.
     """
-    return external_call["shutdown", c_int, c_int, c_int](  # FnName, RetType  # Args
-        socket, how
-    )
+    return external_call["shutdown", c_int, c_int, c_int](socket, how)  # FnName, RetType  # Args
 
 
 fn getaddrinfo(
@@ -697,9 +683,7 @@ fn gai_strerror(ecode: c_int) -> Pointer[c_char]:
     Args: ecode: The error code.
     Returns: A pointer to a string describing the error.
     """
-    return external_call[
-        "gai_strerror", Pointer[c_char], c_int  # FnName, RetType  # Args
-    ](ecode)
+    return external_call["gai_strerror", Pointer[c_char], c_int](ecode)  # FnName, RetType  # Args
 
 
 fn inet_pton(address_family: Int, address: String) -> Int:
@@ -708,9 +692,7 @@ fn inet_pton(address_family: Int, address: String) -> Int:
         ip_buf_size = 16
 
     var ip_buf = Pointer[c_void].alloc(ip_buf_size)
-    var conv_status = inet_pton(
-        rebind[c_int](address_family), to_char_ptr(address), ip_buf
-    )
+    var conv_status = inet_pton(rebind[c_int](address_family), to_char_ptr(address), ip_buf)
     return ip_buf.bitcast[c_uint]().load().to_int()
 
 
@@ -747,14 +729,10 @@ fn open[*T: AnyType](path: Pointer[c_char], oflag: c_int, *args: *T) -> c_int:
     Returns:
         A File Descriptor or -1 in case of failure
     """
-    return external_call[
-        "open", c_int, Pointer[c_char], c_int  # FnName, RetType  # Args
-    ](path, oflag, args)
+    return external_call["open", c_int, Pointer[c_char], c_int](path, oflag, args)  # FnName, RetType  # Args
 
 
-fn openat[
-    *T: AnyType
-](fd: c_int, path: Pointer[c_char], oflag: c_int, *args: *T) -> c_int:
+fn openat[*T: AnyType](fd: c_int, path: Pointer[c_char], oflag: c_int, *args: *T) -> c_int:
     """Libc POSIX `open` function
     Reference: https://man7.org/linux/man-pages/man3/open.3p.html
     Fn signature: int openat(int fd, const char *path, int oflag, ...).
@@ -767,9 +745,9 @@ fn openat[
     Returns:
         A File Descriptor or -1 in case of failure
     """
-    return external_call[
-        "openat", c_int, c_int, Pointer[c_char], c_int  # FnName, RetType  # Args
-    ](fd, path, oflag, args)
+    return external_call["openat", c_int, c_int, Pointer[c_char], c_int](  # FnName, RetType  # Args
+        fd, path, oflag, args
+    )
 
 
 fn printf[*T: AnyType](format: Pointer[c_char], *args: *T) -> c_int:
@@ -788,9 +766,7 @@ fn printf[*T: AnyType](format: Pointer[c_char], *args: *T) -> c_int:
     ](format, args)
 
 
-fn sprintf[
-    *T: AnyType
-](s: Pointer[c_char], format: Pointer[c_char], *args: *T) -> c_int:
+fn sprintf[*T: AnyType](s: Pointer[c_char], format: Pointer[c_char], *args: *T) -> c_int:
     """Libc POSIX `sprintf` function
     Reference: https://man7.org/linux/man-pages/man3/fprintf.3p.html
     Fn signature: int sprintf(char *restrict s, const char *restrict format, ...).
@@ -800,9 +776,7 @@ fn sprintf[
         args: The optional arguments.
     Returns: The number of bytes written or -1 in case of failure.
     """
-    return external_call[
-        "sprintf", c_int, Pointer[c_char], Pointer[c_char]  # FnName, RetType  # Args
-    ](s, format, args)
+    return external_call["sprintf", c_int, Pointer[c_char], Pointer[c_char]](s, format, args)  # FnName, RetType  # Args
 
 
 fn read(fildes: c_int, buf: Pointer[c_void], nbyte: c_size_t) -> c_int:
@@ -815,9 +789,7 @@ fn read(fildes: c_int, buf: Pointer[c_void], nbyte: c_size_t) -> c_int:
         nbyte: The number of bytes to read.
     Returns: The number of bytes read or -1 in case of failure.
     """
-    return external_call["read", c_ssize_t, c_int, Pointer[c_void], c_size_t](
-        fildes, buf, nbyte
-    )
+    return external_call["read", c_ssize_t, c_int, Pointer[c_void], c_size_t](fildes, buf, nbyte)
 
 
 fn write(fildes: c_int, buf: Pointer[c_void], nbyte: c_size_t) -> c_int:
@@ -830,9 +802,7 @@ fn write(fildes: c_int, buf: Pointer[c_void], nbyte: c_size_t) -> c_int:
         nbyte: The number of bytes to write.
     Returns: The number of bytes written or -1 in case of failure.
     """
-    return external_call["write", c_ssize_t, c_int, Pointer[c_void], c_size_t](
-        fildes, buf, nbyte
-    )
+    return external_call["write", c_ssize_t, c_int, Pointer[c_void], c_size_t](fildes, buf, nbyte)
 
 
 alias FILE = UInt64
@@ -863,25 +833,19 @@ fn fgetc(arg: Pointer[FILE]) -> Int32:
 
 
 fn fopen(__filename: Pointer[UInt8], __mode: Pointer[UInt8]) -> Pointer[FILE]:
-    return external_call["fopen", Pointer[FILE], Pointer[UInt8], Pointer[UInt8]](
-        __filename, __mode
+    return external_call["fopen", Pointer[FILE], Pointer[UInt8], Pointer[UInt8]](__filename, __mode)
+
+
+fn fwrite(__ptr: Pointer[UInt8], __size: UInt64, __nitems: UInt64, __stream: Pointer[FILE]) -> UInt64:
+    return external_call["fwrite", UInt64, Pointer[UInt8], UInt64, UInt64, Pointer[FILE]](
+        __ptr, __size, __nitems, __stream
     )
 
 
-fn fwrite(
-    __ptr: Pointer[UInt8], __size: UInt64, __nitems: UInt64, __stream: Pointer[FILE]
-) -> UInt64:
-    return external_call[
-        "fwrite", UInt64, Pointer[UInt8], UInt64, UInt64, Pointer[FILE]
-    ](__ptr, __size, __nitems, __stream)
-
-
-fn fread(
-    __ptr: Pointer[UInt8], __size: UInt64, __nitems: UInt64, __stream: Pointer[FILE]
-) -> UInt64:
-    return external_call[
-        "fread", UInt64, Pointer[UInt8], UInt64, UInt64, Pointer[FILE]
-    ](__ptr, __size, __nitems, __stream)
+fn fread(__ptr: Pointer[UInt8], __size: UInt64, __nitems: UInt64, __stream: Pointer[FILE]) -> UInt64:
+    return external_call["fread", UInt64, Pointer[UInt8], UInt64, UInt64, Pointer[FILE]](
+        __ptr, __size, __nitems, __stream
+    )
 
 
 fn strnlen(pointer: Pointer[UInt8]) -> Int:

@@ -189,8 +189,7 @@ fn save_screen():
 
 
 fn alt_screen():
-    """Switches to the alternate screen buffer. The former view can be restored with ExitAltScreen().
-    """
+    """Switches to the alternate screen buffer. The former view can be restored with ExitAltScreen()."""
     print(csi + alt_screen_seq, end="")
 
 
@@ -216,8 +215,7 @@ fn move_cursor(row: UInt16, column: UInt16):
 
 
 fn hide_cursor():
-    """TODO: Show and Hide cursor don't seem to work ATM. HideCursor hides the cursor.
-    """
+    """TODO: Show and Hide cursor don't seem to work ATM. HideCursor hides the cursor."""
     print(csi + hide_cursor_seq, end="")
 
 
