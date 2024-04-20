@@ -13,7 +13,7 @@ from memory._arc import Arc
 # TODO: Using CommandArc instead of Arc[Command] works. But using Arc[Command] causes a recursive relationship error?
 fn test(command: CommandArc, args: List[String]) raises -> None:
     for item in command[].get_all_flags()[].flags:
-        print(item[].name, item[].value)
+        print(item[].name, item[].value.value())
 
 
 fn init() raises -> None:
@@ -23,7 +23,7 @@ fn init() raises -> None:
         run=test,
     )
 
-    root_command.add_flag(Flag(name="env", shorthand="e", usage="Environment."))
+    root_command.flags.add_string_flag[name="env", shorthand="e", usage="Environment."]()
 
     var say_command = build_say_command()
     var hello_command = build_hello_command()

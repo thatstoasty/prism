@@ -1,3 +1,4 @@
+from time import now
 from prism import Flag, Command, CommandArc, exact_args
 from external.mist import TerminalStyle
 
@@ -38,18 +39,19 @@ fn post_hook(command: CommandArc, args: List[String]) raises -> None:
 
 
 fn init() raises -> None:
-    var root_command = Command(
+    var start = now()
+    var root_command = Command.new[
         name="printer",
         description="Base command.",
-        arg_validator=exact_args[1](),
-        pre_run=pre_hook,
         run=printer,
+        pre_run=pre_hook,
         post_run=post_hook,
-    )
-    root_command.add_flag(Flag(name="color", shorthand="c", usage="Text color", default="#3464eb"))
-    root_command.add_flag(Flag(name="formatting", shorthand="f", usage="Text formatting"))
+    ](arg_validator=exact_args[1]())
+    root_command.flags.add_string_flag[name="color", shorthand="c", usage="Text color", default="#3464eb"]()
+    root_command.flags.add_string_flag[name="formatting", shorthand="f", usage="Text formatting"]()
 
     root_command.execute()
+    print("duration", (now() - start) / 1e9)
 
 
 fn main() raises -> None:

@@ -1,7 +1,6 @@
-from sys import argv
 from collections.optional import Optional
+from external.gojo.fmt import sprintf
 from .vector import contains
-from .fmt import sprintf
 
 
 # TODO: Until Error is a CollectionElement, return a string and throw the error from the caller.
@@ -146,19 +145,13 @@ fn match_all[arg_validators: List[ArgValidator]]() -> ArgValidator:
     return match_all_args
 
 
-# TODO: This is naive argument parsing, what if an argument has a hyphen in it?
-fn get_args() -> List[String]:
+fn get_args(arguments: List[String]) -> List[String]:
     """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
-
-    Raises:
-        Error: TODO
     """
-    var arguments = argv()
     var args = List[String]()
     for i in range(len(arguments)):
-        if i != 0:
-            # Argument is not a shorthand or full flag.
-            var argument = String(arguments[i])
-            if not (argument.startswith("-", 0, 1)):
-                args.append(argument)
+        # Argument is not a shorthand or full flag.
+        var argument = arguments[i]
+        if not (argument.startswith("-", 0, 1)):
+            args.append(argument)
     return args

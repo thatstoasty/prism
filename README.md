@@ -1,12 +1,12 @@
-# prism
+# Prism
 
-A Budding CLI Library! Using this as a way to learn Mojo and to better understand CLI tooling development.
+A Budding CLI Library!
 
 Inspired by: `Cobra`!
 
 ## Usage
 
-WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples and referencing the Cobra documentation. The `external` directory is only for the examples at the moment, so you should be able to build the package by running `mojo package prism`.
+WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples and referencing the Cobra documentation. You should be able to build the package by running `mojo package prism -I .`.
 
 ## Examples
 
@@ -14,7 +14,7 @@ Try out the `nested` example in the examples directory!
 
 Here's the script copied over from the main file.
 
-```py
+```mojo
 from prism import Flag, Command, CommandArc
 from python import Python, PythonObject
 
@@ -28,6 +28,11 @@ fn print_information(command: CommandArc, args: List[String]) raises -> None:
 
 
 fn get_cat_fact(command: CommandArc, args: List[String]) raises -> None:
+    var flags = command[].get_all_flags()[]
+    var lover = flags.get_as_bool("lover")
+    if lover and lover.value():
+        print("Hello fellow cat lover!")
+
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = "https://cat-fact.herokuapp.com/facts/"
@@ -37,12 +42,11 @@ fn get_cat_fact(command: CommandArc, args: List[String]) raises -> None:
 
     # Check if the request was successful (status code 200)
     if response.status_code == 200:
-        var count_flag = command[].get_all_flags()[].get_as_string("count")
-        if not count_flag:
+        var count = flags.get_as_int("count")
+        if not count:
             raise Error("Count flag was not found.")
-        var count = atol(count_flag.value())
         var body = response.json()
-        for i in range(count):
+        for i in range(count.value()):
             print(body[i]["text"])
     else:
         raise Error("Request failed!")
@@ -77,9 +81,8 @@ fn init() raises -> None:
         description="Get some cat facts!",
         run=get_cat_fact,
     )
-    cat_command.add_flag(
-        Flag(name="count", shorthand="c", usage="Number of facts to get.")
-    )
+    cat_command.flags.add_int_flag[name="count", shorthand="c", usage="Number of facts to get."]()
+    cat_command.flags.add_bool_flag[name="lover", shorthand="l", usage="Are you a cat lover?"]()
 
     var dog_command = Command(
         name="dog",
@@ -95,7 +98,6 @@ fn init() raises -> None:
 
 fn main() raises -> None:
     init()
-
 ```
 
 Start by navigating to the `nested` example directory.
@@ -104,28 +106,28 @@ Start by navigating to the `nested` example directory.
 Run the example by using the following command, we're not specifying a subcommand so we should be executing the root command.
 
 ```bash
-mojo run examples/nested/nested.mojo
+mojo run nested.mojo
 This is the base command!
 ```
 
 Now try running it with a subcommand.
 
 ```bash
-mojo run examples/nested/nested.mojo get
+mojo run nested.mojo get
 Pass cat or dog as a subcommand, and see what you get!
 ```
 
 Let's follow the suggestion and add the cat subcommand.
 
 ```bash
-mojo run examples/nested/nested.mojo get cat
+mojo run nested.mojo get cat
 Owning a cat can reduce the risk of stroke and heart attack by a third.
 ```
 
 Now try running it with a flag to get up to five facts.
 
 ```bash
-mojo run examples/nested/nested.mojo get cat --count=5
+mojo run nested.mojo get cat --count 5
 Owning a cat can reduce the risk of stroke and heart attack by a third.
 Most cats are lactose intolerant, and milk can cause painful stomach cramps and diarrhea. It's best to forego the milk and just give your cat the standard: clean, cool drinking water.
 Domestic cats spend about 70 percent of the day sleeping and 15 percent of the day grooming.
@@ -137,10 +139,10 @@ Let's try running it from a compiled binary instead. Start by setting your `MOJO
 `export MOJO_PYTHON_LIBRARY=$(which python3)`
 
 Compile the example file into a binary.
-`mojo build examples/nested/nested.mojo`
+`mojo build nested.mojo`
 
 Now run the previous command, but with the binary instead.
-`./examples/nested/nested --count=3`
+`./nested --count 3`
 
 You should get the same result as before! But, what about command information?
 
@@ -162,33 +164,34 @@ Use "root get cat [command] --help" for more information about a command.
 
 Usage information will be printed the console by passing the `--help` flag.
 
+## Notes
+
+- Flags can have values passed by using the `=` operator. Like `--count=5` OR like `--count 5`.
+- Commands can be created via a typical `Command()` constructor to use runtime values, or you can use `Command.new()` method to create a new `Command` using compile time `Parameters` instead (when possible).
+
 ## TODO
 
 ### Repository
 
 - [ ] Add a description
-- [ ] Add examples
 
 ### Documentation
 
 ### Features
 
 - Introduce persistent flags and commands to `Command` struct
-- Add support for flags that don't need a value set, just passing of a flag. Like `--help`.
 - Map `--help` flag to configurable help function.
 - Add find suggestion logic to `Command` struct.
 - Enable required flags.
+- `Flags` should be created with Parameters and `value` should never be set to start.
 
 ### Improvements
 
-- Help flags should be processed first, currently it's being checked after validating args and other flags.
 - Tree traversal improvements.
 - Figure out how to return mutable references.
 - Once we have kwarg unpacking, update add_flag to pass kwargs along.
 - It is difficult to have recursive relationships, not passing the command to the arg validator for now.
 - Until `Error` is implements `CollectionElement`, `ArgValidator` functions return a string and throw the error from the caller.
-- Non string flags without a value or default value will fail unless empty string can be converted to that type. Will update flags so they're typed.
-- Switch arg parsing algorithm to not require an `=` for flag assignment
 
 ### Bugs
 

@@ -71,14 +71,16 @@ fn format_boolean(s: String, arg: Bool) -> String:
     return replace_first(s, String("%t"), value)
 
 
-fn sprintf(formatting: String, *args: Args) raises -> String:
+# If the number of arguments does not match the number of format specifiers
+alias BadArgCount = "(BAD ARG COUNT)"
+
+
+fn sprintf(formatting: String, *args: Args) -> String:
     var text = formatting
     var formatter_count = formatting.count("%")
 
-    if formatter_count > len(args):
-        raise Error("Not enough arguments for format string")
-    elif formatter_count < len(args):
-        raise Error("Too many arguments for format string")
+    if formatter_count != len(args):
+        return BadArgCount
 
     for i in range(len(args)):
         var argument = args[i]
@@ -90,8 +92,6 @@ fn sprintf(formatting: String, *args: Args) raises -> String:
             text = format_float(text, argument.get[Float64]()[])
         elif argument.isa[Bool]():
             text = format_boolean(text, argument.get[Bool]()[])
-        else:
-            raise Error("Unknown for argument #" + String(i))
 
     return text
 
