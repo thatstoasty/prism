@@ -64,8 +64,8 @@ fn init() raises -> None:
         description="Get some cat facts!",
         run=get_cat_fact,
     )
-    cat_command.flags.add_int_flag(name="count", shorthand="c", usage="Number of facts to get.")
-    cat_command.flags.add_bool_flag(name="lover", shorthand="l", usage="Are you a cat lover?")
+    cat_command.flags.add_int_flag[name="count", shorthand="c", usage="Number of facts to get."]()
+    cat_command.flags.add_bool_flag[name="lover", shorthand="l", usage="Are you a cat lover?"]()
 
     var dog_command = Command(
         name="dog",
