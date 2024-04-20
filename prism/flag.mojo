@@ -629,7 +629,7 @@ fn parse_flag(i: Int, argument: String, arguments: List[String], flags: FlagSet)
         if name not in flags:
             raise Error("Command does not accept the flag supplied: " + name)
 
-        return name, value, i + 1
+        return name, value, 1
 
     # Flag with value set like "--flag <value>"
     var name = argument[2:]
@@ -638,7 +638,7 @@ fn parse_flag(i: Int, argument: String, arguments: List[String], flags: FlagSet)
 
     # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
     if flags.get_as_bool(name):
-        return name, String("True"), i + 1
+        return name, String("True"), 1
 
     if i + 1 >= len(arguments):
         raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
@@ -647,7 +647,7 @@ fn parse_flag(i: Int, argument: String, arguments: List[String], flags: FlagSet)
         raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
 
     # Increment index by 2 because 2 args were used (one for name and value).
-    return name, arguments[i + 1], i + 2
+    return name, arguments[i + 1], 2
 
 
 fn parse_shorthand_flag(
@@ -671,7 +671,7 @@ fn parse_shorthand_flag(
         if name not in flags:
             raise Error("Command does not accept the flag supplied: " + name)
 
-        return name, value, i + 1
+        return name, value, 1
 
     # Flag with value set like "-f <value>"
     var shorthand = argument[1:]
@@ -679,7 +679,7 @@ fn parse_shorthand_flag(
 
     # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
     if flags.get_as_bool(name):
-        return name, String("True"), i + 1
+        return name, String("True"), 1
 
     if i + 1 >= len(arguments):
         raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
@@ -688,7 +688,7 @@ fn parse_shorthand_flag(
         raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
 
     # Increment index by 2 because 2 args were used (one for name and value).
-    return name, arguments[i + 1], i + 2
+    return name, arguments[i + 1], 2
 
 
 # TODO: This parsing is dirty atm, will come back around and clean it up.
