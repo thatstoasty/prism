@@ -183,7 +183,6 @@ Usage information will be printed the console by passing the `--help` flag.
 - Map `--help` flag to configurable help function.
 - Add find suggestion logic to `Command` struct.
 - Enable required flags.
-- `Flags` should be created with Parameters and `value` should never be set to start.
 
 ### Improvements
 
