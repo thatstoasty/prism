@@ -694,12 +694,16 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
     var i = 0
     while i < len(arguments):
         var argument = arguments[i]
+
+        # Positional argument
         if not argument.startswith("-", 0, 1):
             remaining_args.append(argument)
             i += 1
             continue
 
+        # Full flag
         if argument.startswith("--", 0, 2):
+            # Flag with value set like "--flag=<value>"
             if argument.find("=") != -1:
                 var flag = argument.split("=")
                 var name = flag[0][2:]
@@ -710,11 +714,14 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
 
                 flags._set_flag_value(name, value)
                 i += 1
+
+            # Flag with value set like "--flag <value>"
             else:
                 var name = argument[2:]
                 if name not in flags:
                     raise Error("Command does not accept the flag supplied: " + name)
 
+                # If it's a bool flag, set it to True and only increment the index by 1.
                 if flags.get_as_bool(name):
                     flags._set_flag_value(name, "True")
                     i += 1
@@ -729,7 +736,9 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
                 flags._set_flag_value(name, arguments[i + 1])
                 i += 2
 
+        # Shorthand flag
         elif argument.startswith("-", 0, 1):
+            # Flag with value set like "-f=<value>"
             if argument.find("=") != -1:
                 var flag = argument.split("=")
                 var shorthand = flag[0][1:]
@@ -745,6 +754,7 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
                 flags._set_flag_value(shorthand, value)
                 i += 1
 
+            # Flag with value set like "-f <value>"
             else:
                 var shorthand = argument[1:]
                 var shorthands = flags.get_shorthands()
@@ -755,6 +765,8 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
                         raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
 
                 var name = flags.lookup_name_from_shorthand(shorthand).value()
+
+                # If it's a bool flag, set it to True and only increment the index by 1.
                 if flags.get_as_bool(name):
                     flags._set_flag_value(name, "True")
                     i += 1
@@ -768,10 +780,5 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
 
                 flags._set_flag_value(name, arguments[i + 1])
                 i += 2
-
-                try:
-                    flags._set_flag_value(shorthand, "True")
-                except e:
-                    raise Error("Command does not accept the flag supplied: " + shorthand + "; " + e)
 
     return remaining_args
