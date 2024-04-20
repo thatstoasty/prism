@@ -11,6 +11,11 @@ fn print_information(command: CommandArc, args: List[String]) raises -> None:
 
 
 fn get_cat_fact(command: CommandArc, args: List[String]) raises -> None:
+    var flags = command[].get_all_flags()[]
+    var lover = flags.get_as_bool("lover")
+    if lover and lover.value():
+        print("Hello fellow cat lover!")
+
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = "https://cat-fact.herokuapp.com/facts/"
@@ -20,12 +25,11 @@ fn get_cat_fact(command: CommandArc, args: List[String]) raises -> None:
 
     # Check if the request was successful (status code 200)
     if response.status_code == 200:
-        var count_flag = command[].get_all_flags()[].get_as_string("count")
-        if not count_flag:
+        var count = flags.get_as_int("count")
+        if not count:
             raise Error("Count flag was not found.")
-        var count = atol(count_flag.value())
         var body = response.json()
-        for i in range(count):
+        for i in range(count.value()):
             print(body[i]["text"])
     else:
         raise Error("Request failed!")
@@ -61,6 +65,7 @@ fn init() raises -> None:
         run=get_cat_fact,
     )
     cat_command.flags.add_int_flag(name="count", shorthand="c", usage="Number of facts to get.")
+    cat_command.flags.add_bool_flag(name="lover", shorthand="l", usage="Are you a cat lover?")
 
     var dog_command = Command(
         name="dog",

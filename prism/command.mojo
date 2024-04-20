@@ -62,7 +62,7 @@ struct Command(CollectionElement):
         self.arg_validator = arbitrary_args
         self.valid_args = valid_args
         self.flags = FlagSet()
-        self.flags.add_bool_flag("help", "h", "Displays help information about the command.")
+        self.flags.add_bool_flag["help", "h", "Displays help information about the command."]()
 
         self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
@@ -88,10 +88,45 @@ struct Command(CollectionElement):
         self.arg_validator = arg_validator
         self.valid_args = valid_args
         self.flags = FlagSet()
-        self.flags.add_bool_flag("help", "h", "Displays help information about the command.")
+        self.flags.add_bool_flag["help", "h", "Displays help information about the command."]()
 
         self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
+
+    @staticmethod
+    fn new[
+        name: String,
+        description: String,
+        run: CommandFunction,
+        valid_args: List[String] = List[String](),
+        pre_run: Optional[CommandFunction] = None,
+        post_run: Optional[CommandFunction] = None,
+    ](arg_validator: ArgValidator) -> Self:
+        """Experimental function to create a new Command by using parameters to offload some work to compile time.
+
+        Params:
+            name: The name of the command.
+            description: The description of the command.
+            run: The function to run when the command is executed.
+            valid_args: The valid arguments for the command.
+            pre_run: The function to run before the command is executed.
+            post_run: The function to run after the command is executed.
+
+        Args:
+            arg_validator: The function to validate the arguments passed to the command.
+
+        Returns:
+            A new Command instance.
+        """
+        return Command(
+            name,
+            description,
+            run,
+            arg_validator,
+            valid_args,
+            pre_run,
+            post_run,
+        )
 
     fn __copyinit__(inout self, existing: Self):
         self.name = existing.name
