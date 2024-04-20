@@ -161,7 +161,7 @@ struct FlagSet(Stringable, Sized):
         except:
             return None
 
-    fn get_as_int(self, name: String) raises -> Optional[Int]:
+    fn get_as_int(self, name: String) -> Optional[Int]:
         """Returns the value of a flag as an Int. If it isn't set, then return the default value.
 
         Args:
@@ -176,63 +176,103 @@ struct FlagSet(Stringable, Sized):
         except:
             return None
 
-    fn get_as_int8(self, name: String) raises -> Optional[Int8]:
+    fn get_as_int8(self, name: String) -> Optional[Int8]:
+        """Returns the value of a flag as a Int8. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag to return.
+        """
         var value = self.get_as_int(name)
         if not value:
             return None
 
         return Int8(value.value())
 
-    fn get_as_int16(self, name: String) raises -> Optional[Int16]:
+    fn get_as_int16(self, name: String) -> Optional[Int16]:
+        """Returns the value of a flag as a Int16. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag to return.
+        """
         var value = self.get_as_int(name)
         if not value:
             return None
 
         return Int16(value.value())
 
-    fn get_as_int32(self, name: String) raises -> Optional[Int32]:
+    fn get_as_int32(self, name: String) -> Optional[Int32]:
+        """Returns the value of a flag as a Int32. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag to return.
+        """
         var value = self.get_as_int(name)
         if not value:
             return None
 
         return Int32(value.value())
 
-    fn get_as_int64(self, name: String) raises -> Optional[Int64]:
+    fn get_as_int64(self, name: String) -> Optional[Int64]:
+        """Returns the value of a flag as a Int64. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag to return.
+        """
         var value = self.get_as_int(name)
         if not value:
             return None
 
         return Int64(value.value())
 
-    fn get_as_uint8(self, name: String) raises -> Optional[UInt8]:
+    fn get_as_uint8(self, name: String) -> Optional[UInt8]:
+        """Returns the value of a flag as a UInt8. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag to return.
+        """
         var value = self.get_as_int(name)
         if not value:
             return None
 
         return UInt8(value.value())
 
-    fn get_as_uint16(self, name: String) raises -> Optional[UInt16]:
+    fn get_as_uint16(self, name: String) -> Optional[UInt16]:
+        """Returns the value of a flag as a UInt16. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag to return.
+        """
         var value = self.get_as_int(name)
         if not value:
             return None
 
         return UInt16(value.value())
 
-    fn get_as_uint32(self, name: String) raises -> Optional[UInt32]:
+    fn get_as_uint32(self, name: String) -> Optional[UInt32]:
+        """Returns the value of a flag as a UInt32. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag to return.
+        """
         var value = self.get_as_int(name)
         if not value:
             return None
 
         return UInt32(value.value())
 
-    fn get_as_uint64(self, name: String) raises -> Optional[UInt64]:
+    fn get_as_uint64(self, name: String) -> Optional[UInt64]:
+        """Returns the value of a flag as a UInt64. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag to return.
+        """
         var value = self.get_as_int(name)
         if not value:
             return None
 
         return UInt64(value.value())
 
-    fn get_as_float16(self, name: String) raises -> Optional[Float16]:
+    fn get_as_float16(self, name: String) -> Optional[Float16]:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
 
         Args:
@@ -244,7 +284,7 @@ struct FlagSet(Stringable, Sized):
 
         return Float16(value.value())
 
-    fn get_as_float32(self, name: String) raises -> Optional[Float32]:
+    fn get_as_float32(self, name: String) -> Optional[Float32]:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
 
         Args:
@@ -256,7 +296,7 @@ struct FlagSet(Stringable, Sized):
 
         return Float32(value.value())
 
-    fn get_as_float64(self, name: String) raises -> Optional[Float64]:
+    fn get_as_float64(self, name: String) -> Optional[Float64]:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
 
         Args:
@@ -301,7 +341,7 @@ struct FlagSet(Stringable, Sized):
             result.append(flag[].shorthand)
         return result
 
-    fn lookup_name_from_shorthand(self, shorthand: String) -> Optional[String]:
+    fn lookup_name(self, shorthand: String) -> Optional[String]:
         """Returns the name of a flag given its shorthand.
 
         Args:
@@ -682,6 +722,70 @@ struct Flag(CollectionElement, Stringable):
         return not self == other
 
 
+fn parse_flag(i: Int, argument: String, arguments: List[String], flags: FlagSet) raises -> Tuple[String, String, Int]:
+    # Flag with value set like "--flag=<value>"
+    if argument.find("=") != -1:
+        var flag = argument.split("=")
+        var name = flag[0][2:]
+        var value = flag[1]
+
+        if name not in flags:
+            raise Error("Command does not accept the flag supplied: " + name)
+
+        return name, value, i + 1
+
+    # Flag with value set like "--flag <value>"
+    var name = argument[2:]
+    if name not in flags:
+        raise Error("Command does not accept the flag supplied: " + name)
+
+    # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
+    if flags.get_as_bool(name):
+        return name, String("True"), i + 1
+
+    if i + 1 >= len(arguments):
+        raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
+
+    if arguments[i + 1].startswith("-", 0, 1):
+        raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
+
+    # Increment index by 2 because 2 args were used (one for name and value).
+    return name, arguments[i + 1], i + 2
+
+
+fn parse_shorthand_flag(
+    i: Int, argument: String, arguments: List[String], flags: FlagSet
+) raises -> Tuple[String, String, Int]:
+    # Flag with value set like "-f=<value>"
+    if argument.find("=") != -1:
+        var flag = argument.split("=")
+        var shorthand = flag[0][1:]
+        var value = flag[1]
+        var name = flags.lookup_name(shorthand).value()
+
+        if name not in flags:
+            raise Error("Command does not accept the flag supplied: " + name)
+
+        return name, value, i + 1
+
+    # Flag with value set like "-f <value>"
+    var shorthand = argument[1:]
+    var name = flags.lookup_name(shorthand).value()
+
+    # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
+    if flags.get_as_bool(name):
+        return name, String("True"), i + 1
+
+    if i + 1 >= len(arguments):
+        raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
+
+    if arguments[i + 1].startswith("-", 0, 1):
+        raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
+
+    # Increment index by 2 because 2 args were used (one for name and value).
+    return name, arguments[i + 1], i + 2
+
+
 # TODO: This parsing is dirty atm, will come back around and clean it up.
 fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[String]:
     """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
@@ -701,84 +805,19 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
             i += 1
             continue
 
+        var name: String = ""
+        var value: String = ""
+        var increment_by: Int = 0
+
         # Full flag
         if argument.startswith("--", 0, 2):
-            # Flag with value set like "--flag=<value>"
-            if argument.find("=") != -1:
-                var flag = argument.split("=")
-                var name = flag[0][2:]
-                var value = flag[1]
-
-                if name not in flags:
-                    raise Error("Command does not accept the flag supplied: " + name)
-
-                flags._set_flag_value(name, value)
-                i += 1
-
-            # Flag with value set like "--flag <value>"
-            else:
-                var name = argument[2:]
-                if name not in flags:
-                    raise Error("Command does not accept the flag supplied: " + name)
-
-                # If it's a bool flag, set it to True and only increment the index by 1.
-                if flags.get_as_bool(name):
-                    flags._set_flag_value(name, "True")
-                    i += 1
-                    continue
-
-                if i + 1 >= len(arguments):
-                    raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
-
-                if arguments[i + 1].startswith("-", 0, 1):
-                    raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
-
-                flags._set_flag_value(name, arguments[i + 1])
-                i += 2
+            name, value, increment_by = parse_flag(i, argument, arguments, flags)
 
         # Shorthand flag
         elif argument.startswith("-", 0, 1):
-            # Flag with value set like "-f=<value>"
-            if argument.find("=") != -1:
-                var flag = argument.split("=")
-                var shorthand = flag[0][1:]
-                var value = flag[1]
+            name, value, increment_by = parse_shorthand_flag(i, argument, arguments, flags)
 
-                var shorthands = flags.get_shorthands()
-                for i in range(len(shorthands)):
-                    if shorthands[i] == shorthand:
-                        break
-                    elif i == len(shorthands) - 1:
-                        raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
-
-                flags._set_flag_value(shorthand, value)
-                i += 1
-
-            # Flag with value set like "-f <value>"
-            else:
-                var shorthand = argument[1:]
-                var shorthands = flags.get_shorthands()
-                for i in range(len(shorthands)):
-                    if shorthands[i] == shorthand:
-                        break
-                    elif i == len(shorthands) - 1:
-                        raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
-
-                var name = flags.lookup_name_from_shorthand(shorthand).value()
-
-                # If it's a bool flag, set it to True and only increment the index by 1.
-                if flags.get_as_bool(name):
-                    flags._set_flag_value(name, "True")
-                    i += 1
-                    continue
-
-                if i + 1 >= len(arguments):
-                    raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
-
-                if arguments[i + 1].startswith("-", 0, 1):
-                    raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
-
-                flags._set_flag_value(name, arguments[i + 1])
-                i += 2
+        flags._set_flag_value(name, value)
+        i += increment_by
 
     return remaining_args
