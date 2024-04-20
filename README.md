@@ -4,6 +4,8 @@ A Budding CLI Library!
 
 Inspired by: `Cobra`!
 
+NOTE: This does not work on Mojo 24.2, you must use the nightly build for now. This will be resolved in the next Mojo release.
+
 ## Usage
 
 WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples and referencing the Cobra documentation. You should be able to build the package by running `mojo package prism -I .`.
