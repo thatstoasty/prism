@@ -2,16 +2,19 @@ from prism import Flag, Command
 from prism.command import CommandArc
 
 
-fn say(command: CommandArc, args: List[String]) raises -> None:
+fn say(command: CommandArc, args: List[String]) -> Error:
     print("Shouldn't be here!")
+    return Error()
 
 
-fn say_hello(command: CommandArc, args: List[String]) raises -> None:
+fn say_hello(command: CommandArc, args: List[String]) -> Error:
     print("Hello World!")
+    return Error()
 
 
-fn say_goodbye(command: CommandArc, args: List[String]) raises -> None:
+fn say_goodbye(command: CommandArc, args: List[String]) -> Error:
     print("Goodbye World!")
+    return Error()
 
 
 # for some reason returning the command object without setting it to variable breaks the compiler

@@ -11,12 +11,14 @@ from memory._arc import Arc
 
 
 # TODO: Using CommandArc instead of Arc[Command] works. But using Arc[Command] causes a recursive relationship error?
-fn test(command: CommandArc, args: List[String]) raises -> None:
+fn test(command: CommandArc, args: List[String]) -> Error:
     for item in command[].get_all_flags()[].flags:
         print(item[].name, item[].value.value())
 
+    return Error()
 
-fn init() raises -> None:
+
+fn init() -> None:
     var root_command = Command(
         name="tones",
         description="This is a dummy command!",
@@ -38,5 +40,5 @@ fn init() raises -> None:
     root_command.execute()
 
 
-fn main() raises -> None:
+fn main() -> None:
     init()

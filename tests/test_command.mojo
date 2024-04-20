@@ -1,14 +1,20 @@
 from tests.wrapper import MojoTest
 from prism.command import Command, CommandArc
+from prism.flag import FlagSet
 
 
 fn test_command_operations():
     var test = MojoTest("Testing Command.new")
 
-    fn dummy(command: CommandArc, args: List[String]) raises -> None:
-        pass
+    fn dummy(command: CommandArc, args: List[String]) -> Error:
+        return Error()
 
     var cmd = Command.new[name="root", description="Base command.", run=dummy]()
+
+    var get_all_flags_test = MojoTest("Testing Command.get_all_flags")
+    var flags = cmd.get_all_flags()[]
+    for flag in flags.flags:
+        get_all_flags_test.assert_equal("color", flag[].name)
 
     var add_command_test = MojoTest("Testing Command.add_command")
     var child_cmd = Command.new[name="child", description="Child command.", run=dummy]()
@@ -20,12 +26,6 @@ fn test_command_operations():
 
     var help_test = MojoTest("Testing Command._help")
     cmd._help()
-
-    var get_all_flags_test = MojoTest("Testing Command.get_all_flags")
-    var flags = child_cmd.get_all_flags()[]
-    for flag in flags.flags:
-        print(flag[])
-    # get_all_flags_test.assert_true("color" in flags)
 
 
 fn main():

@@ -168,6 +168,8 @@ Usage information will be printed the console by passing the `--help` flag.
 
 - Flags can have values passed by using the `=` operator. Like `--count=5` OR like `--count 5`.
 - Commands can be created via a typical `Command()` constructor to use runtime values, or you can use `Command.new()` method to create a new `Command` using compile time `Parameters` instead (when possible).
+- This library leans towards Errors as values over raising Exceptions.
+- `Optional[Error]` would be much cleaner for Command run functions. For now return `Error()` if there's no `Error` to return.
 
 ## TODO
 
@@ -183,6 +185,8 @@ Usage information will be printed the console by passing the `--help` flag.
 - Map `--help` flag to configurable help function.
 - Add find suggestion logic to `Command` struct.
 - Enable required flags.
+- Replace print usage with writers to enable stdout/stderr/file writing.
+- Split `Run` and `RunE` fields so that the primary run function `Run` can return no errors while `RunE` can return errors.
 
 ### Improvements
 
