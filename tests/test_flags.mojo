@@ -1,3 +1,4 @@
+from tests.wrapper import MojoTest
 from prism.flag import string_to_bool, string_to_float, Flag, FlagSet, get_flags, parse_flag, parse_shorthand_flag
 
 

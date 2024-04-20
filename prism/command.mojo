@@ -47,7 +47,6 @@ struct Command(CollectionElement):
         name: String,
         description: String,
         run: CommandFunction,
-        # arg_validator: ArgValidator = arbitrary_args,
         valid_args: List[String] = List[String](),
         pre_run: Optional[CommandFunction] = None,
         post_run: Optional[CommandFunction] = None,
@@ -122,7 +121,38 @@ struct Command(CollectionElement):
             name,
             description,
             run,
-            arg_validator,
+            valid_args,
+            pre_run,
+            post_run,
+        )
+
+    @staticmethod
+    fn new[
+        name: String,
+        description: String,
+        run: CommandFunction,
+        valid_args: List[String] = List[String](),
+        pre_run: Optional[CommandFunction] = None,
+        post_run: Optional[CommandFunction] = None,
+    ]() -> Self:
+        """Experimental function to create a new Command by using parameters to offload some work to compile time.
+
+        Params:
+            name: The name of the command.
+            description: The description of the command.
+            run: The function to run when the command is executed.
+            valid_args: The valid arguments for the command.
+            pre_run: The function to run before the command is executed.
+            post_run: The function to run after the command is executed.
+
+        Returns:
+            A new Command instance.
+        """
+        return Command(
+            name,
+            description,
+            run,
+            arbitrary_args,
             valid_args,
             pre_run,
             post_run,
@@ -178,15 +208,15 @@ struct Command(CollectionElement):
             + parent_name
         )
 
-    fn full_command(self) -> String:
+    fn _full_command(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
         if self.parent[]:
-            var ancestor: String = self.parent[].value().full_command()
+            var ancestor: String = self.parent[].value()._full_command()
             return ancestor + " " + self.name
         else:
             return self.name
 
-    fn help(self) -> None:
+    fn _help(self) -> None:
         """Prints the help information for the command."""
         var child_commands: String = ""
         for child in self.children:
@@ -214,16 +244,16 @@ struct Command(CollectionElement):
         if len(self.flags) > 0:
             usage_arguments = usage_arguments + " [flags]"
 
-        var full_command = self.full_command()
+        var _full_command = self._full_command()
         var help = self.description + "\n\n"
-        var usage = "Usage:\n" + "  " + full_command + usage_arguments + "\n\n"
+        var usage = "Usage:\n" + "  " + _full_command + usage_arguments + "\n\n"
         var available_commands = "Available commands:\n" + child_commands + "\n"
         var available_flags = "Available flags:\n" + flags + "\n"
-        var note = 'Use "' + full_command + ' [command] --help" for more information about a command.'
+        var note = 'Use "' + _full_command + ' [command] --help" for more information about a command.'
         help = help + usage + available_commands + available_flags + note
         print(help)
 
-    fn validate_flag_set(self, flag_set: FlagSet) raises -> None:
+    fn _validate_flag_set(self, flag_set: FlagSet) raises -> None:
         """Validates the flags passed to the command. Raises an error if an invalid flag is passed.
 
         Args:
@@ -269,7 +299,7 @@ struct Command(CollectionElement):
         # Check if the help flag was passed
         var help = command.flags.get_as_bool("help")
         if help.value() == True:
-            command.help()
+            command._help()
             return None
 
         # Validate the remaining arguments
@@ -278,7 +308,7 @@ struct Command(CollectionElement):
             raise Error(error_message.value())
 
         # Check if the flags are valid
-        command.validate_flag_set(command.flags)
+        command._validate_flag_set(command.flags)
 
         # Run the function's commands.
         if command.pre_run:
@@ -295,14 +325,6 @@ struct Command(CollectionElement):
         """
         return Arc(self.flags)
 
-    fn set_parent(inout self, inout parent: Command) -> None:
-        """Sets the command's parent attribute to the given parent.
-
-        Args:
-            parent: The name of the parent command.
-        """
-        self.parent[] = parent
-
     fn add_command(inout self, inout command: Command):
         """Adds child command and set's child's parent attribute to self.
 
@@ -310,4 +332,4 @@ struct Command(CollectionElement):
             command: The command to add as a child of self.
         """
         self.children.append(Arc(command))
-        command.set_parent(self)
+        command.parent[] = self

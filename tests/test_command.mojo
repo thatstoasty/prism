@@ -1,9 +1,32 @@
-from prism.command import get_args_as_list, Command
+from tests.wrapper import MojoTest
+from prism.command import Command, CommandArc
 
 
-fn test_get_args_as_list():
-    pass
+fn test_command_operations():
+    var test = MojoTest("Testing Command.new")
+
+    fn dummy(command: CommandArc, args: List[String]) raises -> None:
+        pass
+
+    var cmd = Command.new[name="root", description="Base command.", run=dummy]()
+
+    var add_command_test = MojoTest("Testing Command.add_command")
+    var child_cmd = Command.new[name="child", description="Child command.", run=dummy]()
+    cmd.add_command(child_cmd)
+    child_cmd.flags.add_string_flag[name="color", shorthand="c", usage="Text color", default="#3464eb"]()
+
+    var full_command_test = MojoTest("Testing Command._full_command")
+    full_command_test.assert_equal(child_cmd._full_command(), "root child")
+
+    var help_test = MojoTest("Testing Command._help")
+    cmd._help()
+
+    var get_all_flags_test = MojoTest("Testing Command.get_all_flags")
+    var flags = child_cmd.get_all_flags()[]
+    for flag in flags.flags:
+        print(flag[])
+    # get_all_flags_test.assert_true("color" in flags)
 
 
 fn main():
-    test_get_args_as_list()
+    test_command_operations()
