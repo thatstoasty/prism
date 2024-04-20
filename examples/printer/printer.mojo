@@ -46,8 +46,8 @@ fn init() raises -> None:
         run=printer,
         post_run=post_hook,
     )
-    root_command.add_flag(Flag(name="color", shorthand="c", usage="Text color", default="#3464eb"))
-    root_command.add_flag(Flag(name="formatting", shorthand="f", usage="Text formatting"))
+    root_command.flags.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    root_command.flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
 
     root_command.execute()
 

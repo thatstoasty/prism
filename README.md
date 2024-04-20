@@ -174,7 +174,7 @@ Usage information will be printed the console by passing the `--help` flag.
 ### Features
 
 - Introduce persistent flags and commands to `Command` struct
-- Add support for flags that don't need a value set, just passing of a flag. Like `--help`.
+- Add support for bool flags just passing of a flag. Like `--help`.
 - Map `--help` flag to configurable help function.
 - Add find suggestion logic to `Command` struct.
 - Enable required flags.

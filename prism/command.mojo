@@ -1,3 +1,4 @@
+from sys import argv
 from collections.optional import Optional
 from collections.dict import Dict, KeyElement
 from memory._arc import Arc
@@ -6,6 +7,18 @@ from .flag import Flag, FlagSet, StringKey, get_flags
 from .args import arbitrary_args, ArgValidator, get_args
 from .vector import join, to_string, contains
 from .fmt import sprintf
+
+
+fn get_args_as_list() -> List[String]:
+    """Returns the arguments passed to the executable as a list of strings."""
+    var args = argv()
+    var args_list = List[String]()
+    var i = 1
+    while i < len(args):
+        args_list.append(args[i])
+        i += 1
+
+    return args_list
 
 
 alias CommandArc = Arc[Command]
@@ -50,7 +63,7 @@ struct Command(CollectionElement):
         self.arg_validator = arbitrary_args
         self.valid_args = valid_args
         self.flags = FlagSet()
-        self.flags.add_flag(Flag("help", "h", "Displays help information about the command."))
+        self.flags.add_bool_flag("help", "h", "Displays help information about the command.")
 
         self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
@@ -76,7 +89,7 @@ struct Command(CollectionElement):
         self.arg_validator = arg_validator
         self.valid_args = valid_args
         self.flags = FlagSet()
-        self.flags.add_flag(Flag("help", "h", "Displays help information about the command."))
+        self.flags.add_bool_flag("help", "h", "Displays help information about the command.")
 
         self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
@@ -197,10 +210,8 @@ struct Command(CollectionElement):
         # Traverse from the root command through the children to find a match for the current argument.
         # Any additional arguments past the last matched command name are considered arguments.
         # TODO: Tree traversal is new to me, there's probably a better way to do this.
-        var args = get_args()
-        var error_message = self.arg_validator(args)
-        if error_message:
-            raise Error(error_message.value())
+        var args = get_args_as_list()
+        var number_of_args = len(args)
         var command = self
         var children = command.children
         var leftover_args_start_index = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
@@ -215,17 +226,22 @@ struct Command(CollectionElement):
 
         # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
         var remaining_args = List[String]()
-        if len(args) >= leftover_args_start_index:
-            remaining_args = args[leftover_args_start_index : len(args)]
+        if number_of_args >= leftover_args_start_index:
+            remaining_args = args[leftover_args_start_index:number_of_args]
 
         # Get the flags for the command to be executed.
-        get_flags(command.flags)
+        remaining_args = get_flags(command.flags, remaining_args)
 
         # Check if the help flag was passed
-        for flag in command.flags.get_flags_with_values():
-            if flag[][].name == "help":
-                command.help()
-                return None
+        var help = command.flags.get_as_bool("help")
+        if help.value() == True:
+            command.help()
+            return None
+
+        # Validate the remaining arguments
+        var error_message = self.arg_validator(remaining_args)
+        if error_message:
+            raise Error(error_message.value())
 
         # Check if the flags are valid
         command.validate_flag_set(command.flags)
@@ -236,14 +252,6 @@ struct Command(CollectionElement):
         command.run(Arc(command), remaining_args)
         if command.post_run:
             command.post_run.value()(Arc(command), remaining_args)
-
-    fn add_flag(inout self, flag: Flag) -> None:
-        """Adds a flag to the command's flags.
-
-        Args:
-            flag: The flag to add to the command.
-        """
-        self.flags.add_flag(flag)
 
     fn get_all_flags(self) -> Arc[FlagSet]:
         """Returns all flags for the command and persistent flags from its parent.
