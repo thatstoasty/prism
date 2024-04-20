@@ -1,31 +1,7 @@
-from collections.dict import Dict, KeyElement
 from memory._arc import Arc
 from collections.optional import Optional
 from .vector import to_string
 from .command import ArgValidator
-
-
-@value
-struct StringKey(KeyElement):
-    var s: String
-
-    fn __init__(inout self, owned s: String):
-        self.s = s^
-
-    fn __init__(inout self, s: StringLiteral):
-        self.s = String(s)
-
-    fn __hash__(self) -> Int:
-        return hash(self.s)
-
-    fn __eq__(self, other: Self) -> Bool:
-        return self.s == other.s
-
-    fn __ne__(self, other: Self) -> Bool:
-        return self.s != other.s
-
-    fn __str__(self) -> String:
-        return self.s
 
 
 fn string_to_bool(value: String) -> Bool:
@@ -34,7 +10,7 @@ fn string_to_bool(value: String) -> Bool:
     return False
 
 
-fn str_to_float(s: String) raises -> Float64:
+fn string_to_float(s: String) raises -> Float64:
     try:
         # locate decimal point
         var dot_pos = s.find(".")
@@ -301,9 +277,9 @@ struct FlagSet(Stringable, Sized):
         try:
             var flag = self.get_flag_of_type(name, "Float64")[]
             if not flag.value:
-                return str_to_float(flag.default)
+                return string_to_float(flag.default)
 
-            return str_to_float(flag.value.value())
+            return string_to_float(flag.value.value())
         except e:
             return None
 
