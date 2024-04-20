@@ -19,7 +19,7 @@ fn handler(command: CommandArc, args: List[String]) raises -> None:
 fn init() raises -> None:
     var root_command = Command(name="read_csv", description="Base command.", run=handler, arg_validator=no_args)
     root_command.flags.add_string_flag(name="file", shorthand="f", usage="CSV file to read.")
-    root_command.flags.add_int_flag(name="lines", shorthand="l", usage="Lines to print.", default="3")
+    root_command.flags.add_int_flag(name="lines", shorthand="l", usage="Lines to print.", default=3)
 
     root_command.execute()
 
