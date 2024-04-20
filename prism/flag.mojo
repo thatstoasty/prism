@@ -144,7 +144,6 @@ struct FlagSet(Stringable, Sized):
 
             return flag.value
         except e:
-            print(e)
             return None
 
     fn get_as_bool(self, name: String) -> Optional[Bool]:
@@ -159,8 +158,7 @@ struct FlagSet(Stringable, Sized):
                 return string_to_bool(flag.default)
 
             return string_to_bool(flag.value.value())
-        except e:
-            print(e)
+        except:
             return None
 
     fn get_as_int(self, name: String) raises -> Optional[Int]:
@@ -175,8 +173,7 @@ struct FlagSet(Stringable, Sized):
                 return atol(flag.default)
 
             return atol(flag.value.value())
-        except e:
-            print(e)
+        except:
             return None
 
     fn get_as_int8(self, name: String) raises -> Optional[Int8]:
@@ -303,6 +300,17 @@ struct FlagSet(Stringable, Sized):
         for flag in self.flags:
             result.append(flag[].shorthand)
         return result
+
+    fn lookup_name_from_shorthand(self, shorthand: String) -> Optional[String]:
+        """Returns the name of a flag given its shorthand.
+
+        Args:
+            shorthand: The shorthand of the flag to lookup.
+        """
+        for flag in self.flags:
+            if flag[].shorthand == shorthand:
+                return flag[].name
+        return None
 
     fn _add_flag[
         T: StringableCollectionElement
@@ -605,7 +613,7 @@ struct FlagSet(Stringable, Sized):
                 self.flags[i].value = value
                 return
 
-        raise Error("FlagNotFound: Could not find flag with name: " + name)
+        raise Error("FlagNotFound: Could not set value on flag: " + name)
 
 
 @value
@@ -683,9 +691,14 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
         arguments: The arguments passed via the command line.
     """
     var remaining_args = List[String]()
-    for i in range(len(arguments)):
-        # while True:
-        var argument = String(arguments[i])
+    var i = 0
+    while i < len(arguments):
+        var argument = arguments[i]
+        if not argument.startswith("-", 0, 1):
+            remaining_args.append(argument)
+            i += 1
+            continue
+
         if argument.startswith("--", 0, 2):
             if argument.find("=") != -1:
                 var flag = argument.split("=")
@@ -695,11 +708,27 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
                 if name not in flags:
                     raise Error("Command does not accept the flag supplied: " + name)
 
-                try:
-                    flags._set_flag_value(name, value)
+                flags._set_flag_value(name, value)
+                i += 1
+            else:
+                var name = argument[2:]
+                if name not in flags:
+                    raise Error("Command does not accept the flag supplied: " + name)
 
-                except e:
-                    raise Error("Command does not accept the flag supplied: " + name + "; " + e)
+                if flags.get_as_bool(name):
+                    flags._set_flag_value(name, "True")
+                    i += 1
+                    continue
+
+                if i + 1 >= len(arguments):
+                    raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
+
+                if arguments[i + 1].startswith("-", 0, 1):
+                    raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
+
+                flags._set_flag_value(name, arguments[i + 1])
+                i += 2
+
         elif argument.startswith("-", 0, 1):
             if argument.find("=") != -1:
                 var flag = argument.split("=")
@@ -713,11 +742,36 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
                     elif i == len(shorthands) - 1:
                         raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
 
+                flags._set_flag_value(shorthand, value)
+                i += 1
+
+            else:
+                var shorthand = argument[1:]
+                var shorthands = flags.get_shorthands()
+                for i in range(len(shorthands)):
+                    if shorthands[i] == shorthand:
+                        break
+                    elif i == len(shorthands) - 1:
+                        raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
+
+                var name = flags.lookup_name_from_shorthand(shorthand).value()
+                if flags.get_as_bool(name):
+                    flags._set_flag_value(name, "True")
+                    i += 1
+                    continue
+
+                if i + 1 >= len(arguments):
+                    raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
+
+                if arguments[i + 1].startswith("-", 0, 1):
+                    raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
+
+                flags._set_flag_value(name, arguments[i + 1])
+                i += 2
+
                 try:
-                    flags._set_flag_value(shorthand, value)
+                    flags._set_flag_value(shorthand, "True")
                 except e:
                     raise Error("Command does not accept the flag supplied: " + shorthand + "; " + e)
-        else:
-            remaining_args.append(argument)
 
     return remaining_args

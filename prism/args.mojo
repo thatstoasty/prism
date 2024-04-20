@@ -1,6 +1,6 @@
 from collections.optional import Optional
+from external.gojo.fmt import sprintf
 from .vector import contains
-from .fmt import sprintf
 
 
 # TODO: Until Error is a CollectionElement, return a string and throw the error from the caller.

@@ -2,11 +2,10 @@ from sys import argv
 from collections.optional import Optional
 from collections.dict import Dict, KeyElement
 from memory._arc import Arc
+from external.gojo.fmt import sprintf
 from .flag import Flag, FlagSet, StringKey, get_flags
-
 from .args import arbitrary_args, ArgValidator, get_args
 from .vector import join, to_string, contains
-from .fmt import sprintf
 
 
 fn get_args_as_list() -> List[String]:
