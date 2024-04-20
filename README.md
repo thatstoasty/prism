@@ -19,55 +19,68 @@ from prism import Flag, Command, CommandArc
 from python import Python, PythonObject
 
 
-fn base(command: CommandArc, args: List[String]) raises -> None:
+fn base(command: CommandArc, args: List[String]) -> Error:
     print("This is the base command!")
+    return Error()
 
 
-fn print_information(command: CommandArc, args: List[String]) raises -> None:
+fn print_information(command: CommandArc, args: List[String]) -> Error:
     print("Pass cat or dog as a subcommand, and see what you get!")
+    return Error()
 
 
-fn get_cat_fact(command: CommandArc, args: List[String]) raises -> None:
+fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
     var flags = command[].get_all_flags()[]
     var lover = flags.get_as_bool("lover")
     if lover and lover.value():
         print("Hello fellow cat lover!")
 
-    var requests = Python.import_module("requests")
-    # URL you want to send a GET request to
-    var url = "https://cat-fact.herokuapp.com/facts/"
+    try:
+        var requests = Python.import_module("requests")
 
-    # Send the GET request
-    var response = requests.get(url)
+        # URL you want to send a GET request to
+        var url = "https://cat-fact.herokuapp.com/facts/"
 
-    # Check if the request was successful (status code 200)
-    if response.status_code == 200:
-        var count = flags.get_as_int("count")
-        if not count:
-            raise Error("Count flag was not found.")
-        var body = response.json()
-        for i in range(count.value()):
-            print(body[i]["text"])
-    else:
-        raise Error("Request failed!")
+        # Send the GET request
+        var response = requests.get(url)
 
+        # Check if the request was successful (status code 200)
+        if response.status_code == 200:
+            var count = flags.get_as_int("count")
+            if not count:
+                return Error("Count flag was not found.")
+            var body = response.json()
+            for i in range(count.value()):
+                print(body[i]["text"])
+        else:
+            return Error("Request failed!")
+    except e:
+        return e
 
-fn get_dog_breeds(command: CommandArc, args: List[String]) raises -> None:
-    var requests = Python.import_module("requests")
-    # URL you want to send a GET request to
-    var url = "https://dog.ceo/api/breeds/list/all"
-
-    # Send the GET request
-    var response = requests.get(url)
-
-    # Check if the request was successful (status code 200)
-    if response.status_code == 200:
-        print(response.json()["message"])
-    else:
-        raise Error("Request failed!")
+    return Error()
 
 
-fn init() raises -> None:
+fn get_dog_breeds(command: CommandArc, args: List[String]) -> Error:
+    try:
+        var requests = Python.import_module("requests")
+        # URL you want to send a GET request to
+        var url = "https://dog.ceo/api/breeds/list/all"
+
+        # Send the GET request
+        var response = requests.get(url)
+
+        # Check if the request was successful (status code 200)
+        if response.status_code == 200:
+            print(response.json()["message"])
+        else:
+            return Error("Request failed!")
+    except e:
+        return e
+
+    return Error()
+
+
+fn init() -> None:
     var root_command = Command(name="nested", description="Base command.", run=base)
 
     var get_command = Command(
@@ -96,8 +109,9 @@ fn init() raises -> None:
     root_command.execute()
 
 
-fn main() raises -> None:
+fn main() -> None:
     init()
+
 ```
 
 Start by navigating to the `nested` example directory.
@@ -168,6 +182,8 @@ Usage information will be printed the console by passing the `--help` flag.
 
 - Flags can have values passed by using the `=` operator. Like `--count=5` OR like `--count 5`.
 - Commands can be created via a typical `Command()` constructor to use runtime values, or you can use `Command.new()` method to create a new `Command` using compile time `Parameters` instead (when possible).
+- This library leans towards Errors as values over raising Exceptions.
+- `Optional[Error]` would be much cleaner for Command run functions. For now return `Error()` if there's no `Error` to return.
 
 ## TODO
 
@@ -183,6 +199,8 @@ Usage information will be printed the console by passing the `--help` flag.
 - Map `--help` flag to configurable help function.
 - Add find suggestion logic to `Command` struct.
 - Enable required flags.
+- Replace print usage with writers to enable stdout/stderr/file writing.
+- Split `Run` and `RunE` fields so that the primary run function `Run` can return no errors while `RunE` can return errors.
 
 ### Improvements
 

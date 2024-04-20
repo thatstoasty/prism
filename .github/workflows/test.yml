@@ -1,0 +1,23 @@
+name: Run Tests
+
+on: ["push"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: basic
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          curl https://get.modular.com | MODULAR_AUTH=${{ secrets.MODULAR_AUTH }} sh -
+          modular auth ${{ secrets.MODULAR_AUTH }}
+          modular install nightly/mojo
+          pip install pytest
+          pip install git+https://github.com/guidorice/mojo-pytest.git
+      - name: Unit Tests
+        run: |
+          export MODULAR_HOME="/home/runner/.modular"
+          export PATH="/home/runner/.modular/pkg/packages.modular.com_nightly_mojo/bin:$PATH"
+          pytest

@@ -668,7 +668,7 @@ fn parse_shorthand_flag(
 
 
 # TODO: This parsing is dirty atm, will come back around and clean it up.
-fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[String]:
+fn get_flags(inout flags: FlagSet, arguments: List[String]) -> (List[String], Error):
     """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
     Args:
@@ -690,15 +690,19 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) raises -> List[Strin
         var value: String = ""
         var increment_by: Int = 0
 
-        # Full flag
-        if argument.startswith("--", 0, 2):
-            name, value, increment_by = parse_flag(i, argument, arguments, flags)
+        try:
+            # Full flag
+            if argument.startswith("--", 0, 2):
+                name, value, increment_by = parse_flag(i, argument, arguments, flags)
 
-        # Shorthand flag
-        elif argument.startswith("-", 0, 1):
-            name, value, increment_by = parse_shorthand_flag(i, argument, arguments, flags)
+            # Shorthand flag
+            elif argument.startswith("-", 0, 1):
+                name, value, increment_by = parse_shorthand_flag(i, argument, arguments, flags)
 
-        flags._set_flag_value(name, value)
+            flags._set_flag_value(name, value)
+        except e:
+            return remaining_args, e
+
         i += increment_by
 
-    return remaining_args
+    return remaining_args, Error()

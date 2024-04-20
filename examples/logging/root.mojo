@@ -2,7 +2,7 @@ from prism import Flag, Command, CommandArc, minimum_n_args
 from examples.logging.log import logger, default_logger, json_logger
 
 
-fn handler(command: CommandArc, args: List[String]) raises -> None:
+fn handler(command: CommandArc, args: List[String]) -> Error:
     var print_type = command[].get_all_flags()[].get_as_string("type").value()
     if print_type == "json":
         for arg in args:
@@ -14,8 +14,10 @@ fn handler(command: CommandArc, args: List[String]) raises -> None:
         for arg in args:
             default_logger.info(arg[])
 
+    return Error()
 
-fn init() raises -> None:
+
+fn init() -> None:
     var root_command = Command(
         name="logger", description="Base command.", run=handler, arg_validator=minimum_n_args[1]()
     )
@@ -26,5 +28,5 @@ fn init() raises -> None:
     root_command.execute()
 
 
-fn main() raises -> None:
+fn main() -> None:
     init()

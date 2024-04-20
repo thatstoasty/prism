@@ -19,7 +19,7 @@ fn no_args(args: List[String]) -> Optional[String]:
         args: The arguments to check.
     """
     if len(args) > 0:
-        return String("Command ") + String("does not take any arguments")
+        return String("Command does not take any arguments.")
     return None
 
 
@@ -45,7 +45,7 @@ fn minimum_n_args[n: Int]() -> ArgValidator:
     fn less_than_n_args(args: List[String]) -> Optional[String]:
         if len(args) < n:
             return sprintf(
-                "Command accepts at least %d arguments. Received: %d.",
+                "Command accepts at least %d argument(s). Received: %d.",
                 n,
                 len(args),
             )
@@ -66,7 +66,7 @@ fn maximum_n_args[n: Int]() -> ArgValidator:
 
     fn more_than_n_args(args: List[String]) -> Optional[String]:
         if len(args) > n:
-            return sprintf("Command accepts at most %d arguments. Received: %d", n, len(args))
+            return sprintf("Command accepts at most %d argument(s). Received: %d.", n, len(args))
         return None
 
     return more_than_n_args
@@ -84,7 +84,7 @@ fn exact_args[n: Int]() -> ArgValidator:
 
     fn exactly_n_args(args: List[String]) -> Optional[String]:
         if len(args) != n:
-            return sprintf("Command accepts at exactly %d arguments. Received: %d", n, len(args))
+            return sprintf("Command accepts exactly %d argument(s). Received: %d.", n, len(args))
         return None
 
     return exactly_n_args
@@ -121,7 +121,7 @@ fn range_args[minimum: Int, maximum: Int]() -> ArgValidator:
     fn range_n_args(args: List[String]) -> Optional[String]:
         if len(args) < minimum or len(args) > maximum:
             return sprintf(
-                "Command accepts between %d and %d arguments. Received: %d",
+                "Command accepts between %d to %d argument(s). Received: %d.",
                 minimum,
                 maximum,
                 len(args),

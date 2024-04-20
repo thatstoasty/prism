@@ -3,6 +3,7 @@ from collections.optional import Optional
 from collections.dict import Dict, KeyElement
 from memory._arc import Arc
 from external.gojo.fmt import sprintf
+from external.gojo.builtins import panic
 from .flag import Flag, FlagSet, get_flags
 from .args import arbitrary_args, ArgValidator, get_args
 from .vector import join, to_string, contains
@@ -21,7 +22,30 @@ fn get_args_as_list() -> List[String]:
 
 
 alias CommandArc = Arc[Command]
-alias CommandFunction = fn (command: Arc[Command], args: List[String]) raises -> None
+alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> Error
+
+
+fn parse_command_from_args(start: Command) -> (Command, List[String]):
+    var args = get_args_as_list()
+    var number_of_args = len(args)
+    var command = start
+    var children = command.children
+    var leftover_args_start_index = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
+
+    for arg in args:
+        for command_ref in children:
+            if command_ref[][].name == arg[]:
+                command = command_ref[][]
+                children = command.children
+                leftover_args_start_index += 1
+                break
+
+    # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
+    var remaining_args = List[String]()
+    if number_of_args >= leftover_args_start_index:
+        remaining_args = args[leftover_args_start_index:number_of_args]
+
+    return command, remaining_args
 
 
 # TODO: Add persistent flags
@@ -47,7 +71,6 @@ struct Command(CollectionElement):
         name: String,
         description: String,
         run: CommandFunction,
-        # arg_validator: ArgValidator = arbitrary_args,
         valid_args: List[String] = List[String](),
         pre_run: Optional[CommandFunction] = None,
         post_run: Optional[CommandFunction] = None,
@@ -122,7 +145,38 @@ struct Command(CollectionElement):
             name,
             description,
             run,
-            arg_validator,
+            valid_args,
+            pre_run,
+            post_run,
+        )
+
+    @staticmethod
+    fn new[
+        name: String,
+        description: String,
+        run: CommandFunction,
+        valid_args: List[String] = List[String](),
+        pre_run: Optional[CommandFunction] = None,
+        post_run: Optional[CommandFunction] = None,
+    ]() -> Self:
+        """Experimental function to create a new Command by using parameters to offload some work to compile time.
+
+        Params:
+            name: The name of the command.
+            description: The description of the command.
+            run: The function to run when the command is executed.
+            valid_args: The valid arguments for the command.
+            pre_run: The function to run before the command is executed.
+            post_run: The function to run after the command is executed.
+
+        Returns:
+            A new Command instance.
+        """
+        return Command(
+            name,
+            description,
+            run,
+            arbitrary_args,
             valid_args,
             pre_run,
             post_run,
@@ -178,15 +232,15 @@ struct Command(CollectionElement):
             + parent_name
         )
 
-    fn full_command(self) -> String:
+    fn _full_command(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
         if self.parent[]:
-            var ancestor: String = self.parent[].value().full_command()
+            var ancestor: String = self.parent[].value()._full_command()
             return ancestor + " " + self.name
         else:
             return self.name
 
-    fn help(self) -> None:
+    fn _help(self) -> None:
         """Prints the help information for the command."""
         var child_commands: String = ""
         for child in self.children:
@@ -214,78 +268,55 @@ struct Command(CollectionElement):
         if len(self.flags) > 0:
             usage_arguments = usage_arguments + " [flags]"
 
-        var full_command = self.full_command()
+        var _full_command = self._full_command()
         var help = self.description + "\n\n"
-        var usage = "Usage:\n" + "  " + full_command + usage_arguments + "\n\n"
+        var usage = "Usage:\n" + "  " + _full_command + usage_arguments + "\n\n"
         var available_commands = "Available commands:\n" + child_commands + "\n"
         var available_flags = "Available flags:\n" + flags + "\n"
-        var note = 'Use "' + full_command + ' [command] --help" for more information about a command.'
+        var note = 'Use "' + _full_command + ' [command] --help" for more information about a command.'
         help = help + usage + available_commands + available_flags + note
         print(help)
 
-    fn validate_flag_set(self, flag_set: FlagSet) raises -> None:
-        """Validates the flags passed to the command. Raises an error if an invalid flag is passed.
-
-        Args:
-            flag_set: The flags passed to the command.
-        """
-        var length_of_command_flags = len(self.flags)
-        var length_of_input_flags = len(flag_set)
-
-        if length_of_input_flags > length_of_command_flags:
-            raise Error("Specified more flags than the command accepts, please check your command's flags.")
-
-        for flag in flag_set.flags:
-            if flag[] not in self.flags:
-                raise Error(String("Invalid flags passed to command: ") + flag[].name)
-
-    fn execute(inout self) raises -> None:
+    fn execute(inout self) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch."""
         # Traverse from the root command through the children to find a match for the current argument.
         # Any additional arguments past the last matched command name are considered arguments.
         # TODO: Tree traversal is new to me, there's probably a better way to do this.
-        var args = get_args_as_list()
-        var number_of_args = len(args)
-        var command = self
-        var children = command.children
-        var leftover_args_start_index = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
-
-        for arg in args:
-            for command_ref in children:
-                if command_ref[][].name == arg[]:
-                    command = command_ref[][]
-                    children = command.children
-                    leftover_args_start_index += 1
-                    break
-
-        # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
-        var remaining_args = List[String]()
-        if number_of_args >= leftover_args_start_index:
-            remaining_args = args[leftover_args_start_index:number_of_args]
+        var remaining_args: List[String]
+        var command: Self
+        command, remaining_args = parse_command_from_args(self)
 
         # Get the flags for the command to be executed.
-        remaining_args = get_flags(command.flags, remaining_args)
+        var err: Error
+        remaining_args, err = get_flags(command.flags, remaining_args)
+        if err:
+            panic(err)
 
         # Check if the help flag was passed
         var help = command.flags.get_as_bool("help")
         if help.value() == True:
-            command.help()
+            command._help()
             return None
 
         # Validate the remaining arguments
         var error_message = self.arg_validator(remaining_args)
         if error_message:
-            raise Error(error_message.value())
-
-        # Check if the flags are valid
-        command.validate_flag_set(command.flags)
+            panic(error_message.value())
 
         # Run the function's commands.
         if command.pre_run:
-            command.pre_run.value()(Arc(command), remaining_args)
-        command.run(Arc(command), remaining_args)
+            err = command.pre_run.value()(Arc(command), remaining_args)
+            if err:
+                panic(err)
+
+        err = command.run(Arc(command), remaining_args)
+        if err:
+            panic(err)
+
         if command.post_run:
-            command.post_run.value()(Arc(command), remaining_args)
+            err = command.post_run.value()(Arc(command), remaining_args)
+            if err:
+                panic(err)
 
     fn get_all_flags(self) -> Arc[FlagSet]:
         """Returns all flags for the command and persistent flags from its parent.
@@ -295,14 +326,6 @@ struct Command(CollectionElement):
         """
         return Arc(self.flags)
 
-    fn set_parent(inout self, inout parent: Command) -> None:
-        """Sets the command's parent attribute to the given parent.
-
-        Args:
-            parent: The name of the parent command.
-        """
-        self.parent[] = parent
-
     fn add_command(inout self, inout command: Command):
         """Adds child command and set's child's parent attribute to self.
 
@@ -310,4 +333,4 @@ struct Command(CollectionElement):
             command: The command to add as a child of self.
         """
         self.children.append(Arc(command))
-        command.set_parent(self)
+        command.parent[] = self
