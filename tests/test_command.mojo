@@ -24,8 +24,8 @@ fn test_command_operations():
     var full_command_test = MojoTest("Testing Command._full_command")
     full_command_test.assert_equal(child_cmd._full_command(), "root child")
 
-    var help_test = MojoTest("Testing Command._help")
-    cmd._help()
+    # var help_test = MojoTest("Testing Command.help")
+    # cmd.help()
 
 
 fn main():

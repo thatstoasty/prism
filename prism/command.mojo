@@ -4,6 +4,7 @@ from collections.dict import Dict, KeyElement
 from memory._arc import Arc
 from external.gojo.fmt import sprintf
 from external.gojo.builtins import panic
+from external.gojo.strings import StringBuilder
 from .flag import Flag, FlagSet, get_flags
 from .args import arbitrary_args, ArgValidator, get_args
 from .vector import join, to_string, contains
@@ -21,8 +22,37 @@ fn get_args_as_list() -> List[String]:
     return args_list
 
 
+fn default_help(command: Arc[Command]) -> String:
+    """Prints the help information for the command."""
+    var builder = StringBuilder()
+    _ = builder.write_string(command[].description)
+    _ = builder.write_string("\n\n")
+
+    # Build usage statement arguments depending on the command's children and flags.
+    var full_command = command[]._full_command()
+    _ = builder.write_string(sprintf("Usage:\n  %s%s", full_command, String(" [args]")))
+    if len(command[].children) > 0:
+        _ = builder.write_string(" [command]")
+    if len(command[].flags) > 0:
+        _ = builder.write_string(" [flags]")
+
+    _ = builder.write_string("\n\nAvailable commands:\n")
+    for child in command[].children:
+        _ = builder.write_string(sprintf("  %s\n", str(child[][])))
+
+    _ = builder.write_string("\nAvailable flags:\n")
+    for command in command[].flags.get_flags():
+        _ = builder.write_string(
+            sprintf("  -%s, --%s    %s\n", command[][].shorthand, command[][].name, command[][].usage)
+        )
+
+    _ = builder.write_string(sprintf('Use "%s [command] --help" for more information about a command.', full_command))
+    return str(builder)
+
+
 alias CommandArc = Arc[Command]
 alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> Error
+alias HelpFunction = fn (Arc[Command]) -> String
 
 
 fn parse_command_from_args(start: Command) -> (Command, List[String]):
@@ -55,6 +85,9 @@ struct Command(CollectionElement):
     var name: String
     var description: String
 
+    # Generates help text.
+    var help: HelpFunction
+
     var pre_run: Optional[CommandFunction]
     var run: CommandFunction
     var post_run: Optional[CommandFunction]
@@ -74,9 +107,12 @@ struct Command(CollectionElement):
         valid_args: List[String] = List[String](),
         pre_run: Optional[CommandFunction] = None,
         post_run: Optional[CommandFunction] = None,
+        help: HelpFunction = default_help,
     ):
         self.name = name
         self.description = description
+
+        self.help = help
 
         self.pre_run = pre_run
         self.run = run
@@ -100,9 +136,12 @@ struct Command(CollectionElement):
         valid_args: List[String] = List[String](),
         pre_run: Optional[CommandFunction] = None,
         post_run: Optional[CommandFunction] = None,
+        help: HelpFunction = default_help,
     ):
         self.name = name
         self.description = description
+
+        self.help = help
 
         self.pre_run = pre_run
         self.run = run
@@ -186,6 +225,8 @@ struct Command(CollectionElement):
         self.name = existing.name
         self.description = existing.description
 
+        self.help = existing.help
+
         self.pre_run = existing.pre_run
         self.run = existing.run
         self.post_run = existing.post_run
@@ -199,6 +240,8 @@ struct Command(CollectionElement):
     fn __moveinit__(inout self, owned existing: Self):
         self.name = existing.name^
         self.description = existing.description^
+
+        self.help = existing.help
 
         self.pre_run = existing.pre_run^
         self.run = existing.run
@@ -240,43 +283,6 @@ struct Command(CollectionElement):
         else:
             return self.name
 
-    fn _help(self) -> None:
-        """Prints the help information for the command."""
-        var child_commands: String = ""
-        for child in self.children:
-            child_commands = child_commands + "  " + child[][] + "\n"
-
-        var flags: String = ""
-        for command in self.flags.get_flags():
-            flags = (
-                flags
-                + "  "
-                + "-"
-                + command[][].shorthand
-                + ", "
-                + "--"
-                + command[][].name
-                + "    "
-                + command[][].usage
-                + "\n"
-            )
-
-        # Build usage statement arguments depending on the command's children and flags.
-        var usage_arguments: String = " [args]"
-        if len(self.children) > 0:
-            usage_arguments = " [command]" + usage_arguments
-        if len(self.flags) > 0:
-            usage_arguments = usage_arguments + " [flags]"
-
-        var _full_command = self._full_command()
-        var help = self.description + "\n\n"
-        var usage = "Usage:\n" + "  " + _full_command + usage_arguments + "\n\n"
-        var available_commands = "Available commands:\n" + child_commands + "\n"
-        var available_flags = "Available flags:\n" + flags + "\n"
-        var note = 'Use "' + _full_command + ' [command] --help" for more information about a command.'
-        help = help + usage + available_commands + available_flags + note
-        print(help)
-
     fn execute(inout self) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch."""
         # Traverse from the root command through the children to find a match for the current argument.
@@ -285,17 +291,18 @@ struct Command(CollectionElement):
         var remaining_args: List[String]
         var command: Self
         command, remaining_args = parse_command_from_args(self)
+        var command_ref = Arc(command)
 
         # Get the flags for the command to be executed.
         var err: Error
-        remaining_args, err = get_flags(command.flags, remaining_args)
+        remaining_args, err = get_flags(command_ref[].flags, remaining_args)
         if err:
             panic(err)
 
         # Check if the help flag was passed
-        var help = command.flags.get_as_bool("help")
-        if help.value() == True:
-            command._help()
+        var help_passed = command_ref[].flags.get_as_bool("help")
+        if help_passed.value() == True:
+            print(command.help(command_ref))
             return None
 
         # Validate the remaining arguments
@@ -304,17 +311,17 @@ struct Command(CollectionElement):
             panic(error_message.value())
 
         # Run the function's commands.
-        if command.pre_run:
-            err = command.pre_run.value()(Arc(command), remaining_args)
+        if command_ref[].pre_run:
+            err = command.pre_run.value()(command_ref, remaining_args)
             if err:
                 panic(err)
 
-        err = command.run(Arc(command), remaining_args)
+        err = command_ref[].run(command_ref, remaining_args)
         if err:
             panic(err)
 
-        if command.post_run:
-            err = command.post_run.value()(Arc(command), remaining_args)
+        if command_ref[].post_run:
+            err = command.post_run.value()(command_ref, remaining_args)
             if err:
                 panic(err)
 
