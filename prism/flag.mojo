@@ -5,8 +5,18 @@ from .command import ArgValidator
 
 
 fn string_to_bool(value: String) -> Bool:
-    if value == "True":
-        return True
+    """Converts a string to a boolean.
+
+    Args:
+        value: The string to convert to a boolean.
+
+    Returns:
+        The boolean equivalent of the string.
+    """
+    var truthy = List[String]("true", "True", "1")
+    for t in truthy:
+        if value == t[]:
+            return True
     return False
 
 
@@ -323,38 +333,42 @@ struct FlagSet(Stringable, Sized):
                 return flag[].name
         return None
 
-    fn _add_flag(inout self, name: String, shorthand: String, usage: String, default: String, type: String) -> None:
+    fn _add_flag(
+        inout self, name: String, usage: String, default: String, type: String, shorthand: String = ""
+    ) -> None:
         """Adds a flag to the flag set.
+        Valid type values: [String, Bool, Int, Int8, Int16, Int32, Int64,
+        UInt8, UInt16, UInt32, UInt64, Float16, Float32, Float64]
 
         Args:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
             default: The default value of the flag.
             type: The type of the flag.
+            shorthand: The shorthand of the flag.
         """
-        self.flags.append(Flag(name, shorthand, usage, None, default, type))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=default, type=type))
 
     fn add_bool_flag[
         name: String,
-        shorthand: String,
         usage: String,
+        shorthand: String = "",
         default: Bool = False,
     ](inout self) -> None:
         """Adds a Bool flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, str(default), "Bool")
+        self._add_flag(name, usage, str(default), "Bool", shorthand)
 
     fn add_string_flag[
         name: String,
-        shorthand: String,
         usage: String,
+        shorthand: String = "",
         default: String = "",
     ](inout self) -> None:
         """Adds a String flag to the flag set.
@@ -365,9 +379,9 @@ struct FlagSet(Stringable, Sized):
             usage: The usage of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "String")
+        self._add_flag(name, usage, default, "String", shorthand)
 
-    fn add_int_flag[name: String, shorthand: String, usage: String, default: Int = 0](inout self) -> None:
+    fn add_int_flag[name: String, usage: String, shorthand: String = "", default: Int = 0](inout self) -> None:
         """Adds an Int flag to the flag set.
 
         Params:
@@ -376,133 +390,133 @@ struct FlagSet(Stringable, Sized):
             usage: The usage of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "Int")
+        self._add_flag(name, usage, default, "Int", shorthand)
 
-    fn add_int8_flag[name: String, shorthand: String, usage: String, default: Int8 = 0](inout self) -> None:
+    fn add_int8_flag[name: String, usage: String, shorthand: String = "", default: Int8 = 0](inout self) -> None:
         """Adds an Int8 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "Int8")
+        self._add_flag(name, usage, default, "Int8", shorthand)
 
-    fn add_int16_flag[name: String, shorthand: String, usage: String, default: Int16 = 0](inout self) -> None:
+    fn add_int16_flag[name: String, usage: String, shorthand: String = "", default: Int16 = 0](inout self) -> None:
         """Adds an Int16 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "Int16")
+        self._add_flag(name, usage, default, "Int16", shorthand)
 
-    fn add_int32_flag[name: String, shorthand: String, usage: String, default: Int32 = 0](inout self) -> None:
+    fn add_int32_flag[name: String, usage: String, shorthand: String = "", default: Int32 = 0](inout self) -> None:
         """Adds an Int32 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "Int32")
+        self._add_flag(name, usage, default, "Int32", shorthand)
 
-    fn add_int64_flag[name: String, shorthand: String, usage: String, default: Int64 = 0](inout self) -> None:
+    fn add_int64_flag[name: String, usage: String, shorthand: String = "", default: Int64 = 0](inout self) -> None:
         """Adds an Int64 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "Int64")
+        self._add_flag(name, usage, default, "Int64", shorthand)
 
-    fn add_uint8_flag[name: String, shorthand: String, usage: String, default: UInt8 = 0](inout self) -> None:
+    fn add_uint8_flag[name: String, usage: String, shorthand: String = "", default: UInt8 = 0](inout self) -> None:
         """Adds a UInt8 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "UInt8")
+        self._add_flag(name, usage, default, "UInt8", shorthand)
 
-    fn add_uint16_flag[name: String, shorthand: String, usage: String, default: UInt16 = 0](inout self) -> None:
+    fn add_uint16_flag[name: String, usage: String, shorthand: String = "", default: UInt16 = 0](inout self) -> None:
         """Adds a UInt16 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "UInt16")
+        self._add_flag(name, usage, default, "UInt16", shorthand)
 
-    fn add_uint32_flag[name: String, shorthand: String, usage: String, default: UInt32 = 0](inout self) -> None:
+    fn add_uint32_flag[name: String, usage: String, shorthand: String = "", default: UInt32 = 0](inout self) -> None:
         """Adds a UInt32 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "UInt32")
+        self._add_flag(name, usage, default, "UInt32", shorthand)
 
-    fn add_uint64_flag[name: String, shorthand: String, usage: String, default: UInt64 = 0](inout self) -> None:
+    fn add_uint64_flag[name: String, usage: String, shorthand: String = "", default: UInt64 = 0](inout self) -> None:
         """Adds a UInt64 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "UInt64")
+        self._add_flag(name, usage, default, "UInt64", shorthand)
 
-    fn add_float16_flag[name: String, shorthand: String, usage: String, default: Float16 = 0](inout self) -> None:
+    fn add_float16_flag[name: String, usage: String, shorthand: String = "", default: Float16 = 0](inout self) -> None:
         """Adds a Float16 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "Float16")
+        self._add_flag(name, usage, default, "Float16", shorthand)
 
-    fn add_float32_flag[name: String, shorthand: String, usage: String, default: Float32 = 0](inout self) -> None:
+    fn add_float32_flag[name: String, usage: String, shorthand: String = "", default: Float32 = 0](inout self) -> None:
         """Adds a Float32 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "Float32")
+        self._add_flag(name, usage, default, "Float32", shorthand)
 
     fn add_float64_flag[
         name: String,
-        shorthand: String,
         usage: String,
+        shorthand: String = "",
         default: Float64 = 0,
     ](inout self) -> None:
         """Adds a Float64 flag to the flag set.
 
         Params:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self._add_flag(name, shorthand, usage, default, "Float64")
+        self._add_flag(name, usage, default, "Float64", shorthand)
 
     # TODO: This is temporary until I figure out how to return a mutable reference to a flag inside the list.
     # Calling get_flag, dereferencing, and then setting the value does not persist.
@@ -514,7 +528,7 @@ struct FlagSet(Stringable, Sized):
             value: The value to set the flag to.
         """
         for i in range(len(self.flags)):
-            if self.flags[i].name == name or self.flags[i].shorthand == name:
+            if self.flags[i].name == name:
                 self.flags[i].value = value
                 return
 
@@ -651,7 +665,10 @@ fn parse_shorthand_flag(
 
     # Flag with value set like "-f <value>"
     var shorthand = argument[1:]
-    var name = flags.lookup_name(shorthand).value()
+    var result = flags.lookup_name(shorthand)
+    if not result:
+        raise Error("Did not find name for shorthand: " + shorthand)
+    var name = result.value()
 
     # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
     if flags.get_as_bool(name):

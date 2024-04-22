@@ -85,7 +85,7 @@ struct Command(CollectionElement):
         self.arg_validator = arbitrary_args
         self.valid_args = valid_args
         self.flags = FlagSet()
-        self.flags.add_bool_flag["help", "h", "Displays help information about the command."]()
+        self.flags.add_bool_flag[name="help", shorthand="h", usage="Displays help information about the command."]()
 
         self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
@@ -111,7 +111,7 @@ struct Command(CollectionElement):
         self.arg_validator = arg_validator
         self.valid_args = valid_args
         self.flags = FlagSet()
-        self.flags.add_bool_flag["help", "h", "Displays help information about the command."]()
+        self.flags.add_bool_flag[name="help", shorthand="h", usage="Displays help information about the command."]()
 
         self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
