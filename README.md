@@ -198,7 +198,6 @@ Usage information will be printed the console by passing the `--help` flag.
 ### Features
 
 - Introduce persistent flags and commands to `Command` struct
-- Map `--help` flag to configurable help function.
 - Add find suggestion logic to `Command` struct.
 - Enable required flags.
 - Replace print usage with writers to enable stdout/stderr/file writing.
