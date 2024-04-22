@@ -71,7 +71,7 @@ fn test_parse_shorthand_flag() raises:
     test.assert_equal(increment_by, 1)
 
 
-fn main() raises:
+fn main():
     test_string_to_bool()
     test_string_to_float()
     test_get_flags()
