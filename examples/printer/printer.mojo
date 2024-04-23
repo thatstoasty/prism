@@ -3,10 +3,10 @@ from prism import Flag, Command, CommandArc, exact_args
 from external.mist import TerminalStyle
 
 
-fn printer(command: CommandArc, args: List[String]) -> Error:
+fn printer(command: CommandArc, args: List[String]) -> None:
     if len(args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
-        return Error()
+        return None
 
     var flags = command[].get_all_flags()[]
     var color = flags.get_as_string("color")
@@ -28,17 +28,17 @@ fn printer(command: CommandArc, args: List[String]) -> Error:
         style = style.italic()
 
     print(style.render(args[0]))
-    return Error()
+    return None
 
 
-fn pre_hook(command: CommandArc, args: List[String]) -> Error:
+fn pre_hook(command: CommandArc, args: List[String]) -> None:
     print("Pre-hook executed!")
-    return Error()
+    return None
 
 
-fn post_hook(command: CommandArc, args: List[String]) -> Error:
+fn post_hook(command: CommandArc, args: List[String]) -> None:
     print("Post-hook executed!")
-    return Error()
+    return None
 
 
 fn init() -> None:

@@ -51,7 +51,8 @@ fn default_help(command: Arc[Command]) -> String:
 
 
 alias CommandArc = Arc[Command]
-alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> Error
+alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> None
+alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) -> Error
 alias HelpFunction = fn (Arc[Command]) -> String
 
 
@@ -82,6 +83,22 @@ fn parse_command_from_args(start: Command) -> (Command, List[String]):
 # TODO: For parent Arc[Optional[Self]] works but Optional[Arc[Self]] causes compiler issues.
 @value
 struct Command(CollectionElement):
+    """A struct representing a command that can be executed from the command line.
+
+    Args:
+        name: The name of the command.
+        description: The description of the command.
+        arg_validator: The function to validate the arguments passed to the command.
+        valid_args: The valid arguments for the command.
+        run: The function to run when the command is executed.
+        pre_run: The function to run before the command is executed.
+        post_run: The function to run after the command is executed.
+        erroring_run: The function to run when the command is executed that returns an error.
+        erroring_pre_run: The function to run before the command is executed that returns an error.
+        erroring_post_run: The function to run after the command is executed that returns an error.
+        help: The function to generate help text for the command.
+    """
+
     var name: String
     var description: String
 
@@ -89,8 +106,12 @@ struct Command(CollectionElement):
     var help: HelpFunction
 
     var pre_run: Optional[CommandFunction]
-    var run: CommandFunction
+    var run: Optional[CommandFunction]
     var post_run: Optional[CommandFunction]
+
+    var erroring_pre_run: Optional[CommandFunctionErr]
+    var erroring_run: Optional[CommandFunctionErr]
+    var erroring_post_run: Optional[CommandFunctionErr]
 
     var arg_validator: ArgValidator
     var valid_args: List[String]
@@ -103,12 +124,18 @@ struct Command(CollectionElement):
         inout self,
         name: String,
         description: String,
-        run: CommandFunction,
         valid_args: List[String] = List[String](),
+        run: Optional[CommandFunction] = None,
         pre_run: Optional[CommandFunction] = None,
         post_run: Optional[CommandFunction] = None,
+        erroring_run: Optional[CommandFunctionErr] = None,
+        erroring_pre_run: Optional[CommandFunctionErr] = None,
+        erroring_post_run: Optional[CommandFunctionErr] = None,
         help: HelpFunction = default_help,
     ):
+        if not run and not erroring_run:
+            panic("A command must have a run or erroring_run function.")
+
         self.name = name
         self.description = description
 
@@ -117,6 +144,10 @@ struct Command(CollectionElement):
         self.pre_run = pre_run
         self.run = run
         self.post_run = post_run
+
+        self.erroring_pre_run = erroring_pre_run
+        self.erroring_run = erroring_run
+        self.erroring_post_run = erroring_post_run
 
         self.arg_validator = arbitrary_args
         self.valid_args = valid_args
@@ -131,13 +162,19 @@ struct Command(CollectionElement):
         inout self,
         name: String,
         description: String,
-        run: CommandFunction,
         arg_validator: ArgValidator,
         valid_args: List[String] = List[String](),
+        run: Optional[CommandFunction] = None,
         pre_run: Optional[CommandFunction] = None,
         post_run: Optional[CommandFunction] = None,
+        erroring_run: Optional[CommandFunctionErr] = None,
+        erroring_pre_run: Optional[CommandFunctionErr] = None,
+        erroring_post_run: Optional[CommandFunctionErr] = None,
         help: HelpFunction = default_help,
     ):
+        if not run and not erroring_run:
+            panic("A command must have a run or erroring_run function.")
+
         self.name = name
         self.description = description
 
@@ -146,6 +183,10 @@ struct Command(CollectionElement):
         self.pre_run = pre_run
         self.run = run
         self.post_run = post_run
+
+        self.erroring_pre_run = erroring_pre_run
+        self.erroring_run = erroring_run
+        self.erroring_post_run = erroring_post_run
 
         self.arg_validator = arg_validator
         self.valid_args = valid_args
@@ -159,20 +200,26 @@ struct Command(CollectionElement):
     fn new[
         name: String,
         description: String,
-        run: CommandFunction,
         valid_args: List[String] = List[String](),
+        run: Optional[CommandFunction] = None,
         pre_run: Optional[CommandFunction] = None,
         post_run: Optional[CommandFunction] = None,
+        erroring_run: Optional[CommandFunctionErr] = None,
+        erroring_pre_run: Optional[CommandFunctionErr] = None,
+        erroring_post_run: Optional[CommandFunctionErr] = None,
     ](arg_validator: ArgValidator) -> Self:
         """Experimental function to create a new Command by using parameters to offload some work to compile time.
 
         Params:
             name: The name of the command.
             description: The description of the command.
-            run: The function to run when the command is executed.
             valid_args: The valid arguments for the command.
+            run: The function to run when the command is executed.
             pre_run: The function to run before the command is executed.
             post_run: The function to run after the command is executed.
+            erroring_run: The function to run when the command is executed that returns an error.
+            erroring_pre_run: The function to run before the command is executed that returns an error.
+            erroring_post_run: The function to run after the command is executed that returns an error.
 
         Args:
             arg_validator: The function to validate the arguments passed to the command.
@@ -183,30 +230,40 @@ struct Command(CollectionElement):
         return Command(
             name,
             description,
-            run,
+            arg_validator,
             valid_args,
+            run,
             pre_run,
             post_run,
+            erroring_run,
+            erroring_pre_run,
+            erroring_post_run,
         )
 
     @staticmethod
     fn new[
         name: String,
         description: String,
-        run: CommandFunction,
         valid_args: List[String] = List[String](),
+        run: Optional[CommandFunction] = None,
         pre_run: Optional[CommandFunction] = None,
         post_run: Optional[CommandFunction] = None,
+        erroring_run: Optional[CommandFunctionErr] = None,
+        erroring_pre_run: Optional[CommandFunctionErr] = None,
+        erroring_post_run: Optional[CommandFunctionErr] = None,
     ]() -> Self:
         """Experimental function to create a new Command by using parameters to offload some work to compile time.
 
         Params:
             name: The name of the command.
             description: The description of the command.
-            run: The function to run when the command is executed.
             valid_args: The valid arguments for the command.
+            run: The function to run when the command is executed.
             pre_run: The function to run before the command is executed.
             post_run: The function to run after the command is executed.
+            erroring_run: The function to run when the command is executed that returns an error.
+            erroring_pre_run: The function to run before the command is executed that returns an error.
+            erroring_post_run: The function to run after the command is executed that returns an error.
 
         Returns:
             A new Command instance.
@@ -214,11 +271,14 @@ struct Command(CollectionElement):
         return Command(
             name,
             description,
-            run,
             arbitrary_args,
             valid_args,
+            run,
             pre_run,
             post_run,
+            erroring_run,
+            erroring_pre_run,
+            erroring_post_run,
         )
 
     fn __copyinit__(inout self, existing: Self):
@@ -230,6 +290,10 @@ struct Command(CollectionElement):
         self.pre_run = existing.pre_run
         self.run = existing.run
         self.post_run = existing.post_run
+
+        self.erroring_pre_run = existing.erroring_pre_run
+        self.erroring_run = existing.erroring_run
+        self.erroring_post_run = existing.erroring_post_run
 
         self.arg_validator = existing.arg_validator
         self.valid_args = existing.valid_args
@@ -244,8 +308,12 @@ struct Command(CollectionElement):
         self.help = existing.help
 
         self.pre_run = existing.pre_run^
-        self.run = existing.run
+        self.run = existing.run^
         self.post_run = existing.post_run^
+
+        self.erroring_pre_run = existing.erroring_pre_run^
+        self.erroring_run = existing.erroring_run
+        self.erroring_post_run = existing.erroring_post_run^
 
         self.arg_validator = existing.arg_validator^
         self.valid_args = existing.valid_args^
@@ -312,16 +380,23 @@ struct Command(CollectionElement):
 
         # Run the function's commands.
         if command_ref[].pre_run:
-            err = command.pre_run.value()(command_ref, remaining_args)
+            command.pre_run.value()(command_ref, remaining_args)
+        elif command_ref[].erroring_pre_run:
+            err = command.erroring_pre_run.value()(command_ref, remaining_args)
             if err:
                 panic(err)
 
-        err = command_ref[].run(command_ref, remaining_args)
-        if err:
-            panic(err)
+        if command_ref[].run:
+            command_ref[].run.value()(command_ref, remaining_args)
+        else:
+            err = command_ref[].erroring_run.value()(command_ref, remaining_args)
+            if err:
+                panic(err)
 
         if command_ref[].post_run:
-            err = command.post_run.value()(command_ref, remaining_args)
+            command.post_run.value()(command_ref, remaining_args)
+        elif command_ref[].erroring_post_run:
+            err = command.erroring_post_run.value()(command_ref, remaining_args)
             if err:
                 panic(err)
 
