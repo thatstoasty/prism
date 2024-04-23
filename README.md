@@ -4,6 +4,8 @@ A Budding CLI Library!
 
 Inspired by: `Cobra`!
 
+> [!NOTE]
+> This library will often have breaking changes and it should not be used for anything in production.
 NOTE: This does not work on Mojo 24.2, you must use the nightly build for now. This will be resolved in the next Mojo release.
 
 ## Usage
@@ -201,7 +203,6 @@ Usage information will be printed the console by passing the `--help` flag.
 - Add find suggestion logic to `Command` struct.
 - Enable required flags.
 - Replace print usage with writers to enable stdout/stderr/file writing.
-- Split `Run` and `RunE` fields so that the primary run function `Run` can return no errors while `RunE` can return errors.
 
 ### Improvements
 
