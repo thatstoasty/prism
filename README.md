@@ -23,14 +23,14 @@ from prism import Flag, Command, CommandArc
 from python import Python, PythonObject
 
 
-fn base(command: CommandArc, args: List[String]) -> Error:
+fn base(command: CommandArc, args: List[String]) -> None:
     print("This is the base command!")
-    return Error()
+    return None
 
 
-fn print_information(command: CommandArc, args: List[String]) -> Error:
+fn print_information(command: CommandArc, args: List[String]) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
-    return Error()
+    return None
 
 
 fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
@@ -96,7 +96,7 @@ fn init() -> None:
     var cat_command = Command(
         name="cat",
         description="Get some cat facts!",
-        run=get_cat_fact,
+        erroring_run=get_cat_fact,
     )
     cat_command.flags.add_int_flag[name="count", shorthand="c", usage="Number of facts to get."]()
     cat_command.flags.add_bool_flag[name="lover", shorthand="l", usage="Are you a cat lover?"]()
@@ -104,7 +104,7 @@ fn init() -> None:
     var dog_command = Command(
         name="dog",
         description="Get some dog breeds!",
-        run=get_dog_breeds,
+        erroring_run=get_dog_breeds,
     )
 
     get_command.add_command(cat_command)
@@ -115,6 +115,7 @@ fn init() -> None:
 
 fn main() -> None:
     init()
+
 
 ```
 
