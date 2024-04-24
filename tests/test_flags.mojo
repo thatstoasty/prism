@@ -1,3 +1,4 @@
+from memory._arc import Arc
 from tests.wrapper import MojoTest
 from prism.flag import string_to_bool, string_to_float, Flag, FlagSet, get_flags, parse_flag, parse_shorthand_flag
 
@@ -19,23 +20,23 @@ fn test_string_to_float() raises:
 
 fn test_get_flags():
     var test = MojoTest("Testing get_flags")
-    var flag_set = FlagSet()
-    flag_set.add_string_flag["key", "description", "default"]()
-    flag_set.add_bool_flag["flag", "description", "False"]()
+    var flag_set = Arc(FlagSet())
+    flag_set[].add_string_flag("key", "description", "default")
+    flag_set[].add_bool_flag("flag", "description", "False")
     var flags = List[String]("--key=value", "positional", "--flag")
 
     var remaining_args: List[String]
     var err: Error
     remaining_args, err = get_flags(flag_set, flags)
-    test.assert_equal(flag_set.get_as_string("key").value(), "value")
-    test.assert_equal(flag_set.get_as_bool("flag").value(), True)
+    test.assert_equal(flag_set[].get_as_string("key").value(), "value")
+    test.assert_equal(flag_set[].get_as_bool("flag").value(), True)
 
 
 fn test_parse_flag() raises:
     var test = MojoTest("Testing parse_flag")
     var flag_set = FlagSet()
-    flag_set.add_string_flag[name="key", usage="description", default="default"]()
-    flag_set.add_bool_flag[name="flag", usage="description", default=False]()
+    flag_set.add_string_flag(name="key", usage="description", default="default")
+    flag_set.add_bool_flag(name="flag", usage="description", default=False)
 
     var name: String
     var value: String
@@ -54,8 +55,8 @@ fn test_parse_flag() raises:
 fn test_parse_shorthand_flag() raises:
     var test = MojoTest("Testing parse_shorthand_flag")
     var flag_set = FlagSet()
-    flag_set.add_string_flag[name="key", usage="description", default="default", shorthand="k"]()
-    flag_set.add_bool_flag[name="flag", usage="description", default=False, shorthand="f"]()
+    flag_set.add_string_flag(name="key", usage="description", default="default", shorthand="k")
+    flag_set.add_bool_flag(name="flag", usage="description", default=False, shorthand="f")
 
     var name: String
     var value: String
