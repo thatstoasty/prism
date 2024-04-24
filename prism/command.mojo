@@ -139,7 +139,7 @@ struct Command(CollectionElement):
     var _inherited_flags: Arc[FlagSet]
 
     var children: List[Arc[Self]]
-    var parent: Arc[Optional[Self]]
+    var parent: Optional[Arc[Self]]
 
     fn __init__(
         inout self,
@@ -183,7 +183,7 @@ struct Command(CollectionElement):
         self.valid_args = valid_args
 
         self.children = List[Arc[Self]]()
-        self.parent = Arc[Optional[Command]](None)
+        self.parent = None
 
         # These need to be mutable so we can add flags to them.
         self.flags = Arc(FlagSet())
@@ -235,7 +235,7 @@ struct Command(CollectionElement):
         self.persistent_erroring_post_run = persistent_erroring_post_run
 
         self.children = List[Arc[Self]]()
-        self.parent = Arc[Optional[Command]](None)
+        self.parent = None
 
         self.arg_validator = arg_validator
         self.valid_args = valid_args
@@ -310,8 +310,8 @@ struct Command(CollectionElement):
 
     fn __repr__(inout self) -> String:
         var parent_name: String = ""
-        if self.parent[]:
-            parent_name = self.parent[].value().name
+        if self.parent:
+            parent_name = self.parent.value()[].name
         return (
             "Name: "
             + self.name
@@ -329,16 +329,16 @@ struct Command(CollectionElement):
 
     fn _full_command(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
-        if self.parent[]:
-            var ancestor: String = self.parent[].value()._full_command()
+        if self.parent:
+            var ancestor: String = self.parent.value()[]._full_command()
             return ancestor + " " + self.name
         else:
             return self.name
 
     fn _root(self) -> Arc[Command]:
         """Returns the root command of the command tree."""
-        if self.parent[]:
-            return self.parent[].value()._root()
+        if self.parent:
+            return self.parent.value()[]._root()
 
         return self
 
@@ -349,7 +349,7 @@ struct Command(CollectionElement):
         # TODO: Tree traversal is new to me, there's probably a better way to do this.
 
         # Always execute from the root command, regardless of what command was executed in main.
-        if self.parent[]:
+        if self.parent:
             return self._root()[].execute()
 
         var remaining_args: List[String]
@@ -360,15 +360,15 @@ struct Command(CollectionElement):
         # Merge local and inherited flags
         command_ref[]._merge_flags()
 
-        var parents = List[Arc[Optional[Command]]]()
-        var parent = Arc[Optional[Command]](command)
+        var parents = List[Arc[Command]]()
+        var parent = Optional[Arc[Command]](command_ref)
 
         # Add all parents to the list to check if they have persistent pre/post hooks.
         while True:
-            parents.append(parent)
-            if not parent[].value().parent[]:
+            if not parent.value()[].parent:
                 break
-            parent = parent[].value().parent[]
+            parents.append(parent.value())
+            parent = parent.value()[].parent
 
         # If ENABLE_TRAVERSE_RUN_HOOKS is True, reverse the list to start from the root command rather than
         # from the child. This is because all of the persistent hooks will be run.
@@ -397,19 +397,18 @@ struct Command(CollectionElement):
 
         # Run the persistent pre-run hooks.
         for parent in parents:
-            if parent[][]:
-                var cmd = parent[][].value()
-                if cmd.persistent_erroring_pre_run:
-                    err = cmd.persistent_erroring_pre_run.value()(command_ref, remaining_args)
-                    if err:
-                        panic(err)
+            var cmd = parent[][]
+            if cmd.persistent_erroring_pre_run:
+                err = cmd.persistent_erroring_pre_run.value()(command_ref, remaining_args)
+                if err:
+                    panic(err)
+                if not ENABLE_TRAVERSE_RUN_HOOKS:
+                    break
+            else:
+                if cmd.persistent_pre_run:
+                    cmd.persistent_pre_run.value()(command_ref, remaining_args)
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
-                else:
-                    if cmd.persistent_pre_run:
-                        cmd.persistent_pre_run.value()(command_ref, remaining_args)
-                        if not ENABLE_TRAVERSE_RUN_HOOKS:
-                            break
 
         # Run the pre-run hooks.
         if command_ref[].pre_run:
@@ -429,19 +428,18 @@ struct Command(CollectionElement):
 
         # Run the persistent post-run hooks.
         for parent in parents:
-            if parent[][]:
-                var cmd = parent[][].value()
-                if cmd.persistent_erroring_post_run:
-                    err = cmd.persistent_erroring_post_run.value()(command_ref, remaining_args)
-                    if err:
-                        panic(err)
+            var cmd = parent[][]
+            if cmd.persistent_erroring_post_run:
+                err = cmd.persistent_erroring_post_run.value()(command_ref, remaining_args)
+                if err:
+                    panic(err)
+                if not ENABLE_TRAVERSE_RUN_HOOKS:
+                    break
+            else:
+                if cmd.persistent_post_run:
+                    cmd.persistent_post_run.value()(command_ref, remaining_args)
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
-                else:
-                    if cmd.persistent_post_run:
-                        cmd.persistent_post_run.value()(command_ref, remaining_args)
-                        if not ENABLE_TRAVERSE_RUN_HOOKS:
-                            break
 
         # Run the post-run hooks.
         if command_ref[].post_run:
@@ -460,8 +458,8 @@ struct Command(CollectionElement):
         # Set mutability of flag set by initializing it as a var.
         var i_flags = FlagSet()
         if len(self._inherited_flags[]) == 0:
-            if self.parent[]:
-                var cmd = self.parent[].value()
+            if self.parent:
+                var cmd = self.parent.value()[]
                 i_flags += cmd.inherited_flags()[]
 
             i_flags += self.persistent_flags[]
@@ -488,7 +486,7 @@ struct Command(CollectionElement):
             command: The command to add as a child of self.
         """
         self.children.append(Arc(command))
-        command.parent[] = self
+        command.parent = Arc(self)
 
     # NOTE: These wrappers are just nice to have. Feels good to call Command().add_flag()
     # instead of Command().flags[].add_flag()
