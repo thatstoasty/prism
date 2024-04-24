@@ -31,13 +31,7 @@ struct MojoTest:
         except e:
             print(e)
 
-    fn assert_equal(self, left: Int, right: Int):
-        try:
-            testing.assert_equal(left, right)
-        except e:
-            print(e)
-
-    fn assert_equal(self, left: String, right: String):
+    fn assert_equal[T: testing.Testable](self, left: T, right: T):
         try:
             testing.assert_equal(left, right)
         except e:

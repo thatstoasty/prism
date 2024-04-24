@@ -311,7 +311,7 @@ struct Command(CollectionElement):
     fn __repr__(inout self) -> String:
         var parent_name: String = ""
         if self.parent[]:
-            parent_name = self.parent[].value().name
+            parent_name = self.parent[].value()[].name
         return (
             "Name: "
             + self.name
@@ -330,7 +330,7 @@ struct Command(CollectionElement):
     fn _full_command(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
         if self.parent[]:
-            var ancestor: String = self.parent[].value()._full_command()
+            var ancestor: String = self.parent[].value()[]._full_command()
             return ancestor + " " + self.name
         else:
             return self.name
@@ -338,7 +338,7 @@ struct Command(CollectionElement):
     fn _root(self) -> Arc[Command]:
         """Returns the root command of the command tree."""
         if self.parent[]:
-            return self.parent[].value()._root()
+            return self.parent[].value()[]._root()
 
         return self
 
@@ -366,9 +366,9 @@ struct Command(CollectionElement):
         # Add all parents to the list to check if they have persistent pre/post hooks.
         while True:
             parents.append(parent)
-            if not parent[].value().parent[]:
+            if not parent[].value()[].parent[]:
                 break
-            parent = parent[].value().parent[]
+            parent = parent[].value()[].parent[]
 
         # If ENABLE_TRAVERSE_RUN_HOOKS is True, reverse the list to start from the root command rather than
         # from the child. This is because all of the persistent hooks will be run.
@@ -386,68 +386,68 @@ struct Command(CollectionElement):
 
         # Check if the help flag was passed
         var help_passed = command_ref[].flags[].get_as_bool("help")
-        if help_passed.value() == True:
+        if help_passed.value()[] == True:
             print(command.help(command_ref))
             return None
 
         # Validate the remaining arguments
         var error_message = self.arg_validator(command_ref, remaining_args)
         if error_message:
-            panic(error_message.value())
+            panic(error_message.value()[])
 
         # Run the persistent pre-run hooks.
         for parent in parents:
             if parent[][]:
-                var cmd = parent[][].value()
+                var cmd = parent[][].value()[]
                 if cmd.persistent_erroring_pre_run:
-                    err = cmd.persistent_erroring_pre_run.value()(command_ref, remaining_args)
+                    err = cmd.persistent_erroring_pre_run.value()[](command_ref, remaining_args)
                     if err:
                         panic(err)
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
                     if cmd.persistent_pre_run:
-                        cmd.persistent_pre_run.value()(command_ref, remaining_args)
+                        cmd.persistent_pre_run.value()[](command_ref, remaining_args)
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
         # Run the pre-run hooks.
         if command_ref[].pre_run:
-            command.pre_run.value()(command_ref, remaining_args)
+            command.pre_run.value()[](command_ref, remaining_args)
         elif command_ref[].erroring_pre_run:
-            err = command.erroring_pre_run.value()(command_ref, remaining_args)
+            err = command.erroring_pre_run.value()[](command_ref, remaining_args)
             if err:
                 panic(err)
 
         # Run the function's commands.
         if command_ref[].run:
-            command_ref[].run.value()(command_ref, remaining_args)
+            command_ref[].run.value()[](command_ref, remaining_args)
         else:
-            err = command_ref[].erroring_run.value()(command_ref, remaining_args)
+            err = command_ref[].erroring_run.value()[](command_ref, remaining_args)
             if err:
                 panic(err)
 
         # Run the persistent post-run hooks.
         for parent in parents:
             if parent[][]:
-                var cmd = parent[][].value()
+                var cmd = parent[][].value()[]
                 if cmd.persistent_erroring_post_run:
-                    err = cmd.persistent_erroring_post_run.value()(command_ref, remaining_args)
+                    err = cmd.persistent_erroring_post_run.value()[](command_ref, remaining_args)
                     if err:
                         panic(err)
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
                     if cmd.persistent_post_run:
-                        cmd.persistent_post_run.value()(command_ref, remaining_args)
+                        cmd.persistent_post_run.value()[](command_ref, remaining_args)
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
         # Run the post-run hooks.
         if command_ref[].post_run:
-            command.post_run.value()(command_ref, remaining_args)
+            command.post_run.value()[](command_ref, remaining_args)
         elif command_ref[].erroring_post_run:
-            err = command.erroring_post_run.value()(command_ref, remaining_args)
+            err = command.erroring_post_run.value()[](command_ref, remaining_args)
             if err:
                 panic(err)
 
@@ -461,7 +461,7 @@ struct Command(CollectionElement):
         var i_flags = FlagSet()
         if len(self._inherited_flags[]) == 0:
             if self.parent[]:
-                var cmd = self.parent[].value()
+                var cmd = self.parent[].value()[]
                 i_flags += cmd.inherited_flags()[]
 
             i_flags += self.persistent_flags[]

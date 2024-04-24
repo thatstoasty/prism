@@ -12,7 +12,7 @@ from memory._arc import Arc
 
 fn test(command: CommandArc, args: List[String]) -> None:
     for item in command[].flag_list():
-        print(item[][].name, item[][].value.value())
+        print(item[][].name, item[][].value.value()[])
 
     return None
 

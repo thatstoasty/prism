@@ -142,7 +142,7 @@ struct BoundLogger[L: Logger]():
 
             # Check if there's a style for the log level.
             if key == "level":
-                var style = self_styles.levels.find(value).value()
+                var style = self_styles.levels.find(value).value()[]
                 value = style.render(value)
 
             # Get the style for the message.
@@ -157,7 +157,7 @@ struct BoundLogger[L: Logger]():
 
             # Check if there's a style for a key and apply it if so, otherwise use the default style for values.
             elif key in self_styles.keys:
-                var style = self_styles.keys.find(key).value()
+                var style = self_styles.keys.find(key).value()[]
                 key = style.render(key)
             else:
                 var style = self_styles.key
@@ -165,7 +165,7 @@ struct BoundLogger[L: Logger]():
 
             # Check if there's a style for the value of a key and apply it if so, otherwise use the default style for values.
             if key in self_styles.values:
-                var style = self_styles.values.find(key).value()
+                var style = self_styles.values.find(key).value()[]
                 value = style.render(value)
             else:
                 var style = self_styles.value

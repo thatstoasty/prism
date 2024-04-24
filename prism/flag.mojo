@@ -152,7 +152,7 @@ struct FlagSet(Stringable, Sized):
             if not flag.value:
                 return string_to_bool(flag.default)
 
-            return string_to_bool(flag.value.value())
+            return string_to_bool(flag.value.value()[])
         except:
             return None
 
@@ -167,7 +167,7 @@ struct FlagSet(Stringable, Sized):
             if not flag.value:
                 return atol(flag.default)
 
-            return atol(flag.value.value())
+            return atol(flag.value.value()[])
         except:
             return None
 
@@ -181,7 +181,7 @@ struct FlagSet(Stringable, Sized):
         if not value:
             return None
 
-        return Int8(value.value())
+        return Int8(value.value()[])
 
     fn get_as_int16(self, name: String) -> Optional[Int16]:
         """Returns the value of a flag as a Int16. If it isn't set, then return the default value.
@@ -193,7 +193,7 @@ struct FlagSet(Stringable, Sized):
         if not value:
             return None
 
-        return Int16(value.value())
+        return Int16(value.value()[])
 
     fn get_as_int32(self, name: String) -> Optional[Int32]:
         """Returns the value of a flag as a Int32. If it isn't set, then return the default value.
@@ -205,7 +205,7 @@ struct FlagSet(Stringable, Sized):
         if not value:
             return None
 
-        return Int32(value.value())
+        return Int32(value.value()[])
 
     fn get_as_int64(self, name: String) -> Optional[Int64]:
         """Returns the value of a flag as a Int64. If it isn't set, then return the default value.
@@ -217,7 +217,7 @@ struct FlagSet(Stringable, Sized):
         if not value:
             return None
 
-        return Int64(value.value())
+        return Int64(value.value()[])
 
     fn get_as_uint8(self, name: String) -> Optional[UInt8]:
         """Returns the value of a flag as a UInt8. If it isn't set, then return the default value.
@@ -229,7 +229,7 @@ struct FlagSet(Stringable, Sized):
         if not value:
             return None
 
-        return UInt8(value.value())
+        return UInt8(value.value()[])
 
     fn get_as_uint16(self, name: String) -> Optional[UInt16]:
         """Returns the value of a flag as a UInt16. If it isn't set, then return the default value.
@@ -241,7 +241,7 @@ struct FlagSet(Stringable, Sized):
         if not value:
             return None
 
-        return UInt16(value.value())
+        return UInt16(value.value()[])
 
     fn get_as_uint32(self, name: String) -> Optional[UInt32]:
         """Returns the value of a flag as a UInt32. If it isn't set, then return the default value.
@@ -253,7 +253,7 @@ struct FlagSet(Stringable, Sized):
         if not value:
             return None
 
-        return UInt32(value.value())
+        return UInt32(value.value()[])
 
     fn get_as_uint64(self, name: String) -> Optional[UInt64]:
         """Returns the value of a flag as a UInt64. If it isn't set, then return the default value.
@@ -265,7 +265,7 @@ struct FlagSet(Stringable, Sized):
         if not value:
             return None
 
-        return UInt64(value.value())
+        return UInt64(value.value()[])
 
     fn get_as_float16(self, name: String) -> Optional[Float16]:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
@@ -277,7 +277,7 @@ struct FlagSet(Stringable, Sized):
         if not value:
             return None
 
-        return Float16(value.value())
+        return Float16(value.value()[])
 
     fn get_as_float32(self, name: String) -> Optional[Float32]:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
@@ -289,7 +289,7 @@ struct FlagSet(Stringable, Sized):
         if not value:
             return None
 
-        return Float32(value.value())
+        return Float32(value.value()[])
 
     fn get_as_float64(self, name: String) -> Optional[Float64]:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
@@ -302,7 +302,7 @@ struct FlagSet(Stringable, Sized):
             if not flag.value:
                 return string_to_float(flag.default)
 
-            return string_to_float(flag.value.value())
+            return string_to_float(flag.value.value()[])
         except e:
             return None
 
@@ -310,7 +310,7 @@ struct FlagSet(Stringable, Sized):
         """Returns a list of references to all flags in the flag set that have values set."""
         var result = List[Arc[Flag]]()
         for flag in self.flags:
-            if flag[][].value.value() != "":
+            if flag[][].value.value()[] != "":
                 result.append(flag[])
         return result
 
@@ -582,7 +582,7 @@ struct Flag(CollectionElement, Stringable):
             self.name == other.name
             and self.shorthand == other.shorthand
             and self.usage == other.usage
-            and self.value.value() == other.value.value()
+            and self.value.value()[] == other.value.value()[]
             and self.default == other.default
         )
 
@@ -647,7 +647,7 @@ fn parse_shorthand_flag(
         var flag = argument.split("=")
         var shorthand = flag[0][1:]
         var value = flag[1]
-        var name = flags[].lookup_name(shorthand).value()
+        var name = flags[].lookup_name(shorthand).value()[]
 
         if name not in flags[]:
             raise Error("Command does not accept the flag supplied: " + name)
@@ -659,7 +659,7 @@ fn parse_shorthand_flag(
     var result = flags[].lookup_name(shorthand)
     if not result:
         raise Error("Did not find name for shorthand: " + shorthand)
-    var name = result.value()
+    var name = result.value()[]
 
     # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
     if flags[].get_as_bool(name):

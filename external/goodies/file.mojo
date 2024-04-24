@@ -120,7 +120,7 @@ struct FileWrapper(io.ReadWriteSeeker, io.ByteReader):
         try:
             var copy = List[Byte](src)
             var bytes_length = len(copy)
-            self.handle.write(StringRef(copy.steal_data().value, bytes_length))
+            self.handle.write(StringRef(copy.steal_data(), bytes_length))
             return len(src), Error(io.EOF)
         except e:
             return 0, Error(e)
