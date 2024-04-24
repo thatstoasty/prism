@@ -6,7 +6,7 @@ from external.gojo.fmt import sprintf
 from external.gojo.builtins import panic
 from external.gojo.strings import StringBuilder
 from .flag import Flag, FlagSet, get_flags
-from .args import arbitrary_args, ArgValidator, get_args
+from .args import arbitrary_args, get_args
 from .vector import join, to_string, contains
 
 
@@ -53,6 +53,7 @@ alias CommandArc = Arc[Command]
 alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> None
 alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) -> Error
 alias HelpFunction = fn (Arc[Command]) -> String
+alias ArgValidator = fn (command: Arc[Command], args: List[String]) escaping -> Optional[String]
 
 # Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 # If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down.
@@ -390,7 +391,7 @@ struct Command(CollectionElement):
             return None
 
         # Validate the remaining arguments
-        var error_message = self.arg_validator(remaining_args)
+        var error_message = self.arg_validator(command_ref, remaining_args)
         if error_message:
             panic(error_message.value())
 

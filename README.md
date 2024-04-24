@@ -206,13 +206,9 @@ Usage information will be printed the console by passing the `--help` flag.
 ### Improvements
 
 - Tree traversal improvements.
-- Figure out how to return mutable references.
-- Once we have kwarg unpacking, update add_flag to pass kwargs along.
-- It is difficult to have recursive relationships, not passing the command to the arg validator for now.
-- Until `Error` is implements `CollectionElement`, `ArgValidator` functions return a string and throw the error from the caller.
+- Once we have kwarg unpacking, update `Command().add_flag` to pass kwargs along.
 - Considering adding convenience functions for adding persistent flags, but I don't want to make the Command struct too massive. It may be better to just limit setting flags to the `command[].flags[].add_flag()` pattern. Auto dereferencing will most likely make this look less verbose in the future. For now persistent flags will be set via `command[].persistent_flags[].add_flag()`.
 
 ### Bugs
 
-- Using `CommandArc` instead of `Arc[Command]` works for `Command.run` functions. But using `Arc[Command]` causes a recursive relationship error?
 - `Command` has 2 almost indentical init functions because setting a default `arg_validator` value, breaks the compiler as of 24.2.
