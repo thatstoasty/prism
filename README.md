@@ -186,9 +186,8 @@ Usage information will be printed the console by passing the `--help` flag.
 ## Notes
 
 - Flags can have values passed by using the `=` operator. Like `--count=5` OR like `--count 5`.
-- Commands can be created via a typical `Command()` constructor to use runtime values, or you can use `Command.new()` method to create a new `Command` using compile time `Parameters` instead (when possible).
 - This library leans towards Errors as values over raising Exceptions.
-- `Optional[Error]` would be much cleaner for Command run functions. For now return `Error()` if there's no `Error` to return.
+- `Optional[Error]` would be much cleaner for Command `erroring_run` functions. For now return `Error()` if there's no `Error` to return.
 
 ## TODO
 
@@ -211,7 +210,7 @@ Usage information will be printed the console by passing the `--help` flag.
 - Once we have kwarg unpacking, update add_flag to pass kwargs along.
 - It is difficult to have recursive relationships, not passing the command to the arg validator for now.
 - Until `Error` is implements `CollectionElement`, `ArgValidator` functions return a string and throw the error from the caller.
-- Considering adding convenience functions for adding persistent flags, but I don't want to make the Command struct too massive. It may be better to just limit setting flags to the `command[].flags[].add_flag()` pattern. Auto dereferencing will most likely make this look like verbose in the future. For now persistent flags will be set via `command[].persistent_flags[].add_flag()`.
+- Considering adding convenience functions for adding persistent flags, but I don't want to make the Command struct too massive. It may be better to just limit setting flags to the `command[].flags[].add_flag()` pattern. Auto dereferencing will most likely make this look less verbose in the future. For now persistent flags will be set via `command[].persistent_flags[].add_flag()`.
 
 ### Bugs
 
