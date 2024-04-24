@@ -15,7 +15,7 @@ fn print_information(command: CommandArc, args: List[String]) -> None:
 fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
     var flags = command[].flags[]
     var lover = flags.get_as_bool("lover")
-    if lover and lover.value():
+    if lover and lover.value()[]:
         print("Hello fellow cat lover!")
 
     try:
@@ -33,7 +33,7 @@ fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
             if not count:
                 return Error("Count flag was not found.")
             var body = response.json()
-            for i in range(count.value()):
+            for i in range(count.value()[]):
                 print(body[i]["text"])
         else:
             return Error("Request failed!")
@@ -46,7 +46,7 @@ fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
 fn get_dog_breeds(command: CommandArc, args: List[String]) -> Error:
     var flags = command[].flags[]
     var lover = flags.get_as_bool("lover")
-    if lover and lover.value():
+    if lover and lover.value()[]:
         print("Hello fellow dog lover!")
 
     try:

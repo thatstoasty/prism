@@ -14,7 +14,7 @@ fn test_command_operations():
     var get_all_flags_test = MojoTest("Testing Command.get_all_flags")
     var flags = cmd.flag_list()
     for flag in flags:
-        get_all_flags_test.assert_equal("help", flag[][].name)
+        get_all_flags_test.assert_equal(String("help"), flag[][].name)
 
     var add_command_test = MojoTest("Testing Command.add_command")
     var child_cmd = Command(name="child", description="Child command.", run=dummy)

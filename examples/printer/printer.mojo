@@ -17,13 +17,13 @@ fn printer(command: CommandArc, args: List[String]) -> None:
     if not formatting:
         formatting = String("")
 
-    if color.value() != "":
-        style = style.foreground(style.profile.color(color.value()))
-    if formatting.value() == "bold":
+    if color.value()[] != "":
+        style = style.foreground(style.profile.color(color.value()[]))
+    if formatting.value()[] == "bold":
         style = style.bold()
-    elif formatting.value() == "underline":
+    elif formatting.value()[] == "underline":
         style = style.underline()
-    elif formatting.value() == "italic":
+    elif formatting.value()[] == "italic":
         style = style.italic()
 
     print(style.render(args[0]))

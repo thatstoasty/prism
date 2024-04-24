@@ -4,14 +4,14 @@ from os.path import exists
 
 
 fn handler(command: CommandArc, args: List[String]) -> Error:
-    var file_path = command[].flags[].get_as_string("file").value()
+    var file_path = command[].flags[].get_as_string("file").value()[]
     if not exists(file_path):
         return Error("File does not exist.")
 
     try:
         var file = FileWrapper(file_path, "r")
         var reader = CSVReader(file^)
-        var lines = command[].flags[].get_as_int("lines").value()
+        var lines = command[].flags[].get_as_int("lines").value()[]
         var csv = reader.read_lines(lines, "\n", 3)
         for i in range(csv.row_count()):
             print(csv.get(i, 0))
