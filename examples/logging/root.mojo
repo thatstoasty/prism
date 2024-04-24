@@ -3,7 +3,7 @@ from examples.logging.log import logger, default_logger, json_logger
 
 
 fn handler(command: CommandArc, args: List[String]) -> None:
-    var print_type = command[].get_all_flags()[].get_as_string("type").value()
+    var print_type = command[].flags[].get_as_string("type").value()
     if print_type == "json":
         for arg in args:
             json_logger.info(arg[])
@@ -21,9 +21,7 @@ fn init() -> None:
     var root_command = Command(
         name="logger", description="Base command.", run=handler, arg_validator=minimum_n_args[1]()
     )
-    root_command.flags.add_string_flag[
-        name="type", shorthand="t", usage="Formatting type: [json, custom]", default="json"
-    ]()
+    root_command.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]", default="json")
 
     root_command.execute()
 

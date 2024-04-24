@@ -8,9 +8,8 @@ fn printer(command: CommandArc, args: List[String]) -> None:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    var flags = command[].get_all_flags()[]
-    var color = flags.get_as_string("color")
-    var formatting = flags.get_as_string("formatting")
+    var color = command[].flags[].get_as_string("color")
+    var formatting = command[].flags[].get_as_string("formatting")
     var style = TerminalStyle()
 
     if not color:
@@ -43,15 +42,17 @@ fn post_hook(command: CommandArc, args: List[String]) -> None:
 
 fn init() -> None:
     var start = now()
-    var root_command = Command.new[
+    var root_command = Command(
         name="printer",
         description="Base command.",
         run=printer,
         pre_run=pre_hook,
         post_run=post_hook,
-    ](arg_validator=exact_args[1]())
-    root_command.flags.add_string_flag[name="color", shorthand="c", usage="Text color", default="#3464eb"]()
-    root_command.flags.add_string_flag[name="formatting", shorthand="f", usage="Text formatting"]()
+        arg_validator=exact_args[1](),
+    )
+
+    root_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    root_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
 
     root_command.execute()
     print("duration", (now() - start) / 1e9)
