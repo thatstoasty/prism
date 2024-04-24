@@ -1,5 +1,5 @@
 #!/bin/bash
-export MOJO_PYTHON_LIBRARY=$(which python3)
+export MOJO_PYTHON_LIBRARY=$(which python)
 
 mkdir ./temp
 mojo package prism -I ./external -o ./temp/prism.mojopkg
