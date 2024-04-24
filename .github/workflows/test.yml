@@ -21,3 +21,4 @@ jobs:
           export MODULAR_HOME="/home/runner/.modular"
           export PATH="/home/runner/.modular/pkg/packages.modular.com_nightly_mojo/bin:$PATH"
           pytest
+          bash run_examples.sh
