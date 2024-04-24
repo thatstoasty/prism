@@ -47,18 +47,19 @@ fn string_to_float(s: String) raises -> Float64:
 
 @value
 struct FlagSet(Stringable, Sized):
-    var flags: List[Flag]
+    var flags: List[Arc[Flag]]
 
-    fn __init__(
-        inout self,
-        flags: List[Flag] = List[Flag](),
-    ) -> None:
-        self.flags = flags
+    fn __init__(inout self) -> None:
+        self.flags = List[Arc[Flag]]()
+
+    fn __init__(inout self, flag_set: Self) -> None:
+        self = flag_set
 
     fn __str__(self) -> String:
         var result = String("Flags: [")
         for i in range(self.flags.size):
-            result += self.flags[i]
+            var f = self.flags[i]
+            result += f[]
             if i != self.flags.size - 1:
                 result += String(", ")
         result += String("]")
@@ -69,7 +70,7 @@ struct FlagSet(Stringable, Sized):
 
     fn __contains__(self, value: Flag) -> Bool:
         for flag in self.flags:
-            if flag[] == value:
+            if flag[][] == value:
                 return True
         return False
 
@@ -78,12 +79,24 @@ struct FlagSet(Stringable, Sized):
             return False
 
         for i in range(len(self.flags)):
-            if self.flags[i] != other.flags[i]:
+            var f = self.flags[i]
+            var other_f = other.flags[i]
+            if f[] != other_f[]:
                 return False
         return True
 
     fn __ne__(self, other: Self) -> Bool:
         return not self == other
+
+    fn __add__(inout self, other: Self) -> Self:
+        var new = FlagSet(self)
+        for flag in other.flags:
+            new.flags.append(flag[])
+        return new
+
+    fn __iadd__(inout self, other: Self):
+        for flag in other.flags:
+            self.flags.append(flag[])
 
     fn get_flag(self, name: String) raises -> Arc[Flag]:
         """Returns a reference to a Flag with the given name.
@@ -92,8 +105,8 @@ struct FlagSet(Stringable, Sized):
             name: The name of the flag to return.
         """
         for flag in self.flags:
-            if flag[].name == name:
-                return Arc(flag[])
+            if flag[][].name == name:
+                return flag[]
 
         raise Error("FlagNotFound: Could not find flag with name: " + name)
 
@@ -108,8 +121,8 @@ struct FlagSet(Stringable, Sized):
             ARC pointer to the Flag.
         """
         for flag in self.flags:
-            if flag[].name == name and flag[].type == type:
-                return Arc(flag[])
+            if flag[][].name == name and flag[][].type == type:
+                return flag[]
 
         raise Error("FlagNotFound: Could not find flag with name: " + name)
 
@@ -293,33 +306,26 @@ struct FlagSet(Stringable, Sized):
         except e:
             return None
 
-    fn get_flags(self) -> List[Arc[Flag]]:
-        """Returns a list of references to all flags in the flag set."""
-        var result = List[Arc[Flag]]()
-        for flag in self.flags:
-            result.append(Arc(flag[]))
-        return result
-
     fn get_flags_with_values(self) -> List[Arc[Flag]]:
         """Returns a list of references to all flags in the flag set that have values set."""
         var result = List[Arc[Flag]]()
         for flag in self.flags:
-            if flag[].value.value() != "":
-                result.append(Arc(flag[]))
+            if flag[][].value.value() != "":
+                result.append(flag[])
         return result
 
     fn get_names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set."""
         var result = List[String]()
         for flag in self.flags:
-            result.append(flag[].name)
+            result.append(flag[][].name)
         return result
 
     fn get_shorthands(self) -> List[String]:
         """Returns a list of shorthands of all flags in the flag set."""
         var result = List[String]()
         for flag in self.flags:
-            result.append(flag[].shorthand)
+            result.append(flag[][].shorthand)
         return result
 
     fn lookup_name(self, shorthand: String) -> Optional[String]:
@@ -329,8 +335,8 @@ struct FlagSet(Stringable, Sized):
             shorthand: The shorthand of the flag to lookup.
         """
         for flag in self.flags:
-            if flag[].shorthand == shorthand:
-                return flag[].name
+            if flag[][].shorthand == shorthand:
+                return flag[][].name
         return None
 
     fn _add_flag(
@@ -347,17 +353,20 @@ struct FlagSet(Stringable, Sized):
             type: The type of the flag.
             shorthand: The shorthand of the flag.
         """
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=default, type=type))
+        # Use var to set the mutability of flag, then add it to the list
+        var flag = Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=default, type=type)
+        self.flags.append(Arc(flag))
 
-    fn add_bool_flag[
+    fn add_bool_flag(
+        inout self,
         name: String,
         usage: String,
         shorthand: String = "",
         default: Bool = False,
-    ](inout self) -> None:
+    ) -> None:
         """Adds a Bool flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -365,37 +374,38 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, str(default), "Bool", shorthand)
 
-    fn add_string_flag[
+    fn add_string_flag(
+        inout self,
         name: String,
         usage: String,
         shorthand: String = "",
         default: String = "",
-    ](inout self) -> None:
+    ) -> None:
         """Adds a String flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
         self._add_flag(name, usage, default, "String", shorthand)
 
-    fn add_int_flag[name: String, usage: String, shorthand: String = "", default: Int = 0](inout self) -> None:
+    fn add_int_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int = 0) -> None:
         """Adds an Int flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
-            shorthand: The shorthand of the flag.
             usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
         self._add_flag(name, usage, default, "Int", shorthand)
 
-    fn add_int8_flag[name: String, usage: String, shorthand: String = "", default: Int8 = 0](inout self) -> None:
+    fn add_int8_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int8 = 0) -> None:
         """Adds an Int8 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -403,10 +413,10 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "Int8", shorthand)
 
-    fn add_int16_flag[name: String, usage: String, shorthand: String = "", default: Int16 = 0](inout self) -> None:
+    fn add_int16_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int16 = 0) -> None:
         """Adds an Int16 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -414,10 +424,10 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "Int16", shorthand)
 
-    fn add_int32_flag[name: String, usage: String, shorthand: String = "", default: Int32 = 0](inout self) -> None:
+    fn add_int32_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int32 = 0) -> None:
         """Adds an Int32 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -425,10 +435,10 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "Int32", shorthand)
 
-    fn add_int64_flag[name: String, usage: String, shorthand: String = "", default: Int64 = 0](inout self) -> None:
+    fn add_int64_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int64 = 0) -> None:
         """Adds an Int64 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -436,10 +446,10 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "Int64", shorthand)
 
-    fn add_uint8_flag[name: String, usage: String, shorthand: String = "", default: UInt8 = 0](inout self) -> None:
+    fn add_uint8_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt8 = 0) -> None:
         """Adds a UInt8 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -447,10 +457,10 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "UInt8", shorthand)
 
-    fn add_uint16_flag[name: String, usage: String, shorthand: String = "", default: UInt16 = 0](inout self) -> None:
+    fn add_uint16_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt16 = 0) -> None:
         """Adds a UInt16 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -458,10 +468,10 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "UInt16", shorthand)
 
-    fn add_uint32_flag[name: String, usage: String, shorthand: String = "", default: UInt32 = 0](inout self) -> None:
+    fn add_uint32_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt32 = 0) -> None:
         """Adds a UInt32 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -469,10 +479,10 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "UInt32", shorthand)
 
-    fn add_uint64_flag[name: String, usage: String, shorthand: String = "", default: UInt64 = 0](inout self) -> None:
+    fn add_uint64_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt64 = 0) -> None:
         """Adds a UInt64 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -480,10 +490,10 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "UInt64", shorthand)
 
-    fn add_float16_flag[name: String, usage: String, shorthand: String = "", default: Float16 = 0](inout self) -> None:
+    fn add_float16_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float16 = 0) -> None:
         """Adds a Float16 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -491,10 +501,10 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "Float16", shorthand)
 
-    fn add_float32_flag[name: String, usage: String, shorthand: String = "", default: Float32 = 0](inout self) -> None:
+    fn add_float32_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float32 = 0) -> None:
         """Adds a Float32 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
@@ -502,37 +512,16 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "Float32", shorthand)
 
-    fn add_float64_flag[
-        name: String,
-        usage: String,
-        shorthand: String = "",
-        default: Float64 = 0,
-    ](inout self) -> None:
+    fn add_float64_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float64 = 0) -> None:
         """Adds a Float64 flag to the flag set.
 
-        Params:
+        Args:
             name: The name of the flag.
             usage: The usage of the flag.
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
         self._add_flag(name, usage, default, "Float64", shorthand)
-
-    # TODO: This is temporary until I figure out how to return a mutable reference to a flag inside the list.
-    # Calling get_flag, dereferencing, and then setting the value does not persist.
-    fn _set_flag_value(inout self, name: String, value: String) raises -> None:
-        """Sets the value of a flag with the given name.
-
-        Args:
-            name: The name of the flag to set the value of.
-            value: The value to set the flag to.
-        """
-        for i in range(len(self.flags)):
-            if self.flags[i].name == name:
-                self.flags[i].value = value
-                return
-
-        raise Error("FlagNotFound: Could not set value on flag: " + name)
 
 
 @value
@@ -601,7 +590,9 @@ struct Flag(CollectionElement, Stringable):
         return not self == other
 
 
-fn parse_flag(i: Int, argument: String, arguments: List[String], flags: FlagSet) raises -> Tuple[String, String, Int]:
+fn parse_flag(
+    i: Int, argument: String, arguments: List[String], flags: Arc[FlagSet]
+) raises -> Tuple[String, String, Int]:
     """Parses a flag and returns the name, value, and the index to increment by.
 
     Args:
@@ -616,18 +607,18 @@ fn parse_flag(i: Int, argument: String, arguments: List[String], flags: FlagSet)
         var name = flag[0][2:]
         var value = flag[1]
 
-        if name not in flags:
+        if name not in flags[]:
             raise Error("Command does not accept the flag supplied: " + name)
 
         return name, value, 1
 
     # Flag with value set like "--flag <value>"
     var name = argument[2:]
-    if name not in flags:
+    if name not in flags[]:
         raise Error("Command does not accept the flag supplied: " + name)
 
     # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-    if flags.get_as_bool(name):
+    if flags[].get_as_bool(name):
         return name, String("True"), 1
 
     if i + 1 >= len(arguments):
@@ -641,7 +632,7 @@ fn parse_flag(i: Int, argument: String, arguments: List[String], flags: FlagSet)
 
 
 fn parse_shorthand_flag(
-    i: Int, argument: String, arguments: List[String], flags: FlagSet
+    i: Int, argument: String, arguments: List[String], flags: Arc[FlagSet]
 ) raises -> Tuple[String, String, Int]:
     """Parses a shorthand flag and returns the name, value, and the index to increment by.
 
@@ -656,22 +647,22 @@ fn parse_shorthand_flag(
         var flag = argument.split("=")
         var shorthand = flag[0][1:]
         var value = flag[1]
-        var name = flags.lookup_name(shorthand).value()
+        var name = flags[].lookup_name(shorthand).value()
 
-        if name not in flags:
+        if name not in flags[]:
             raise Error("Command does not accept the flag supplied: " + name)
 
         return name, value, 1
 
     # Flag with value set like "-f <value>"
     var shorthand = argument[1:]
-    var result = flags.lookup_name(shorthand)
+    var result = flags[].lookup_name(shorthand)
     if not result:
         raise Error("Did not find name for shorthand: " + shorthand)
     var name = result.value()
 
     # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-    if flags.get_as_bool(name):
+    if flags[].get_as_bool(name):
         return name, String("True"), 1
 
     if i + 1 >= len(arguments):
@@ -685,7 +676,7 @@ fn parse_shorthand_flag(
 
 
 # TODO: This parsing is dirty atm, will come back around and clean it up.
-fn get_flags(inout flags: FlagSet, arguments: List[String]) -> (List[String], Error):
+fn get_flags(inout flags: Arc[FlagSet], arguments: List[String]) -> (List[String], Error):
     """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
     Args:
@@ -716,7 +707,8 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) -> (List[String], Er
             elif argument.startswith("-", 0, 1):
                 name, value, increment_by = parse_shorthand_flag(i, argument, arguments, flags)
 
-            flags._set_flag_value(name, value)
+            # Set the value of the flag directly, no more set_value function.
+            flags[].get_flag(name)[].value = value
         except e:
             return remaining_args, e
 
