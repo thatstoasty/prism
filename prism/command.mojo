@@ -83,7 +83,6 @@ fn parse_command_from_args(start: Command) -> (Command, List[String]):
     return command, remaining_args
 
 
-# TODO: Add persistent flags
 # TODO: For parent Arc[Optional[Self]] works but Optional[Arc[Self]] causes compiler issues.
 @value
 struct Command(CollectionElement):
@@ -127,15 +126,15 @@ struct Command(CollectionElement):
     var valid_args: List[String]
 
     # Local flags for the command.
-    var _local_flags: Arc[FlagSet]
+    var local_flags: Arc[FlagSet]
 
     # Local flags that also persist to children.
-    var _persistent_flags: Arc[FlagSet]
+    var persistent_flags: Arc[FlagSet]
 
     # Cached results from self._merge_flags(). It is all local, persistent, and inherited flags.
     var flags: Arc[FlagSet]
 
-    # Cached results from self.inherited_flags().
+    # Cached results from self._merge_flags().
     var _inherited_flags: Arc[FlagSet]
 
     var children: List[Arc[Self]]
@@ -185,12 +184,12 @@ struct Command(CollectionElement):
         self.children = List[Arc[Self]]()
         self.parent = Arc[Optional[Command]](None)
 
-        # These need to be mutable, so not using Arc for now because it returns a copy
+        # These need to be mutable so we can add flags to them.
         self.flags = Arc(FlagSet())
-        self._local_flags = Arc(FlagSet())
-        self._persistent_flags = Arc(FlagSet())
+        self.local_flags = Arc(FlagSet())
+        self.persistent_flags = Arc(FlagSet())
         self._inherited_flags = Arc(FlagSet())
-        self._local_flags[].add_bool_flag(
+        self.local_flags[].add_bool_flag(
             name="help", shorthand="h", usage="Displays help information about the command."
         )
 
@@ -240,10 +239,10 @@ struct Command(CollectionElement):
         self.arg_validator = arg_validator
         self.valid_args = valid_args
         self.flags = Arc(FlagSet())
-        self._local_flags = Arc(FlagSet())
-        self._persistent_flags = Arc(FlagSet())
+        self.local_flags = Arc(FlagSet())
+        self.persistent_flags = Arc(FlagSet())
         self._inherited_flags = Arc(FlagSet())
-        self._local_flags[].add_bool_flag(
+        self.local_flags[].add_bool_flag(
             name="help", shorthand="h", usage="Displays help information about the command."
         )
 
@@ -269,8 +268,8 @@ struct Command(CollectionElement):
         self.arg_validator = existing.arg_validator
         self.valid_args = existing.valid_args
         self.flags = existing.flags
-        self._local_flags = existing._local_flags
-        self._persistent_flags = existing._persistent_flags
+        self.local_flags = existing.local_flags
+        self.persistent_flags = existing.persistent_flags
         self._inherited_flags = existing._inherited_flags
 
         self.children = existing.children
@@ -298,8 +297,8 @@ struct Command(CollectionElement):
         self.arg_validator = existing.arg_validator^
         self.valid_args = existing.valid_args^
         self.flags = existing.flags^
-        self._local_flags = existing._local_flags^
-        self._persistent_flags = existing._persistent_flags^
+        self.local_flags = existing.local_flags^
+        self.persistent_flags = existing.persistent_flags^
         self._inherited_flags = existing._inherited_flags^
 
         self.children = existing.children^
@@ -408,8 +407,8 @@ struct Command(CollectionElement):
                 else:
                     if cmd.persistent_pre_run:
                         cmd.persistent_pre_run.value()(command_ref, remaining_args)
-                    if not ENABLE_TRAVERSE_RUN_HOOKS:
-                        break
+                        if not ENABLE_TRAVERSE_RUN_HOOKS:
+                            break
 
         # Run the pre-run hooks.
         if command_ref[].pre_run:
@@ -440,8 +439,8 @@ struct Command(CollectionElement):
                 else:
                     if cmd.persistent_post_run:
                         cmd.persistent_post_run.value()(command_ref, remaining_args)
-                    if not ENABLE_TRAVERSE_RUN_HOOKS:
-                        break
+                        if not ENABLE_TRAVERSE_RUN_HOOKS:
+                            break
 
         # Run the post-run hooks.
         if command_ref[].post_run:
@@ -464,7 +463,7 @@ struct Command(CollectionElement):
                 var cmd = self.parent[].value()
                 i_flags += cmd.inherited_flags()[]
 
-            i_flags += self._persistent_flags[]
+            i_flags += self.persistent_flags[]
             return Arc(i_flags)
 
         return self._inherited_flags
@@ -474,8 +473,8 @@ struct Command(CollectionElement):
         # Set mutability of flag set by initializing it as a var.
         if len(self.flags[]) == 0:
             var all_flags = Arc(FlagSet())
-            all_flags[] += self._local_flags[]
-            all_flags[] += self._persistent_flags[]
+            all_flags[] += self.local_flags[]
+            all_flags[] += self.persistent_flags[]
             self._inherited_flags = self.inherited_flags()
             all_flags[] += self._inherited_flags[]
 
@@ -514,7 +513,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_bool_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_bool_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_string_flag(
         inout self,
@@ -531,7 +530,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_string_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_string_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_int_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int = 0) -> None:
         """Adds an Int flag to the flag set.
@@ -542,7 +541,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_int_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_int_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_int8_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int8 = 0) -> None:
         """Adds an Int8 flag to the flag set.
@@ -553,7 +552,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_int8_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_int8_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_int16_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int16 = 0) -> None:
         """Adds an Int16 flag to the flag set.
@@ -564,7 +563,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_int16_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_int16_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_int32_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int32 = 0) -> None:
         """Adds an Int32 flag to the flag set.
@@ -575,7 +574,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_int32_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_int32_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_int64_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int64 = 0) -> None:
         """Adds an Int64 flag to the flag set.
@@ -586,7 +585,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_int64_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_int64_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_uint8_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt8 = 0) -> None:
         """Adds a UInt8 flag to the flag set.
@@ -597,7 +596,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_uint8_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_uint8_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_uint16_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt16 = 0) -> None:
         """Adds a UInt16 flag to the flag set.
@@ -608,7 +607,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_uint16_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_uint16_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_uint32_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt32 = 0) -> None:
         """Adds a UInt32 flag to the flag set.
@@ -619,7 +618,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_uint32_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_uint32_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_uint64_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt64 = 0) -> None:
         """Adds a UInt64 flag to the flag set.
@@ -630,7 +629,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_uint64_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_uint64_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_float16_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float16 = 0) -> None:
         """Adds a Float16 flag to the flag set.
@@ -641,7 +640,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_float16_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_float16_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_float32_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float32 = 0) -> None:
         """Adds a Float32 flag to the flag set.
@@ -652,7 +651,7 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_float32_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_float32_flag(name=name, usage=usage, default=default, shorthand=shorthand)
 
     fn add_float64_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float64 = 0) -> None:
         """Adds a Float64 flag to the flag set.
@@ -663,4 +662,4 @@ struct Command(CollectionElement):
             shorthand: The shorthand of the flag.
             default: The default value of the flag.
         """
-        self.flags[].add_float64_flag(name=name, usage=usage, default=default, shorthand=shorthand)
+        self.local_flags[].add_float64_flag(name=name, usage=usage, default=default, shorthand=shorthand)

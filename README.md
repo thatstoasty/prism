@@ -212,6 +212,7 @@ Usage information will be printed the console by passing the `--help` flag.
 - Once we have kwarg unpacking, update add_flag to pass kwargs along.
 - It is difficult to have recursive relationships, not passing the command to the arg validator for now.
 - Until `Error` is implements `CollectionElement`, `ArgValidator` functions return a string and throw the error from the caller.
+- Considering adding convenience functions for adding persistent flags, but I don't want to make the Command struct too massive. It may be better to just limit setting flags to the `command[].flags[].add_flag()` pattern. Auto dereferencing will most likely make this look like verbose in the future. For now persistent flags will be set via `command[].persistent_flags[].add_flag()`.
 
 ### Bugs
 
