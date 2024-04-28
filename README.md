@@ -34,9 +34,9 @@ fn print_information(command: CommandArc, args: List[String]) -> None:
 
 
 fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
-    var flags = command[].get_all_flags()[]
+    var flags = command[].flags[]
     var lover = flags.get_as_bool("lover")
-    if lover and lover.value():
+    if lover and lover.value()[]:
         print("Hello fellow cat lover!")
 
     try:
@@ -54,7 +54,7 @@ fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
             if not count:
                 return Error("Count flag was not found.")
             var body = response.json()
-            for i in range(count.value()):
+            for i in range(count.value()[]):
                 print(body[i]["text"])
         else:
             return Error("Request failed!")
@@ -98,8 +98,8 @@ fn init() -> None:
         description="Get some cat facts!",
         erroring_run=get_cat_fact,
     )
-    cat_command.flags.add_int_flag[name="count", shorthand="c", usage="Number of facts to get."]()
-    cat_command.flags.add_bool_flag[name="lover", shorthand="l", usage="Are you a cat lover?"]()
+    cat_command.add_int_flag(name="count", shorthand="c", usage="Number of facts to get.")
+    cat_command.add_bool_flag(name="lover", shorthand="l", usage="Are you a cat lover?")
 
     var dog_command = Command(
         name="dog",
@@ -115,7 +115,6 @@ fn init() -> None:
 
 fn main() -> None:
     init()
-
 
 ```
 
@@ -201,7 +200,11 @@ Usage information will be printed the console by passing the `--help` flag.
 
 - Add find suggestion logic to `Command` struct.
 - Enable required flags.
+- Add flag groups and mutually exclusive flags.
+- Add subcommand groups.
+- Enable usage function to return the results of a usage function upon calling wrong functions or commands.
 - Replace print usage with writers to enable stdout/stderr/file writing.
+- Update default help command to improve available commands and flags section.
 
 ### Improvements
 
