@@ -24,28 +24,32 @@ fn get_args_as_list() -> List[String]:
 
 fn default_help(command: Arc[Command]) -> String:
     """Prints the help information for the command."""
-    var cmd = command[]
     var builder = StringBuilder()
-    _ = builder.write_string(cmd.description)
-    _ = builder.write_string("\n\n")
+    _ = builder.write_string(command[].description)
+
+    if command[].aliases:
+        _ = builder.write_string("\n\nAliases:")
+        _ = builder.write_string(sprintf("\n  %s", to_string(command[].aliases)))
 
     # Build usage statement arguments depending on the command's children and flags.
-    var full_command = cmd._full_command()
-    _ = builder.write_string(sprintf("Usage:\n  %s%s", full_command, String(" [args]")))
-    if len(cmd.children) > 0:
+    var full_command = command[]._full_command()
+    _ = builder.write_string(sprintf("\n\nUsage:\n  %s%s", full_command, String(" [args]")))
+    if len(command[].children) > 0:
         _ = builder.write_string(" [command]")
-    if len(cmd.flags[]) > 0:
+    if len(command[].flags[]) > 0:
         _ = builder.write_string(" [flags]")
 
-    _ = builder.write_string("\n\nAvailable commands:\n")
-    for child in cmd.children:
-        _ = builder.write_string(sprintf("  %s\n", str(child[][])))
+    if command[].children:
+        _ = builder.write_string("\n\nAvailable commands:\n")
+        for child in command[].children:
+            _ = builder.write_string(sprintf("  %s\n", str(child[][])))
 
-    _ = builder.write_string("\nAvailable flags:\n")
-    for flag in cmd.flag_list():
-        _ = builder.write_string(sprintf("  -%s, --%s    %s\n", flag[][].shorthand, flag[][].name, flag[][].usage))
+    if command[].flag_list():
+        _ = builder.write_string("\n\nAvailable flags:\n")
+        for flag in command[].flag_list():
+            _ = builder.write_string(sprintf("  -%s, --%s    %s\n", flag[][].shorthand, flag[][].name, flag[][].usage))
 
-    _ = builder.write_string(sprintf('Use "%s [command] --help" for more information about a command.', full_command))
+    _ = builder.write_string(sprintf('\nUse "%s [command] --help" for more information about a command.', full_command))
     return str(builder)
 
 
@@ -70,7 +74,7 @@ fn parse_command_from_args(start: Command) -> (Command, List[String]):
 
     for arg in args:
         for command_ref in children:
-            if command_ref[][].name == arg[]:
+            if command_ref[][].name == arg[] or contains(command_ref[][].aliases, arg[]):
                 command = command_ref[][]
                 children = command.children
                 leftover_args_start_index += 1
@@ -100,11 +104,18 @@ struct Command(CollectionElement):
         erroring_run: The function to run when the command is executed that returns an error.
         erroring_pre_run: The function to run before the command is executed that returns an error.
         erroring_post_run: The function to run after the command is executed that returns an error.
+        persisting_pre_run: The function to run before the command is executed. This persists to children.
+        persisting_post_run: The function to run after the command is executed. This persists to children.
+        persisting_erroring_pre_run: The function to run before the command is executed that returns an error. This persists to children.
+        persisting_erroring_post_run: The function to run after the command is executed that returns an error. This persists to children.
         help: The function to generate help text for the command.
     """
 
     var name: String
     var description: String
+
+    # Aliases that can be used instead of the first word in name.
+    var aliases: List[String]
 
     # Generates help text.
     var help: HelpFunction
@@ -145,6 +156,7 @@ struct Command(CollectionElement):
         inout self,
         name: String,
         description: String,
+        aliases: List[String] = List[String](),
         valid_args: List[String] = List[String](),
         run: Optional[CommandFunction] = None,
         pre_run: Optional[CommandFunction] = None,
@@ -163,6 +175,7 @@ struct Command(CollectionElement):
 
         self.name = name
         self.description = description
+        self.aliases = aliases
 
         self.help = help
 
@@ -200,6 +213,7 @@ struct Command(CollectionElement):
         name: String,
         description: String,
         arg_validator: ArgValidator,
+        aliases: List[String] = List[String](),
         valid_args: List[String] = List[String](),
         run: Optional[CommandFunction] = None,
         pre_run: Optional[CommandFunction] = None,
@@ -218,6 +232,7 @@ struct Command(CollectionElement):
 
         self.name = name
         self.description = description
+        self.aliases = aliases
 
         self.help = help
 
@@ -250,6 +265,7 @@ struct Command(CollectionElement):
     fn __copyinit__(inout self, existing: Self):
         self.name = existing.name
         self.description = existing.description
+        self.aliases = existing.aliases
 
         self.help = existing.help
 
@@ -279,6 +295,7 @@ struct Command(CollectionElement):
     fn __moveinit__(inout self, owned existing: Self):
         self.name = existing.name^
         self.description = existing.description^
+        self.aliases = existing.aliases^
 
         self.help = existing.help
 
@@ -306,7 +323,7 @@ struct Command(CollectionElement):
         self.parent = existing.parent^
 
     fn __str__(self) -> String:
-        return "(Name: " + self.name + ", Description: " + self.description + ")"
+        return sprintf("(Name: %s, Description: %s)", self.name, self.description)
 
     fn __repr__(inout self) -> String:
         var parent_name: String = ""
