@@ -5,6 +5,7 @@ mkdir ./temp
 mojo package prism -I ./external -o ./temp/prism.mojopkg
 
 echo -e "Building binaries for all examples...\n"
+mojo build examples/aliases/root.mojo -o temp/aliases
 mojo build examples/hello_world/root.mojo -o temp/hello_world
 mojo build examples/nested/nested.mojo -o temp/nested
 mojo build examples/printer/printer.mojo -o temp/printer
@@ -15,6 +16,7 @@ mkdir -p temp/examples/read_csv/ && cp examples/read_csv/file.csv temp/examples/
 
 echo -e "Executing examples...\n"
 cd temp
+./aliases my thing
 ./hello_world say hello
 ./nested get cat --count 5 -l
 ./printer "sample-text" --formatting=underline

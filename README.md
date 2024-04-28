@@ -200,7 +200,6 @@ Usage information will be printed the console by passing the `--help` flag.
 
 - Add find suggestion logic to `Command` struct.
 - Enable required flags.
-- Enable aliases.
 - Add flag groups and mutually exclusive flags.
 - Add subcommand groups.
 - Enable usage function to return the results of a usage function upon calling wrong functions or commands.
