@@ -10,7 +10,7 @@ NOTE: This does not work on Mojo 24.2, you must use the nightly build for now. T
 
 ## Usage
 
-WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples and referencing the Cobra documentation. You should be able to build the package by running `mojo package prism -I .`.
+WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples and referencing the Cobra documentation. You should be able to build the package by running `mojo package prism -I external`.
 
 ## Examples
 
@@ -211,6 +211,7 @@ Usage information will be printed the console by passing the `--help` flag.
 - Tree traversal improvements.
 - Once we have kwarg unpacking, update `Command().add_flag` to pass kwargs along.
 - Considering adding convenience functions for adding persistent flags, but I don't want to make the Command struct too massive. It may be better to just limit setting flags to the `command[].flags[].add_flag()` pattern. Auto dereferencing will most likely make this look less verbose in the future. For now persistent flags will be set via `command[].persistent_flags[].add_flag()`.
+- Once we have `Result[T]`, I will refactor raising functions to return results instead.
 
 ### Bugs
 
