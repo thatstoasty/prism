@@ -25,7 +25,9 @@ fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
         var url = "https://cat-fact.herokuapp.com/facts/"
 
         # Send the GET request
+        print("sending request")
         var response = requests.get(url)
+        print("request sent")
 
         # Check if the request was successful (status code 200)
         if response.status_code == 200:

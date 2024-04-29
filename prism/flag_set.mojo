@@ -674,7 +674,7 @@ fn validate_one_required_flag_group(data: Dict[Dict[Bool]]) -> None:
 
         # Sort values, so they can be tested/scripted against consistently.
         # unset.sort()
-        panic(sprintf("at least one of the flags in the group %s is required", to_string(keys), to_string(set)))
+        panic(sprintf("at least one of the flags in the group %s is required", to_string(keys)))
 
 
 fn validate_mutually_exclusive_flag_group(data: Dict[Dict[Bool]]) -> None:
