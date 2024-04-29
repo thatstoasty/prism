@@ -199,9 +199,6 @@ Usage information will be printed the console by passing the `--help` flag.
 ### Features
 
 - Add find suggestion logic to `Command` struct.
-- Enable required flags.
-- Add flag groups and mutually exclusive flags.
-- Add subcommand groups.
 - Enable usage function to return the results of a usage function upon calling wrong functions or commands.
 - Replace print usage with writers to enable stdout/stderr/file writing.
 - Update default help command to improve available commands and flags section.
