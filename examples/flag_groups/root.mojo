@@ -1,4 +1,5 @@
 from memory._arc import Arc
+from time import now
 from prism import Flag, Command, CommandArc
 from prism.vector import to_string
 
@@ -12,6 +13,7 @@ fn tool_func(command: CommandArc, args: List[String]) -> None:
 
 
 fn init() -> None:
+    var start = now()
     var root_command = Command(
         name="my",
         description="This is a dummy command!",
@@ -28,6 +30,7 @@ fn init() -> None:
 
     root_command.add_command(tool_command)
     root_command.execute()
+    print("duration", (now() - start) / 1e9)
 
 
 fn main() -> None:
