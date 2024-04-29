@@ -536,6 +536,7 @@ struct Flag(CollectionElement, Stringable):
     var value: Optional[String]
     var default: String
     var type: String
+    # var annotations: Dict[StringKey, List[String]]
 
     fn __init__(
         inout self,

@@ -120,6 +120,9 @@ struct Command(CollectionElement):
     # Generates help text.
     var help: HelpFunction
 
+    # The group id under which this subcommand is grouped in the 'help' output of its parent.
+    var group_id: String
+
     var pre_run: Optional[CommandFunction]
     var run: Optional[CommandFunction]
     var post_run: Optional[CommandFunction]
@@ -178,6 +181,7 @@ struct Command(CollectionElement):
         self.aliases = aliases
 
         self.help = help
+        self.group_id = ""
 
         self.pre_run = pre_run
         self.run = run
@@ -235,6 +239,7 @@ struct Command(CollectionElement):
         self.aliases = aliases
 
         self.help = help
+        self.group_id = ""
 
         self.pre_run = pre_run
         self.run = run
@@ -268,6 +273,7 @@ struct Command(CollectionElement):
         self.aliases = existing.aliases
 
         self.help = existing.help
+        self.group_id = existing.group_id
 
         self.pre_run = existing.pre_run
         self.run = existing.run
@@ -298,6 +304,7 @@ struct Command(CollectionElement):
         self.aliases = existing.aliases^
 
         self.help = existing.help
+        self.group_id = existing.group_id^
 
         self.pre_run = existing.pre_run^
         self.run = existing.run^
