@@ -1,13 +1,19 @@
 from sys import argv
 from collections.optional import Optional
-from collections.dict import Dict, KeyElement
 from memory._arc import Arc
+from external.string_dict import Dict
 from external.gojo.fmt import sprintf
 from external.gojo.builtins import panic
 from external.gojo.strings import StringBuilder
-from .flag import Flag, FlagSet, get_flags
+from .flag import Flag, get_flags
+from .flag_set import FlagSet, process_flag_for_group_annotation, validate_flag_groups
 from .args import arbitrary_args, get_args
 from .vector import join, to_string, contains
+
+
+alias REQUIRED_AS_GROUP = "REQUIRED_AS_GROUP"
+alias ONE_REQUIRED = "ONE_REQUIRED"
+alias MUTUALLY_EXCLUSIVE = "MUTUALLY_EXCLUSIVE"
 
 
 fn get_args_as_list() -> List[String]:
@@ -120,6 +126,9 @@ struct Command(CollectionElement):
     # Generates help text.
     var help: HelpFunction
 
+    # The group id under which this subcommand is grouped in the 'help' output of its parent.
+    var group_id: String
+
     var pre_run: Optional[CommandFunction]
     var run: Optional[CommandFunction]
     var post_run: Optional[CommandFunction]
@@ -178,6 +187,7 @@ struct Command(CollectionElement):
         self.aliases = aliases
 
         self.help = help
+        self.group_id = ""
 
         self.pre_run = pre_run
         self.run = run
@@ -235,6 +245,7 @@ struct Command(CollectionElement):
         self.aliases = aliases
 
         self.help = help
+        self.group_id = ""
 
         self.pre_run = pre_run
         self.run = run
@@ -268,6 +279,7 @@ struct Command(CollectionElement):
         self.aliases = existing.aliases
 
         self.help = existing.help
+        self.group_id = existing.group_id
 
         self.pre_run = existing.pre_run
         self.run = existing.run
@@ -298,6 +310,7 @@ struct Command(CollectionElement):
         self.aliases = existing.aliases^
 
         self.help = existing.help
+        self.group_id = existing.group_id^
 
         self.pre_run = existing.pre_run^
         self.run = existing.run^
@@ -399,7 +412,29 @@ struct Command(CollectionElement):
         var err: Error
         remaining_args, err = get_flags(flags, remaining_args)
         if err:
-            panic(err)
+            panic(str(err))
+
+        # TODO: Move to func and check mutually exclusive and one required cases.
+        var group_status = Dict[Dict[Bool]]()
+        var one_required_group_status = Dict[Dict[Bool]]()
+        var mutually_exclusive_group_status = Dict[Dict[Bool]]()
+
+        @always_inline
+        fn flag_checker(flag: Arc[Flag]) capturing:
+            err = process_flag_for_group_annotation(flags, flag, REQUIRED_AS_GROUP, group_status)
+            if err:
+                panic("Failed to process flag for REQUIRED_AS_GROUP annotation: " + str(err))
+            err = process_flag_for_group_annotation(flags, flag, ONE_REQUIRED, one_required_group_status)
+            if err:
+                panic("Failed to process flag for ONE_REQUIRED annotation: " + str(err))
+            err = process_flag_for_group_annotation(flags, flag, MUTUALLY_EXCLUSIVE, mutually_exclusive_group_status)
+            if err:
+                panic("Failed to process flag for MUTUALLY_EXCLUSIVE annotation: " + str(err))
+
+        flags[].visit_all[flag_checker]()
+
+        # Validate required flag groups
+        validate_flag_groups(group_status, one_required_group_status, mutually_exclusive_group_status)
 
         # Check if the help flag was passed
         var help_passed = command_ref[].flags[].get_as_bool("help")
@@ -489,7 +524,7 @@ struct Command(CollectionElement):
     fn _merge_flags(inout self):
         """Returns all flags for the command and inherited flags from its parent."""
         # Set mutability of flag set by initializing it as a var.
-        if len(self.flags[]) == 0:
+        if not self.flags[]:
             var all_flags = Arc(FlagSet())
             all_flags[] += self.local_flags[]
             all_flags[] += self.persistent_flags[]
@@ -506,6 +541,83 @@ struct Command(CollectionElement):
         """
         self.children.append(Arc(command))
         command.parent[] = self
+
+    fn mark_flags_required_together(inout self, *flag_names: String):
+        """Marks the given flags with annotations so that Prism errors
+        if the command is invoked with a subset (but not all) of the given flags.
+
+        Args:
+            flag_names: The names of the flags to mark as required together.
+        """
+        self._merge_flags()
+        for flag_name in flag_names:
+            var maybe_flag = self.flags[].lookup(flag_name[])
+            if not maybe_flag:
+                panic(sprintf("Failed to find flag %s and mark it as being required in a flag group", flag_name[]))
+
+            var flag = maybe_flag.value()[]
+
+            # TODO: This inline join logic is temporary until we can pass around varadic lists or cast it to a list.
+            var result: String = ""
+            for i in range(len(flag_names)):
+                result += flag_names[i]
+                if i != len(flag_names) - 1:
+                    result += " "
+            flag[].annotations.put(REQUIRED_AS_GROUP, result)
+            self.flags[].set_annotation(
+                flag_name[], REQUIRED_AS_GROUP, flag[].annotations.get(REQUIRED_AS_GROUP, List[String]())
+            )
+
+    fn mark_flags_one_required(inout self, *flag_names: String):
+        """Marks the given flags with annotations so that Prism errors
+        if the command is invoked without at least one flag from the given set of flags.
+
+        Args:
+            flag_names: The names of the flags to mark as required.
+        """
+        self._merge_flags()
+        for flag_name in flag_names:
+            var maybe_flag = self.flags[].lookup(flag_name[])
+            if not maybe_flag:
+                panic(sprintf("Failed to find flag %s and mark it as being in a one-required flag group", flag_name[]))
+
+            var flag = maybe_flag.value()[]
+            var result: String = ""
+            for i in range(len(flag_names)):
+                result += flag_names[i]
+                if i != len(flag_names) - 1:
+                    result += " "
+            flag[].annotations.put(ONE_REQUIRED, result)
+            self.flags[].set_annotation(flag_name[], ONE_REQUIRED, flag[].annotations.get(ONE_REQUIRED, List[String]()))
+
+    fn mark_flags_mutually_exclusive(inout self, *flag_names: String):
+        """Marks the given flags with annotations so that Prism errors
+        if the command is invoked with more than one flag from the given set of flags.
+
+        Args:
+            flag_names: The names of the flags to mark as mutually exclusive.
+        """
+        self._merge_flags()
+        for flag_name in flag_names:
+            var maybe_flag = self.flags[].lookup(flag_name[])
+            if not maybe_flag:
+                panic(
+                    sprintf(
+                        "Failed to find flag %s and mark it as being in a mutually exclusive flag group", flag_name[]
+                    )
+                )
+
+            var flag = maybe_flag.value()[]
+
+            var result: String = ""
+            for i in range(len(flag_names)):
+                result += flag_names[i]
+                if i != len(flag_names) - 1:
+                    result += " "
+            flag[].annotations.put(MUTUALLY_EXCLUSIVE, result)
+            self.flags[].set_annotation(
+                flag_name[], MUTUALLY_EXCLUSIVE, flag[].annotations.get(MUTUALLY_EXCLUSIVE, List[String]())
+            )
 
     # NOTE: These wrappers are just nice to have. Feels good to call Command().add_flag()
     # instead of Command().flags[].add_flag()

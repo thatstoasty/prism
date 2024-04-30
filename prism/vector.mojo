@@ -1,21 +1,19 @@
 from memory._arc import Arc
+from collections.vector import InlinedFixedVector
 
 
-fn contains(vector: List[String], value: String) -> Bool:
+trait EqualityComparableCollectionElement(EqualityComparable, CollectionElement):
+    pass
+
+
+fn contains[T: EqualityComparableCollectionElement](vector: List[T], value: T) -> Bool:
     for i in range(vector.size):
         if vector[i] == value:
             return True
     return False
 
 
-fn contains(vector: List[StringLiteral], value: StringLiteral) -> Bool:
-    for i in range(vector.size):
-        if vector[i] == value:
-            return True
-    return False
-
-
-fn to_string(vector: List[String]) -> String:
+fn to_string[T: StringableCollectionElement](vector: List[T]) -> String:
     var result = String("[")
     for i in range(vector.size):
         result += vector[i]
@@ -25,17 +23,17 @@ fn to_string(vector: List[String]) -> String:
     return result
 
 
-fn to_string(vector: List[Flag]) -> String:
+fn to_string[T: StringableCollectionElement](vector: InlinedFixedVector[T]) -> String:
     var result = String("[")
     for i in range(vector.size):
-        result += str(vector[i])
+        result += vector[i]
         if i < vector.size - 1:
             result += String(", ")
     result += String("]")
     return result
 
 
-fn to_string(vector: List[Arc[Flag]]) -> String:
+fn to_string[T: StringableCollectionElement](vector: List[Arc[T]]) -> String:
     var result = String("[")
     for i in range(vector.size):
         var flag = vector[i]
@@ -46,18 +44,7 @@ fn to_string(vector: List[Arc[Flag]]) -> String:
     return result
 
 
-fn to_string(vector: List[Arc[Command]]) -> String:
-    var result = String("[")
-    for i in range(vector.size):
-        var item = vector[i]
-        result += item[].name
-        if i < vector.size - 1:
-            result += String(", ")
-    result += String("]")
-    return result
-
-
-fn join(separator: String, iterable: List[String]) raises -> String:
+fn join[T: StringableCollectionElement](separator: String, iterable: List[T]) -> String:
     var result: String = ""
     for i in range(len(iterable)):
         result += iterable[i]

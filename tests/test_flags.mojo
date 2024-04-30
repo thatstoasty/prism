@@ -1,6 +1,7 @@
 from memory._arc import Arc
 from tests.wrapper import MojoTest
-from prism.flag import string_to_bool, string_to_float, Flag, FlagSet, get_flags, parse_flag, parse_shorthand_flag
+from prism.flag import Flag, get_flags, parse_flag, parse_shorthand_flag
+from prism.flag_set import FlagSet, string_to_bool, string_to_float
 
 
 fn test_string_to_bool():

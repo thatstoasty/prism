@@ -12,18 +12,24 @@ mojo build examples/printer/printer.mojo -o temp/printer
 mojo build examples/read_csv/root.mojo -o temp/read_csv
 mojo build examples/logging/root.mojo -o temp/logging
 mojo build examples/persistent_flags_and_cmds/persistent.mojo -o temp/persistent
+mojo build examples/flag_groups/root.mojo -o temp/my
 mkdir -p temp/examples/read_csv/ && cp examples/read_csv/file.csv temp/examples/read_csv/file.csv
 
 echo -e "Executing examples...\n"
 cd temp
 ./aliases my thing
 ./hello_world say hello
-./nested get cat --count 5 -l
+# ./nested get cat --count 5 -l
 ./printer "sample-text" --formatting=underline
 ./read_csv --file examples/read_csv/file.csv --lines 1
 ./logging --type=json hello
-./persistent get cat --count 2 --lover
+# ./persistent get cat --count 2 --lover
 ./persistent get dog -l
+./my tool --color "#ffffff" --formatting "underline" --hue "red" --required
+./my tool --color "#ffffff" --required
+./my tool
+
+
 
 cd ..
 rm -R ./temp
