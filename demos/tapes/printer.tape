@@ -8,9 +8,9 @@ Set Height 400
 
 Type "mojo build examples/printer/printer.mojo -o printer" Sleep 500ms  Enter
 Sleep 1500ms
-Type "./printer'Blue Drafter'" Sleep 500ms  Enter
+Type "./printer 'Blue Drafter'" Sleep 500ms  Enter
 Sleep 2s
-Type "./printer'Red Drafter' --color #e02214 --formatting underline" Sleep 500ms  Enter
+Type "./printer 'Red Drafter' --color #e02214 --formatting underline" Sleep 500ms  Enter
 Sleep 1s
 
 Sleep 5s
