@@ -16,7 +16,7 @@ WIP: Documentation, but you should be able to figure out how to use the library 
 
 Try out the `nested` example in the examples directory!
 
-![Nested Example](https://github.com/thatstoasty/prism/blob/feature/documentation/nested.png)
+![Nested Example](https://github.com/thatstoasty/prism/blob/feature/documentation/images/nested.png)
 
 
 Start by navigating to the `nested` example directory.
