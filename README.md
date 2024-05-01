@@ -16,43 +16,26 @@ WIP: Documentation, but you should be able to figure out how to use the library 
 
 Try out the `nested` example in the examples directory!
 
-![Nested Example](https://github.com/thatstoasty/prism/blob/feature/documentation/images/nested.png)
-
+![Nested Example](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/images/nested.png)
 
 Start by navigating to the `nested` example directory.
 `cd examples/nested`
 
 Run the example by using the following command, we're not specifying a subcommand so we should be executing the root command.
 
-```bash
-mojo run nested.mojo
-This is the base command!
-```
+![Nested 1](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/nested-1.gif)
 
 Now try running it with a subcommand.
 
-```bash
-mojo run nested.mojo get
-Pass cat or dog as a subcommand, and see what you get!
-```
+![Nested 1](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/nested-2.gif)
 
 Let's follow the suggestion and add the cat subcommand.
 
-```bash
-mojo run nested.mojo get cat
-Owning a cat can reduce the risk of stroke and heart attack by a third.
-```
+![Nested 1](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/nested-3.gif)
 
-Now try running it with a flag to get up to five facts.
+Now try running it with a flag to get three facts.
 
-```bash
-mojo run nested.mojo get cat --count 5
-Owning a cat can reduce the risk of stroke and heart attack by a third.
-Most cats are lactose intolerant, and milk can cause painful stomach cramps and diarrhea. It's best to forego the milk and just give your cat the standard: clean, cool drinking water.
-Domestic cats spend about 70 percent of the day sleeping and 15 percent of the day grooming.
-The frequency of a domestic cat's purr is the same at which muscles and bones repair themselves.
-Cats are the most popular pet in the United States: There are 88 million pet cats and 74 million dogs.
-```
+![Nested 1](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/nested-4.gif)
 
 Let's try running it from a compiled binary instead. Start by setting your `MOJO_PYTHON_LIBRARY` environment variable to your default python3 installation. We need to do this because we're using the `requests` module via Python interop.
 `export MOJO_PYTHON_LIBRARY=$(which python3)`

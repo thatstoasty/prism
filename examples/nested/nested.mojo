@@ -25,9 +25,7 @@ fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
         var url = "https://cat-fact.herokuapp.com/facts/"
 
         # Send the GET request
-        print("sending request")
         var response = requests.get(url)
-        print("request sent")
 
         # Check if the request was successful (status code 200)
         if response.status_code == 200:
@@ -79,7 +77,7 @@ fn init() -> None:
         description="Get some cat facts!",
         erroring_run=get_cat_fact,
     )
-    cat_command.add_int_flag(name="count", shorthand="c", usage="Number of facts to get.")
+    cat_command.add_int_flag(name="count", shorthand="c", usage="Number of facts to get.", default=1)
     cat_command.add_bool_flag(name="lover", shorthand="l", usage="Are you a cat lover?")
 
     var dog_command = Command(
