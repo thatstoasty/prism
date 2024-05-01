@@ -5,12 +5,14 @@ Set FontSize 20
 Set Width 1200
 Set Height 400
 
-Type "mojo run examples/aliases/root.mojo" Sleep 500ms  Enter
+Type "mojo build examples/aliases/root.mojo -o aliases" Sleep 500ms  Enter
+Sleep 1500ms
+Type "./aliases" Sleep 500ms  Enter
 Sleep 2s
-Type "mojo run examples/aliases/root.mojo tool" Sleep 500ms  Enter
+Type "./aliases tool" Sleep 500ms  Enter
 Sleep 2s
-Type "mojo run examples/aliases/root.mojo object" Sleep 500ms  Enter
+Type "./aliases object" Sleep 500ms  Enter
 Sleep 2s
-Type "mojo run examples/aliases/root.mojo thing" Sleep 500ms  Enter
+Type "./aliases thing" Sleep 500ms  Enter
 Sleep 1s
 Sleep 5s

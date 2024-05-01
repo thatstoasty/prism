@@ -6,12 +6,14 @@ Set Width 1200
 Set Height 600
 
 
-Type "mojo run examples/flag_groups/root.mojo tool --color '#ffffff' --formatting 'underline' --required" Sleep 500ms  Enter
+Type "mojo build examples/flag_groups/root.mojo -o group" Sleep 500ms  Enter
+Sleep 1500ms
+Type "./group tool --color '#ffffff' --formatting 'underline' --required" Sleep 500ms  Enter
 Sleep 2s
-Type "mojo run examples/flag_groups/root.mojo tool --color '#ffffff' --required" Sleep 500ms  Enter
+Type "./group tool --color '#ffffff' --required" Sleep 500ms  Enter
 Sleep 2s
-Type "mojo run examples/flag_groups/root.mojo tool --color '#ffffff' --hue red --formatting 'underline' --required" Sleep 500ms  Enter
+Type "./group tool --color '#ffffff' --hue red --formatting 'underline' --required" Sleep 500ms  Enter
 Sleep 2s
-Type "mojo run examples/flag_groups/root.mojo tool" Sleep 500ms  Enter
+Type "./group tool" Sleep 500ms  Enter
 Sleep 1s
 Sleep 5s

@@ -11,7 +11,7 @@ mojo build examples/nested/nested.mojo -o temp/nested
 mojo build examples/printer/printer.mojo -o temp/printer
 mojo build examples/read_csv/root.mojo -o temp/read_csv
 mojo build examples/logging/root.mojo -o temp/logging
-mojo build examples/persistent_flags_and_cmds/persistent.mojo -o temp/persistent
+mojo build examples/persistent/root.mojo -o temp/persistent
 mojo build examples/flag_groups/root.mojo -o temp/my
 mkdir -p temp/examples/read_csv/ && cp examples/read_csv/file.csv temp/examples/read_csv/file.csv
 
