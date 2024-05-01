@@ -614,7 +614,7 @@ fn dict_keys_to_list[T: CollectionElement](data: Dict[T]) -> (List[String], Erro
 
 fn validate_required_flag_group(data: Dict[Dict[Bool]]) -> None:
     """Validates that all flags in a group are set if any are set.
-    This is for flags that are marked as required via `Command().mark_flags_required_together()`.
+    This is for flags that are marked as required via `Command().mark_flags_one_required_together()`.
 
     Args:
         data: The dictionary of flag groups to validate.
@@ -650,7 +650,7 @@ fn validate_required_flag_group(data: Dict[Dict[Bool]]) -> None:
 
 fn validate_one_required_flag_group(data: Dict[Dict[Bool]]) -> None:
     """Validates that at least one flag in a group is set.
-    This is for flags that are marked as required via `Command().mark_flags_one_required()`.
+    This is for flags that are marked as required via `Command().mark_flag_required()`.
 
     Args:
         data: The dictionary of flag groups to validate.

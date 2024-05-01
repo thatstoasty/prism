@@ -14,19 +14,105 @@ WIP: Documentation, but you should be able to figure out how to use the library 
 
 ### Basic Command and Subcommand
 
-![Nested Example](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/images/chromeria.png)
+Here's an example of a basic command and subcommand!
+
+![Basic Example](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/images/chromeria.png)
 
 ![Chromeria](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/hello-chromeria.gif)
 
 ### Command Flags
 
+Commands can have typed flags added to them to enable different behaviors.
+
+```mojo
+    var root_command = Command(
+        name="logger", description="Base command.", run=handler, arg_validator=minimum_n_args[1]()
+    )
+    root_command.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
+```
+
 ![Logging](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/logging.gif)
 
-### Persistent Flags and Hooks
+### Command Aliases
 
-![Persistent](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/persistent.gif)
+Commands can also be aliased to enable different ways to call the same command. You can change the command underneath the alias and maintain the same behavior.
 
-### Flag Relationships
+```mojo
+var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+    )
+```
+
+![Aliases](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/aliases.gif)
+
+### Required flags
+
+Flags can be grouped together to enable relationships between them. This can be used to enable different behaviors based on the flags that are passed.
+
+By default flags are considered optional. If you want your command to report an error when a flag has not been set, mark it as required:
+
+```mojo
+var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+    )
+    tool_command.add_bool_flag(name="required", shorthand="r", usage="Always required.")
+    tool_command.mark_flag_required("required")
+```
+
+Same for persistent flags:
+
+```mojo
+    var root_command = Command(
+        name="my",
+        description="This is a dummy command!",
+        run=test,
+    )
+    root_command.persistent_flags[].add_bool_flag(name="free", shorthand="f", usage="Always required.")
+    root_command.mark_persistent_flag_required("free")
+```
+
+### Flag Groups
+
+If you have different flags that must be provided together (e.g. if they provide the `--color` flag they MUST provide the `--formatting` flag as well) then Prism can enforce that requirement:
+
+```mojo
+    var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+    )
+    tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    tool_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    tool_command.mark_flags_one_required_together("color", "formatting")
+```
+
+You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
+
+```mojo
+   var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+    )
+    tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    tool_command.add_string_flag(name="hue", shorthand="x", usage="Text color", default="#3464eb")
+    tool_command.mark_flags_mutually_exclusive("color", "hue")
+```
+
+If you want to require at least one flag from a group to be present, you can use `mark_flags_one_required`. This can be combined with `mark_flags_mutually_exclusive` to enforce exactly one flag from a given group:
+
+```mojo
+   var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+    )
+    tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    tool_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    tool_command.mark_flags_one_required("color", "formatting")
+    tool_command.mark_flags_mutually_exclusive("color", "formatting")
+```
+
+In these cases:
+
+- both local and persistent flags can be used
+  - NOTE: the group is only enforced on commands where every flag is defined
+- a flag may appear in multiple groups
+- a group may contain any number of flags
 
 ![Flag Groups](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/flag_groups.gif)
 
@@ -34,9 +120,12 @@ WIP: Documentation, but you should be able to figure out how to use the library 
 
 ![Printer](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/printer.gif)
 
-### Command Aliases
+### Persistent Flags and Hooks
 
-![Aliases](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/aliases.gif)
+Flags and
+
+![Persistent](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/persistent.gif)
+
 
 ## Notes
 
@@ -58,6 +147,7 @@ WIP: Documentation, but you should be able to figure out how to use the library 
 - Enable usage function to return the results of a usage function upon calling wrong functions or commands.
 - Replace print usage with writers to enable stdout/stderr/file writing.
 - Update default help command to improve available commands and flags section.
+- Need to add `mark_flag_required` to the `Command` struct.
 
 ### Improvements
 

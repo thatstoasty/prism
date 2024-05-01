@@ -542,7 +542,7 @@ struct Command(CollectionElement):
         self.children.append(Arc(command))
         command.parent[] = self
 
-    fn mark_flags_required_together(inout self, *flag_names: String):
+    fn mark_flags_one_required_together(inout self, *flag_names: String):
         """Marks the given flags with annotations so that Prism errors
         if the command is invoked with a subset (but not all) of the given flags.
 
@@ -616,6 +616,85 @@ struct Command(CollectionElement):
                     result += " "
             flag[].annotations.put(MUTUALLY_EXCLUSIVE, result)
             self.flags[].set_annotation(
+                flag_name[], MUTUALLY_EXCLUSIVE, flag[].annotations.get(MUTUALLY_EXCLUSIVE, List[String]())
+            )
+
+    fn mark_persistent_flags_required_together(inout self, *flag_names: String):
+        """Marks the given flags with annotations so that Prism errors
+        if the command is invoked with a subset (but not all) of the given flags.
+
+        Args:
+            flag_names: The names of the flags to mark as required together.
+        """
+        self._merge_flags()
+        for flag_name in flag_names:
+            var maybe_flag = self.persistent_flags[].lookup(flag_name[])
+            if not maybe_flag:
+                panic(sprintf("Failed to find flag %s and mark it as being required in a flag group", flag_name[]))
+
+            var flag = maybe_flag.value()[]
+
+            # TODO: This inline join logic is temporary until we can pass around varadic lists or cast it to a list.
+            var result: String = ""
+            for i in range(len(flag_names)):
+                result += flag_names[i]
+                if i != len(flag_names) - 1:
+                    result += " "
+            flag[].annotations.put(REQUIRED_AS_GROUP, result)
+            self.persistent_flags[].set_annotation(
+                flag_name[], REQUIRED_AS_GROUP, flag[].annotations.get(REQUIRED_AS_GROUP, List[String]())
+            )
+
+    fn mark_persistent_flags_one_required(inout self, *flag_names: String):
+        """Marks the given flags with annotations so that Prism errors
+        if the command is invoked without at least one flag from the given set of flags.
+
+        Args:
+            flag_names: The names of the flags to mark as required.
+        """
+        self._merge_flags()
+        for flag_name in flag_names:
+            var maybe_flag = self.persistent_flags[].lookup(flag_name[])
+            if not maybe_flag:
+                panic(sprintf("Failed to find flag %s and mark it as being in a one-required flag group", flag_name[]))
+
+            var flag = maybe_flag.value()[]
+            var result: String = ""
+            for i in range(len(flag_names)):
+                result += flag_names[i]
+                if i != len(flag_names) - 1:
+                    result += " "
+            flag[].annotations.put(ONE_REQUIRED, result)
+            self.persistent_flags[].set_annotation(
+                flag_name[], ONE_REQUIRED, flag[].annotations.get(ONE_REQUIRED, List[String]())
+            )
+
+    fn mark_persistent_flags_mutually_exclusive(inout self, *flag_names: String):
+        """Marks the given flags with annotations so that Prism errors
+        if the command is invoked with more than one flag from the given set of flags.
+
+        Args:
+            flag_names: The names of the flags to mark as mutually exclusive.
+        """
+        self._merge_flags()
+        for flag_name in flag_names:
+            var maybe_flag = self.persistent_flags[].lookup(flag_name[])
+            if not maybe_flag:
+                panic(
+                    sprintf(
+                        "Failed to find flag %s and mark it as being in a mutually exclusive flag group", flag_name[]
+                    )
+                )
+
+            var flag = maybe_flag.value()[]
+
+            var result: String = ""
+            for i in range(len(flag_names)):
+                result += flag_names[i]
+                if i != len(flag_names) - 1:
+                    result += " "
+            flag[].annotations.put(MUTUALLY_EXCLUSIVE, result)
+            self.persistent_flags[].set_annotation(
                 flag_name[], MUTUALLY_EXCLUSIVE, flag[].annotations.get(MUTUALLY_EXCLUSIVE, List[String]())
             )
 
