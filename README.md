@@ -16,7 +16,27 @@ WIP: Documentation, but you should be able to figure out how to use the library 
 
 ![Nested Example](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/images/chromeria.png)
 
-![Chromeria 1](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/hello-chromeria.gif)
+![Chromeria](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/hello-chromeria.gif)
+
+### Command Flags
+
+![Logging](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/logging.gif)
+
+### Persistent Flags and Hooks
+
+![Persistent](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/persistent.gif)
+
+### Flag Relationships
+
+![Flag Groups](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/flag_groups.gif)
+
+### Pre and Post Run Hooks
+
+![Printer](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/printer.gif)
+
+### Command Aliases
+
+![Aliases](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/aliases.gif)
 
 ## Notes
 
@@ -49,3 +69,4 @@ WIP: Documentation, but you should be able to figure out how to use the library 
 ### Bugs
 
 - `Command` has 2 almost indentical init functions because setting a default `arg_validator` value, breaks the compiler as of 24.2.
+- Error message from `get_flags` comes up blank when finally exiting the program. For now, just printing the error message before the Error is returned.

@@ -1,5 +1,5 @@
 #!/bin/bash
-export MOJO_PYTHON_LIBRARY=$(which python)
+export MOJO_PYTHON_LIBRARY=$(which python3)
 
 mkdir ./temp
 mojo package prism -I ./external -o ./temp/prism.mojopkg
@@ -28,7 +28,6 @@ cd temp
 ./my tool --color "#ffffff" --formatting "underline" --hue "red" --required
 ./my tool --color "#ffffff" --required
 ./my tool
-
 
 
 cd ..

@@ -2,7 +2,7 @@ from prism import Flag, Command, CommandArc
 
 
 fn test(command: CommandArc, args: List[String]) -> None:
-    print("Pass hello as a subcommand!")
+    print("Pass chromeria as a subcommand!")
 
 
 fn hello(command: CommandArc, args: List[String]) -> None:

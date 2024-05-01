@@ -21,7 +21,7 @@ fn init() -> None:
     var root_command = Command(
         name="logger", description="Base command.", run=handler, arg_validator=minimum_n_args[1]()
     )
-    root_command.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]", default="json")
+    root_command.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
 
     root_command.execute()
 
