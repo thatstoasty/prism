@@ -79,11 +79,7 @@ alias LAB_DELTA = 1e-6
 
 
 fn lab_eq(lab1: lab_t, lab2: lab_t) -> Bool:
-    return (
-        math.abs(lab1.L - lab2.L) < LAB_DELTA
-        and math.abs(lab1.A - lab2.A) < LAB_DELTA
-        and math.abs(lab1.B - lab2.B) < LAB_DELTA
-    )
+    return abs(lab1.L - lab2.L) < LAB_DELTA and abs(lab1.A - lab2.A) < LAB_DELTA and abs(lab1.B - lab2.B) < LAB_DELTA
 
 
 fn soft_palette_ex(colors_count: Int, settings: SoftPaletteSettings) raises -> List[Color]:

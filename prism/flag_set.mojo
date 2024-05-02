@@ -102,8 +102,7 @@ struct FlagSet(Stringable, Sized):
         return new
 
     fn __iadd__(inout self, other: Self):
-        for flag in other.flags:
-            self.flags.append(flag[])
+        self.add_flag_set(other)
 
     fn lookup(self, name: String) -> Optional[Arc[Flag]]:
         """Returns a reference to a Flag with the given name.
@@ -530,7 +529,7 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "Float64", shorthand)
 
-    fn set_annotation(inout self, name: String, key: String, values: List[String]):
+    fn set_annotation(inout self, name: String, key: String, values: List[String]) -> Error:
         """Sets an annotation for a flag.
 
         Args:
@@ -539,8 +538,12 @@ struct FlagSet(Stringable, Sized):
             values: The values of the annotation.
         """
         var result = self.lookup(name)
-        if result:
-            result.value()[][].annotations.put(key, values)
+        if not result:
+            return Error("FlagSet.set_annotation: Could not find flag with name: " + name)
+
+        result.value()[][].annotations.put(key, values)
+
+        return Error()
 
     fn visit_all[visitor: FlagVisitorFn](self) -> None:
         """Visits all flags in the flag set.
@@ -550,6 +553,20 @@ struct FlagSet(Stringable, Sized):
         """
         for flag in self.flags:
             visitor(flag[])
+
+    fn add_flag_set(inout self, new_set: Self) -> None:
+        """Adds flags from another FlagSet. If a flag is already present, the flag from the new set is ignored.
+
+        Args:
+            new_set: The flag set to add.
+        """
+
+        @always_inline
+        fn add_flag(flag: Arc[Flag]) capturing -> None:
+            if not self.lookup(flag[].name):
+                self.flags.append(flag[])
+
+        new_set.visit_all[add_flag]()
 
 
 fn process_flag_for_group_annotation(
@@ -650,7 +667,7 @@ fn validate_required_flag_group(data: Dict[Dict[Bool]]) -> None:
 
 fn validate_one_required_flag_group(data: Dict[Dict[Bool]]) -> None:
     """Validates that at least one flag in a group is set.
-    This is for flags that are marked as required via `Command().mark_flags_one_required()`.
+    This is for flags that are marked as required via `Command().mark_flag_required()`.
 
     Args:
         data: The dictionary of flag groups to validate.

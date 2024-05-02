@@ -55,7 +55,7 @@ fn init() -> None:
     root_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
 
     root_command.execute()
-    print("duration", (now() - start) / 1e9)
+    # print("duration", (now() - start) / 1e9)
 
 
 fn main() -> None:

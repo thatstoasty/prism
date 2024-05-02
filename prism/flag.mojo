@@ -67,6 +67,8 @@ struct Flag(CollectionElement, Stringable):
             and self.usage == other.usage
             and self.value.value()[] == other.value.value()[]
             and self.default == other.default
+            and self.type == other.type
+            and self.changed == other.changed
         )
 
     fn __ne__(self, other: Self) -> Bool:
@@ -114,10 +116,10 @@ fn parse_flag(
         return name, String("True"), 1
 
     if i + 1 >= len(arguments):
-        raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
+        raise Error("Flag `" + name + "` requires a value to be set but reached the end of arguments.")
 
     if arguments[i + 1].startswith("-", 0, 1):
-        raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
+        raise Error("Flag `" + name + "` requires a value to be set but found another flag instead.")
 
     # Increment index by 2 because 2 args were used (one for name and value).
     return name, arguments[i + 1], 2
@@ -158,10 +160,10 @@ fn parse_shorthand_flag(
         return name, String("True"), 1
 
     if i + 1 >= len(arguments):
-        raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
+        raise Error("Flag `" + name + "` requires a value to be set but reached the end of arguments.")
 
     if arguments[i + 1].startswith("-", 0, 1):
-        raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
+        raise Error("Flag `" + name + "` requires a value to be set but found another flag instead.")
 
     # Increment index by 2 because 2 args were used (one for name and value).
     return name, arguments[i + 1], 2

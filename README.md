@@ -1,89 +1,84 @@
 # Prism
 
+![Mojo 24.3](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.3-purple)
+
 A Budding CLI Library!
 
 Inspired by: `Cobra`!
 
 > [!NOTE]
 > This library will often have breaking changes and it should not be used for anything in production.
-NOTE: This does not work on Mojo 24.2, you must use the nightly build for now. This will be resolved in the next Mojo release.
 
 ## Usage
 
 WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples and referencing the Cobra documentation. You should be able to build the package by running `mojo package prism -I external`.
 
-## Examples
+### Basic Command and Subcommand
 
-Try out the `nested` example in the examples directory!
+Here's an example of a basic command and subcommand!
 
-Here's the script copied over from the main file.
+![Basic Example](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/images/chromeria.png)
+
+![Chromeria](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/hello-chromeria.gif)
+
+### Command Flags
+
+Commands can have typed flags added to them to enable different behaviors.
 
 ```mojo
-from prism import Flag, Command, CommandArc
-from python import Python, PythonObject
+    var root_command = Command(
+        name="logger", description="Base command.", run=handler
+    )
+    root_command.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
+```
 
+![Logging](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/logging.gif)
 
-fn base(command: CommandArc, args: List[String]) -> None:
-    print("This is the base command!")
+### Command Aliases
+
+Commands can also be aliased to enable different ways to call the same command. You can change the command underneath the alias and maintain the same behavior.
+
+```mojo
+var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+    )
+```
+
+![Aliases](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/aliases.gif)
+
+### Pre and Post Run Hooks
+
+Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
+
+```mojo
+fn pre_hook(command: CommandArc, args: List[String]) -> None:
+    print("Pre-hook executed!")
     return None
 
 
-fn print_information(command: CommandArc, args: List[String]) -> None:
-    print("Pass cat or dog as a subcommand, and see what you get!")
+fn post_hook(command: CommandArc, args: List[String]) -> None:
+    print("Post-hook executed!")
     return None
 
 
-fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
-    var flags = command[].flags[]
-    var lover = flags.get_as_bool("lover")
-    if lover and lover.value()[]:
-        print("Hello fellow cat lover!")
+fn init() -> None:
+    var start = now()
+    var root_command = Command(
+        name="printer",
+        description="Base command.",
+        run=printer,
+        pre_run=pre_hook,
+        post_run=post_hook,
+    )
+```
 
-    try:
-        var requests = Python.import_module("requests")
+![Printer](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/printer.gif)
 
-        # URL you want to send a GET request to
-        var url = "https://cat-fact.herokuapp.com/facts/"
+### Persistent Flags and Hooks
 
-        # Send the GET request
-        var response = requests.get(url)
+Flags and hooks can also be inherited by children commands! This can be useful for setting global flags or hooks that should be applied to all child commands.
 
-        # Check if the request was successful (status code 200)
-        if response.status_code == 200:
-            var count = flags.get_as_int("count")
-            if not count:
-                return Error("Count flag was not found.")
-            var body = response.json()
-            for i in range(count.value()[]):
-                print(body[i]["text"])
-        else:
-            return Error("Request failed!")
-    except e:
-        return e
-
-    return Error()
-
-
-fn get_dog_breeds(command: CommandArc, args: List[String]) -> Error:
-    try:
-        var requests = Python.import_module("requests")
-        # URL you want to send a GET request to
-        var url = "https://dog.ceo/api/breeds/list/all"
-
-        # Send the GET request
-        var response = requests.get(url)
-
-        # Check if the request was successful (status code 200)
-        if response.status_code == 200:
-            print(response.json()["message"])
-        else:
-            return Error("Request failed!")
-    except e:
-        return e
-
-    return Error()
-
-
+```mojo
 fn init() -> None:
     var root_command = Command(name="nested", description="Base command.", run=base)
 
@@ -91,96 +86,175 @@ fn init() -> None:
         name="get",
         description="Base command for getting some data.",
         run=print_information,
+        persistent_pre_run=pre_hook,
+        persistent_post_run=post_hook,
     )
+    get_command.persistent_flags[].add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
+```
 
-    var cat_command = Command(
-        name="cat",
-        description="Get some cat facts!",
-        erroring_run=get_cat_fact,
+![Persistent](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/persistent.gif)
+
+### Required flags
+
+Flags can be grouped together to enable relationships between them. This can be used to enable different behaviors based on the flags that are passed.
+
+By default flags are considered optional. If you want your command to report an error when a flag has not been set, mark it as required:
+
+```mojo
+var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     )
-    cat_command.add_int_flag(name="count", shorthand="c", usage="Number of facts to get.")
-    cat_command.add_bool_flag(name="lover", shorthand="l", usage="Are you a cat lover?")
+    tool_command.add_bool_flag(name="required", shorthand="r", usage="Always required.")
+    tool_command.mark_flag_required("required")
+```
 
-    var dog_command = Command(
-        name="dog",
-        description="Get some dog breeds!",
-        erroring_run=get_dog_breeds,
+Same for persistent flags:
+
+```mojo
+    var root_command = Command(
+        name="my",
+        description="This is a dummy command!",
+        run=test,
     )
+    root_command.persistent_flags[].add_bool_flag(name="free", shorthand="f", usage="Always required.")
+    root_command.mark_persistent_flag_required("free")
+```
 
-    get_command.add_command(cat_command)
-    get_command.add_command(dog_command)
-    root_command.add_command(get_command)
+### Flag Groups
+
+If you have different flags that must be provided together (e.g. if they provide the `--color` flag they MUST provide the `--formatting` flag as well) then Prism can enforce that requirement:
+
+```mojo
+    var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+    )
+    tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    tool_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    tool_command.mark_flags_required_together("color", "formatting")
+```
+
+You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
+
+```mojo
+   var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+    )
+    tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    tool_command.add_string_flag(name="hue", shorthand="x", usage="Text color", default="#3464eb")
+    tool_command.mark_flags_mutually_exclusive("color", "hue")
+```
+
+If you want to require at least one flag from a group to be present, you can use `mark_flags_one_required`. This can be combined with `mark_flags_mutually_exclusive` to enforce exactly one flag from a given group:
+
+```mojo
+   var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+    )
+    tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    tool_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    tool_command.mark_flags_one_required("color", "formatting")
+    tool_command.mark_flags_mutually_exclusive("color", "formatting")
+```
+
+In these cases:
+
+- both local and persistent flags can be used
+  - NOTE: the group is only enforced on commands where every flag is defined
+- a flag may appear in multiple groups
+- a group may contain any number of flags
+
+![Flag Groups](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/flag_groups.gif)
+
+> NOTE: If you want to enforce a rule on persistent flags, then the child command must be added to the parent command **BEFORE** setting the rule.
+
+See `examples/flag_groups/child.mojo` for an example.
+
+```mojo
+fn init() -> None:
+    var root_command = Command(
+        name="my",
+        description="This is a dummy command!",
+        run=test,
+    )
+    # Persistent flags are defined on the parent command.
+    root_command.persistent_flags[].add_bool_flag(name="required", shorthand="r", usage="Always required.")
+    root_command.persistent_flags[].add_string_flag(name="host", shorthand="h", usage="Host")
+    root_command.persistent_flags[].add_string_flag(name="port", shorthand="p", usage="Port")
+    root_command.mark_persistent_flag_required("required")
+
+    var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func
+    )
+    tool_command.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
+    tool_command.add_string_flag(name="uri", shorthand="u", usage="URI")
+
+    # Child commands are added to the parent command.
+    root_command.add_command(tool_command)
+
+    # Rules are set on the child command, which can include persistent flags inherited from the parent command.
+    # When executing `mark_flags_required_together()` or `mark_flags_mutually_exclusive()`,
+    # the inherited flags from all parents will merged into the tool_command.flags FlagSet.
+    tool_command.mark_flag_required("also")
+    tool_command.mark_flags_required_together("host", "port")
+    tool_command.mark_flags_mutually_exclusive("host", "uri")
+
     root_command.execute()
-
-
-fn main() -> None:
-    init()
-
 ```
 
-Start by navigating to the `nested` example directory.
-`cd examples/nested`
+![Flag Groups 2](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/flag_groups-2.gif)
 
-Run the example by using the following command, we're not specifying a subcommand so we should be executing the root command.
+### Positional and Custom Arguments
 
-```bash
-mojo run nested.mojo
-This is the base command!
+Validation of positional arguments can be specified using the `arg_validator` field of `Command`. The following validators are built in:
+
+- Number of arguments:
+  - `no_args` - report an error if there are any positional args.
+  - `arbitrary_args` - accept any number of args.
+  - `minimum_n_args[Int]` - report an error if less than N positional args are provided.
+  - `maximum_n_args[Int]` - report an error if more than N positional args are provided.
+  - `exact_args[Int]` - report an error if there are not exactly N positional args.
+  - `range_args[min, max]` - report an error if the number of args is not between min and max.
+- Content of the arguments:
+  - `only_valid_args` - report an error if there are any positional args not specified in the `valid_args` field of `Command`, which can optionally be set to a list of valid values for positional args.
+
+If `arg_validator` is undefined, it defaults to `arbitrary_args`.
+
+> NOTE: `match_all` is unstable at the moment. I will work on ironing it out in the near future. This most likely does not work.
+
+Moreover, `match_all[arg_validators: List[ArgValidator]]` enables combining existing checks with arbitrary other checks. For instance, if you want to report an error if there are not exactly N positional args OR if there are any positional args that are not in the ValidArgs field of Command, you can call `match_all` on `exact_args` and `only_valid_args`, as shown below:
+
+```mojo
+fn test_match_all():
+    var result = match_all[
+        List[ArgValidator](
+            range_args[0, 1](),
+            valid_args[List[String]("Pineapple")]()
+        )
+    ]()(List[String]("abc", "123"))
+    testing.assert_equal(result.value()[], "Command accepts between 0 to 1 argument(s). Received: 2.")
 ```
 
-Now try running it with a subcommand.
+![Arg Validators](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/arg_validators.gif)
 
-```bash
-mojo run nested.mojo get
-Pass cat or dog as a subcommand, and see what you get!
+### Help Commands
+
+Commands are configured to accept a `--help` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed.
+
+```mojo
+fn help_func(command: Arc[Command]) -> String:
+    return ""
+
+fn init() -> None:
+    var root_command = Command(
+        name="hello",
+        description="This is a dummy command!",
+        run=test,
+    )
+
+    var hello_command = Command(name="chromeria", description="This is a dummy command!", run=hello, help=help_func)
 ```
 
-Let's follow the suggestion and add the cat subcommand.
-
-```bash
-mojo run nested.mojo get cat
-Owning a cat can reduce the risk of stroke and heart attack by a third.
-```
-
-Now try running it with a flag to get up to five facts.
-
-```bash
-mojo run nested.mojo get cat --count 5
-Owning a cat can reduce the risk of stroke and heart attack by a third.
-Most cats are lactose intolerant, and milk can cause painful stomach cramps and diarrhea. It's best to forego the milk and just give your cat the standard: clean, cool drinking water.
-Domestic cats spend about 70 percent of the day sleeping and 15 percent of the day grooming.
-The frequency of a domestic cat's purr is the same at which muscles and bones repair themselves.
-Cats are the most popular pet in the United States: There are 88 million pet cats and 74 million dogs.
-```
-
-Let's try running it from a compiled binary instead. Start by setting your `MOJO_PYTHON_LIBRARY` environment variable to your default python3 installation. We need to do this because we're using the `requests` module via Python interop.
-`export MOJO_PYTHON_LIBRARY=$(which python3)`
-
-Compile the example file into a binary.
-`mojo build nested.mojo`
-
-Now run the previous command, but with the binary instead.
-`./nested --count 3`
-
-You should get the same result as before! But, what about command information?
-
-```bash
-./nested get cat --help
-Get some cat facts!
-
-Usage:
-  nested get cat [args] [flags]
-
-Available commands:
-
-Available flags:
-  -h, --help    Displays help information about the command.
-  -c, --count    Number of facts to get.
-
-Use "root get cat [command] --help" for more information about a command.
-```
-
-Usage information will be printed the console by passing the `--help` flag.
+![Help](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/help.gif)
 
 ## Notes
 
@@ -213,3 +287,4 @@ Usage information will be printed the console by passing the `--help` flag.
 ### Bugs
 
 - `Command` has 2 almost indentical init functions because setting a default `arg_validator` value, breaks the compiler as of 24.2.
+- Error message from `get_flags` comes up blank when finally exiting the program. For now, just printing the error message before the Error is returned. Seems like an issue with catching a raised Error and then returning it. Will try returning an Error instead of raising it.
