@@ -28,7 +28,9 @@ cd temp
 ./my tool --color "#ffffff" --formatting "underline" --hue "red" --required
 ./my tool --color "#ffffff" --required
 ./my tool
-
+./my tool --host "www.example.com" --port "8080" --free --required
+./my tool --host "www.example.com" --free --required
+./my tool --host "www.example.com" --uri "/api/v1" --free --required
 
 cd ..
 rm -R ./temp

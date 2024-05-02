@@ -26,7 +26,7 @@ Commands can have typed flags added to them to enable different behaviors.
 
 ```mojo
     var root_command = Command(
-        name="logger", description="Base command.", run=handler, arg_validator=minimum_n_args[1]()
+        name="logger", description="Base command.", run=handler
     )
     root_command.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
 ```
@@ -81,7 +81,7 @@ If you have different flags that must be provided together (e.g. if they provide
     )
     tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
     tool_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
-    tool_command.mark_flags_one_required_together("color", "formatting")
+    tool_command.mark_flags_required_together("color", "formatting")
 ```
 
 You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
@@ -118,6 +118,30 @@ In these cases:
 
 ### Pre and Post Run Hooks
 
+Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
+
+```mojo
+fn pre_hook(command: CommandArc, args: List[String]) -> None:
+    print("Pre-hook executed!")
+    return None
+
+
+fn post_hook(command: CommandArc, args: List[String]) -> None:
+    print("Post-hook executed!")
+    return None
+
+
+fn init() -> None:
+    var start = now()
+    var root_command = Command(
+        name="printer",
+        description="Base command.",
+        run=printer,
+        pre_run=pre_hook,
+        post_run=post_hook,
+    )
+```
+
 ![Printer](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/printer.gif)
 
 ### Persistent Flags and Hooks
@@ -126,6 +150,9 @@ Flags and
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/persistent.gif)
 
+### Positional and Custom Arguments
+
+### Help Commands
 
 ## Notes
 
@@ -147,7 +174,7 @@ Flags and
 - Enable usage function to return the results of a usage function upon calling wrong functions or commands.
 - Replace print usage with writers to enable stdout/stderr/file writing.
 - Update default help command to improve available commands and flags section.
-- Need to add `mark_flag_required` to the `Command` struct.
+- Resolve issue with persistent flags not being picked up.
 
 ### Improvements
 

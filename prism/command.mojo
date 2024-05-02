@@ -64,6 +64,7 @@ alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> None
 alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) -> Error
 alias HelpFunction = fn (Arc[Command]) -> String
 alias ArgValidator = fn (command: Arc[Command], args: List[String]) escaping -> Optional[String]
+alias ParentVisitorFn = fn (parent: Arc[Optional[Command]]) capturing -> None
 
 # Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 # If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down.
@@ -340,7 +341,7 @@ struct Command(CollectionElement):
 
     fn __repr__(inout self) -> String:
         var parent_name: String = ""
-        if self.parent[]:
+        if self.has_parent():
             parent_name = self.parent[].value()[].name
         return (
             "Name: "
@@ -359,7 +360,7 @@ struct Command(CollectionElement):
 
     fn _full_command(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
-        if self.parent[]:
+        if self.has_parent():
             var ancestor: String = self.parent[].value()[]._full_command()
             return ancestor + " " + self.name
         else:
@@ -367,7 +368,7 @@ struct Command(CollectionElement):
 
     fn _root(self) -> Arc[Command]:
         """Returns the root command of the command tree."""
-        if self.parent[]:
+        if self.has_parent():
             return self.parent[].value()[]._root()
 
         return self
@@ -379,7 +380,7 @@ struct Command(CollectionElement):
         # TODO: Tree traversal is new to me, there's probably a better way to do this.
 
         # Always execute from the root command, regardless of what command was executed in main.
-        if self.parent[]:
+        if self.has_parent():
             return self._root()[].execute()
 
         var remaining_args: List[String]
@@ -410,7 +411,7 @@ struct Command(CollectionElement):
         # store flags as a mutable ref
         var flags = command_ref[].flags
         var err: Error
-        remaining_args, err = get_flags(flags, remaining_args)
+        remaining_args, err = get_flags(flags, command_ref[]._inherited_flags, remaining_args)
         if err:
             panic(str(err))
 
@@ -509,29 +510,24 @@ struct Command(CollectionElement):
         Returns:
             The flags for the command and its parent.
         """
-        # Set mutability of flag set by initializing it as a var.
         var i_flags = FlagSet()
-        if len(self._inherited_flags[]) == 0:
-            if self.parent[]:
-                var cmd = self.parent[].value()[]
-                i_flags += cmd.inherited_flags()[]
 
-            i_flags += self.persistent_flags[]
-            return Arc(i_flags)
+        @always_inline
+        fn add_parent_persistent_flags(parent: Arc[Optional[Self]]) capturing -> None:
+            if parent[].value()[].persistent_flags[]:
+                i_flags += parent[].value()[].persistent_flags[]
 
-        return self._inherited_flags
+        self.visit_parents[add_parent_persistent_flags]()
+
+        return i_flags
 
     fn _merge_flags(inout self):
         """Returns all flags for the command and inherited flags from its parent."""
         # Set mutability of flag set by initializing it as a var.
-        if not self.flags[]:
-            var all_flags = Arc(FlagSet())
-            all_flags[] += self.local_flags[]
-            all_flags[] += self.persistent_flags[]
-            self._inherited_flags = self.inherited_flags()
-            all_flags[] += self._inherited_flags[]
-
-            self.flags = all_flags
+        self.flags[] += self.local_flags[]
+        self.flags[] += self.persistent_flags[]
+        self._inherited_flags = self.inherited_flags()
+        self.flags[] += self._inherited_flags[]
 
     fn add_command(inout self, inout command: Command):
         """Adds child command and set's child's parent attribute to self.
@@ -542,7 +538,23 @@ struct Command(CollectionElement):
         self.children.append(Arc(command))
         command.parent[] = self
 
-    fn mark_flags_one_required_together(inout self, *flag_names: String):
+    fn mark_flag_required(inout self, flag_name: String):
+        """Marks the given flag with annotations so that Prism errors
+        if the command is invoked without the flag.
+
+        Args:
+            flag_name: The name of the flag to mark as required.
+        """
+        self._merge_flags()
+        var maybe_flag = self.flags[].lookup(flag_name)
+        if not maybe_flag:
+            panic(sprintf("Failed to find flag %s and mark it as being in a one-required flag group", flag_name))
+
+        var flag = maybe_flag.value()[]
+        flag[].annotations.put(ONE_REQUIRED, flag_name)
+        self.flags[].set_annotation(flag_name, ONE_REQUIRED, flag[].annotations.get(ONE_REQUIRED, List[String]()))
+
+    fn mark_flags_required_together(inout self, *flag_names: String):
         """Marks the given flags with annotations so that Prism errors
         if the command is invoked with a subset (but not all) of the given flags.
 
@@ -619,8 +631,26 @@ struct Command(CollectionElement):
                 flag_name[], MUTUALLY_EXCLUSIVE, flag[].annotations.get(MUTUALLY_EXCLUSIVE, List[String]())
             )
 
+    fn mark_persistent_flag_required(inout self, flag_name: String):
+        """Marks the given persistent flag with annotations so that Prism errors
+        if the command is invoked without the flag.
+
+        Args:
+            flag_name: The name of the flag to mark as required.
+        """
+        self._merge_flags()
+        var maybe_flag = self.persistent_flags[].lookup(flag_name)
+        if not maybe_flag:
+            panic(sprintf("Failed to find flag %s and mark it as being in a one-required flag group", flag_name))
+
+        var flag = maybe_flag.value()[]
+        flag[].annotations.put(ONE_REQUIRED, flag_name)
+        self.persistent_flags[].set_annotation(
+            flag_name, ONE_REQUIRED, flag[].annotations.get(ONE_REQUIRED, List[String]())
+        )
+
     fn mark_persistent_flags_required_together(inout self, *flag_names: String):
-        """Marks the given flags with annotations so that Prism errors
+        """Marks the given persistent flags with annotations so that Prism errors
         if the command is invoked with a subset (but not all) of the given flags.
 
         Args:
@@ -646,7 +676,7 @@ struct Command(CollectionElement):
             )
 
     fn mark_persistent_flags_one_required(inout self, *flag_names: String):
-        """Marks the given flags with annotations so that Prism errors
+        """Marks the given persistent flags with annotations so that Prism errors
         if the command is invoked without at least one flag from the given set of flags.
 
         Args:
@@ -670,7 +700,7 @@ struct Command(CollectionElement):
             )
 
     fn mark_persistent_flags_mutually_exclusive(inout self, *flag_names: String):
-        """Marks the given flags with annotations so that Prism errors
+        """Marks the given persistent flags with annotations so that Prism errors
         if the command is invoked with more than one flag from the given set of flags.
 
         Args:
@@ -697,6 +727,20 @@ struct Command(CollectionElement):
             self.persistent_flags[].set_annotation(
                 flag_name[], MUTUALLY_EXCLUSIVE, flag[].annotations.get(MUTUALLY_EXCLUSIVE, List[String]())
             )
+
+    fn has_parent(self) -> Bool:
+        """Returns True if the command has a parent, False otherwise."""
+        return self.parent[].__bool__()
+
+    fn visit_parents[func: ParentVisitorFn](self) -> None:
+        """Visits all parents of the command and invokes func on each parent.
+
+        Params:
+            func: The function to invoke on each parent.
+        """
+        if self.has_parent():
+            func(self.parent)
+            self.parent[].value()[].visit_parents[func]()
 
     # NOTE: These wrappers are just nice to have. Feels good to call Command().add_flag()
     # instead of Command().flags[].add_flag()

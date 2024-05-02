@@ -102,8 +102,7 @@ struct FlagSet(Stringable, Sized):
         return new
 
     fn __iadd__(inout self, other: Self):
-        for flag in other.flags:
-            self.flags.append(flag[])
+        self.add_flag_set(other)
 
     fn lookup(self, name: String) -> Optional[Arc[Flag]]:
         """Returns a reference to a Flag with the given name.
@@ -551,6 +550,20 @@ struct FlagSet(Stringable, Sized):
         for flag in self.flags:
             visitor(flag[])
 
+    fn add_flag_set(inout self, new_set: Self) -> None:
+        """Adds flags from another FlagSet. If a flag is already present, the flag from the new set is ignored.
+
+        Args:
+            new_set: The flag set to add.
+        """
+
+        @always_inline
+        fn add_flag(flag: Arc[Flag]) capturing -> None:
+            if not self.lookup(flag[].name):
+                self.flags.append(flag[])
+
+        new_set.visit_all[add_flag]()
+
 
 fn process_flag_for_group_annotation(
     flags: Arc[FlagSet], flag: Arc[Flag], annotation: String, inout group_status: Dict[Dict[Bool]]
@@ -614,7 +627,7 @@ fn dict_keys_to_list[T: CollectionElement](data: Dict[T]) -> (List[String], Erro
 
 fn validate_required_flag_group(data: Dict[Dict[Bool]]) -> None:
     """Validates that all flags in a group are set if any are set.
-    This is for flags that are marked as required via `Command().mark_flags_one_required_together()`.
+    This is for flags that are marked as required via `Command().mark_flags_required_together()`.
 
     Args:
         data: The dictionary of flag groups to validate.

@@ -24,8 +24,8 @@ fn init() -> None:
     root_command.persistent_flags[].add_string_flag(name="port", shorthand="p", usage="Port")
     root_command.persistent_flags[].add_string_flag(name="uri", shorthand="u", usage="URI")
     root_command.mark_persistent_flags_required_together("host", "port")
-    root_command.mark_persistent_flags_mutually_exclusive("host", "port", "uri")
-    root_command.mark_persistent_flags_one_required("free")
+    root_command.mark_persistent_flags_mutually_exclusive("host", "uri")
+    root_command.mark_persistent_flag_required("free")
 
     var tool_command = Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
@@ -34,9 +34,9 @@ fn init() -> None:
     tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
     tool_command.add_string_flag(name="hue", shorthand="x", usage="Text color", default="#3464eb")
     tool_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
-    tool_command.mark_flags_one_required_together("color", "formatting")
+    tool_command.mark_flags_required_together("color", "formatting")
     tool_command.mark_flags_mutually_exclusive("color", "hue")
-    tool_command.mark_flags_one_required("required")
+    tool_command.mark_flag_required("required")
 
     root_command.add_command(tool_command)
     root_command.execute()
