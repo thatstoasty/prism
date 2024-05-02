@@ -1,12 +1,13 @@
 # Prism
 
+![Mojo 24.3](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.3-purple)
+
 A Budding CLI Library!
 
 Inspired by: `Cobra`!
 
 > [!NOTE]
 > This library will often have breaking changes and it should not be used for anything in production.
-NOTE: This does not work on Mojo 24.2, you must use the nightly build for now. This will be resolved in the next Mojo release.
 
 ## Usage
 
@@ -44,6 +45,54 @@ var tool_command = Command(
 ```
 
 ![Aliases](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/aliases.gif)
+
+### Pre and Post Run Hooks
+
+Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
+
+```mojo
+fn pre_hook(command: CommandArc, args: List[String]) -> None:
+    print("Pre-hook executed!")
+    return None
+
+
+fn post_hook(command: CommandArc, args: List[String]) -> None:
+    print("Post-hook executed!")
+    return None
+
+
+fn init() -> None:
+    var start = now()
+    var root_command = Command(
+        name="printer",
+        description="Base command.",
+        run=printer,
+        pre_run=pre_hook,
+        post_run=post_hook,
+    )
+```
+
+![Printer](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/printer.gif)
+
+### Persistent Flags and Hooks
+
+Flags and hooks can also be inherited by children commands! This can be useful for setting global flags or hooks that should be applied to all child commands.
+
+```mojo
+fn init() -> None:
+    var root_command = Command(name="nested", description="Base command.", run=base)
+
+    var get_command = Command(
+        name="get",
+        description="Base command for getting some data.",
+        run=print_information,
+        persistent_pre_run=pre_hook,
+        persistent_post_run=post_hook,
+    )
+    get_command.persistent_flags[].add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
+```
+
+![Persistent](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/persistent.gif)
 
 ### Required flags
 
@@ -116,43 +165,96 @@ In these cases:
 
 ![Flag Groups](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/flag_groups.gif)
 
-### Pre and Post Run Hooks
+> NOTE: If you want to enforce a rule on persistent flags, then the child command must be added to the parent command **BEFORE** setting the rule.
 
-Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
+See `examples/flag_groups/child.mojo` for an example.
 
 ```mojo
-fn pre_hook(command: CommandArc, args: List[String]) -> None:
-    print("Pre-hook executed!")
-    return None
-
-
-fn post_hook(command: CommandArc, args: List[String]) -> None:
-    print("Post-hook executed!")
-    return None
-
-
 fn init() -> None:
-    var start = now()
     var root_command = Command(
-        name="printer",
-        description="Base command.",
-        run=printer,
-        pre_run=pre_hook,
-        post_run=post_hook,
+        name="my",
+        description="This is a dummy command!",
+        run=test,
     )
+    # Persistent flags are defined on the parent command.
+    root_command.persistent_flags[].add_bool_flag(name="required", shorthand="r", usage="Always required.")
+    root_command.persistent_flags[].add_string_flag(name="host", shorthand="h", usage="Host")
+    root_command.persistent_flags[].add_string_flag(name="port", shorthand="p", usage="Port")
+    root_command.mark_persistent_flag_required("required")
+
+    var tool_command = Command(
+        name="tool", description="This is a dummy command!", run=tool_func
+    )
+    tool_command.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
+    tool_command.add_string_flag(name="uri", shorthand="u", usage="URI")
+
+    # Child commands are added to the parent command.
+    root_command.add_command(tool_command)
+
+    # Rules are set on the child command, which can include persistent flags inherited from the parent command.
+    # When executing `mark_flags_required_together()` or `mark_flags_mutually_exclusive()`,
+    # the inherited flags from all parents will merged into the tool_command.flags FlagSet.
+    tool_command.mark_flag_required("also")
+    tool_command.mark_flags_required_together("host", "port")
+    tool_command.mark_flags_mutually_exclusive("host", "uri")
+
+    root_command.execute()
 ```
 
-![Printer](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/printer.gif)
-
-### Persistent Flags and Hooks
-
-Flags and
-
-![Persistent](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/persistent.gif)
+![Flag Groups 2](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/flag_groups-2.gif)
 
 ### Positional and Custom Arguments
 
+Validation of positional arguments can be specified using the `arg_validator` field of `Command`. The following validators are built in:
+
+- Number of arguments:
+  - `no_args` - report an error if there are any positional args.
+  - `arbitrary_args` - accept any number of args.
+  - `minimum_n_args[Int]` - report an error if less than N positional args are provided.
+  - `maximum_n_args[Int]` - report an error if more than N positional args are provided.
+  - `exact_args[Int]` - report an error if there are not exactly N positional args.
+  - `range_args[min, max]` - report an error if the number of args is not between min and max.
+- Content of the arguments:
+  - `only_valid_args` - report an error if there are any positional args not specified in the `valid_args` field of `Command`, which can optionally be set to a list of valid values for positional args.
+
+If `arg_validator` is undefined, it defaults to `arbitrary_args`.
+
+> NOTE: `match_all` is unstable at the moment. I will work on ironing it out in the near future. This most likely does not work.
+
+Moreover, `match_all[arg_validators: List[ArgValidator]]` enables combining existing checks with arbitrary other checks. For instance, if you want to report an error if there are not exactly N positional args OR if there are any positional args that are not in the ValidArgs field of Command, you can call `match_all` on `exact_args` and `only_valid_args`, as shown below:
+
+```mojo
+fn test_match_all():
+    var result = match_all[
+        List[ArgValidator](
+            range_args[0, 1](),
+            valid_args[List[String]("Pineapple")]()
+        )
+    ]()(List[String]("abc", "123"))
+    testing.assert_equal(result.value()[], "Command accepts between 0 to 1 argument(s). Received: 2.")
+```
+
+![Arg Validators](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/arg_validators.gif)
+
 ### Help Commands
+
+Commands are configured to accept a `--help` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed.
+
+```mojo
+fn help_func(command: Arc[Command]) -> String:
+    return ""
+
+fn init() -> None:
+    var root_command = Command(
+        name="hello",
+        description="This is a dummy command!",
+        run=test,
+    )
+
+    var hello_command = Command(name="chromeria", description="This is a dummy command!", run=hello, help=help_func)
+```
+
+![Help](https://github.com/thatstoasty/prism/blob/feature/documentation/demos/tapes/help.gif)
 
 ## Notes
 
@@ -174,7 +276,6 @@ Flags and
 - Enable usage function to return the results of a usage function upon calling wrong functions or commands.
 - Replace print usage with writers to enable stdout/stderr/file writing.
 - Update default help command to improve available commands and flags section.
-- Resolve issue with persistent flags not being picked up.
 
 ### Improvements
 
@@ -186,4 +287,4 @@ Flags and
 ### Bugs
 
 - `Command` has 2 almost indentical init functions because setting a default `arg_validator` value, breaks the compiler as of 24.2.
-- Error message from `get_flags` comes up blank when finally exiting the program. For now, just printing the error message before the Error is returned.
+- Error message from `get_flags` comes up blank when finally exiting the program. For now, just printing the error message before the Error is returned. Seems like an issue with catching a raised Error and then returning it. Will try returning an Error instead of raising it.

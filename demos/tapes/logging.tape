@@ -6,7 +6,7 @@ Set Width 1200
 Set Height 400
 
 Type "mojo build examples/logging/root.mojo -o logger" Sleep 500ms  Enter
-Sleep 1500ms
+Sleep 4s
 Type "./logger 'My message.'" Sleep 500ms  Enter
 Sleep 2s
 Type "./logger 'My message.' --type json" Sleep 500ms  Enter

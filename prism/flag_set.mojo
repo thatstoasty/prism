@@ -529,7 +529,7 @@ struct FlagSet(Stringable, Sized):
         """
         self._add_flag(name, usage, default, "Float64", shorthand)
 
-    fn set_annotation(inout self, name: String, key: String, values: List[String]):
+    fn set_annotation(inout self, name: String, key: String, values: List[String]) -> Error:
         """Sets an annotation for a flag.
 
         Args:
@@ -538,8 +538,12 @@ struct FlagSet(Stringable, Sized):
             values: The values of the annotation.
         """
         var result = self.lookup(name)
-        if result:
-            result.value()[][].annotations.put(key, values)
+        if not result:
+            return Error("FlagSet.set_annotation: Could not find flag with name: " + name)
+
+        result.value()[][].annotations.put(key, values)
+
+        return Error()
 
     fn visit_all[visitor: FlagVisitorFn](self) -> None:
         """Visits all flags in the flag set.

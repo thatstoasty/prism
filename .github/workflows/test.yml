@@ -13,12 +13,12 @@ jobs:
         run: |
           curl https://get.modular.com | MODULAR_AUTH=${{ secrets.MODULAR_AUTH }} sh -
           modular auth ${{ secrets.MODULAR_AUTH }}
-          modular install nightly/mojo
+          modular install mojo
           pip install pytest
           pip install git+https://github.com/guidorice/mojo-pytest.git
       - name: Unit Tests
         run: |
           export MODULAR_HOME="/home/runner/.modular"
-          export PATH="/home/runner/.modular/pkg/packages.modular.com_nightly_mojo/bin:$PATH"
+          export PATH="/home/runner/.modular/pkg/packages.modular.com_mojo/bin:$PATH"
           pytest
           bash run_examples.sh

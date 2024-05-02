@@ -12,7 +12,9 @@ mojo build examples/printer/printer.mojo -o temp/printer
 mojo build examples/read_csv/root.mojo -o temp/read_csv
 mojo build examples/logging/root.mojo -o temp/logging
 mojo build examples/persistent/root.mojo -o temp/persistent
-mojo build examples/flag_groups/root.mojo -o temp/my
+mojo build examples/flag_groups/parent.mojo -o temp/parent
+mojo build examples/flag_groups/child.mojo -o temp/child
+mojo build examples/arg_validators/root.mojo -o temp/validators
 mkdir -p temp/examples/read_csv/ && cp examples/read_csv/file.csv temp/examples/read_csv/file.csv
 
 echo -e "Executing examples...\n"
@@ -25,12 +27,21 @@ cd temp
 ./logging --type=json hello
 # ./persistent get cat --count 2 --lover
 ./persistent get dog -l
-./my tool --color "#ffffff" --formatting "underline" --hue "red" --required
-./my tool --color "#ffffff" --required
-./my tool
-./my tool --host "www.example.com" --port "8080" --free --required
-./my tool --host "www.example.com" --free --required
-./my tool --host "www.example.com" --uri "/api/v1" --free --required
+./parent --required --host=www.example.com --port 8080
+./parent --required --host www.example.com
+./parent --required --host www.example.com --uri abcdef --port 8080
+./parent
+./child tool --required -a --host=www.example.com --port 8080
+./child tool --required -a --host www.example.com
+./child tool --required --also --host www.example.com --uri abcdef --port 8080
+./validators Hello from Mojo!
+./validators no_args Hello from Mojo!
+./validators valid_args Hello from Mojo!
+./validators minimum_n_args Hello from Mojo!
+./validators maximum_n_args Hello from Mojo!
+./validators exact_args Hello from Mojo!
+./validators range_args Hello from Mojo!
+
 
 cd ..
 rm -R ./temp

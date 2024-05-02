@@ -6,14 +6,14 @@ Set Width 1200
 Set Height 600
 
 
-Type "mojo build examples/flag_groups/root.mojo -o group" Sleep 500ms  Enter
-Sleep 1500ms
-Type "./group tool --color '#ffffff' --formatting 'underline' --required" Sleep 500ms  Enter
+Type "mojo build examples/flag_groups/parent.mojo -o group" Sleep 500ms  Enter
+Sleep 3s
+Type "./group --required --host=www.example.com --port 8080" Sleep 500ms  Enter
 Sleep 2s
-Type "./group tool --color '#ffffff' --required" Sleep 500ms  Enter
+Type "./group --required --host www.example.com" Sleep 500ms  Enter
 Sleep 2s
-Type "./group tool --color '#ffffff' --hue red --formatting 'underline' --required" Sleep 500ms  Enter
+Type "./group --required --host www.example.com --uri abcdef --port 8080" Sleep 500ms  Enter
 Sleep 2s
-Type "./group tool" Sleep 500ms  Enter
+Type "./group" Sleep 500ms  Enter
 Sleep 1s
 Sleep 5s

@@ -6,7 +6,7 @@ Set Width 1200
 Set Height 400
 
 Type "mojo build examples/aliases/root.mojo -o aliases" Sleep 500ms  Enter
-Sleep 1500ms
+Sleep 2s
 Type "./aliases" Sleep 500ms  Enter
 Sleep 2s
 Type "./aliases tool" Sleep 500ms  Enter

@@ -67,6 +67,8 @@ struct Flag(CollectionElement, Stringable):
             and self.usage == other.usage
             and self.value.value()[] == other.value.value()[]
             and self.default == other.default
+            and self.type == other.type
+            and self.changed == other.changed
         )
 
     fn __ne__(self, other: Self) -> Bool:
@@ -83,7 +85,7 @@ struct Flag(CollectionElement, Stringable):
 
 
 fn parse_flag(
-    i: Int, argument: String, arguments: List[String], flags: Arc[FlagSet], inherited_flags: Arc[FlagSet]
+    i: Int, argument: String, arguments: List[String], flags: Arc[FlagSet]
 ) raises -> Tuple[String, String, Int]:
     """Parses a flag and returns the name, value, and the index to increment by.
 
@@ -92,7 +94,6 @@ fn parse_flag(
         argument: The argument to parse.
         arguments: The list of arguments passed via the command line.
         flags: The flags passed via the command line.
-        inherited_flags: The flags passed via the command line.
     """
     # Flag with value set like "--flag=<value>"
     if argument.find("=") != -1:
@@ -100,7 +101,7 @@ fn parse_flag(
         var name = flag[0][2:]
         var value = flag[1]
 
-        if name not in flags[] or inherited_flags[]:
+        if name not in flags[]:
             raise Error("Command does not accept the flag supplied: " + name)
 
         return name, value, 1
@@ -115,17 +116,17 @@ fn parse_flag(
         return name, String("True"), 1
 
     if i + 1 >= len(arguments):
-        raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
+        raise Error("Flag `" + name + "` requires a value to be set but reached the end of arguments.")
 
     if arguments[i + 1].startswith("-", 0, 1):
-        raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
+        raise Error("Flag `" + name + "` requires a value to be set but found another flag instead.")
 
     # Increment index by 2 because 2 args were used (one for name and value).
     return name, arguments[i + 1], 2
 
 
 fn parse_shorthand_flag(
-    i: Int, argument: String, arguments: List[String], flags: Arc[FlagSet], inherited_flags: Arc[FlagSet]
+    i: Int, argument: String, arguments: List[String], flags: Arc[FlagSet]
 ) raises -> Tuple[String, String, Int]:
     """Parses a shorthand flag and returns the name, value, and the index to increment by.
 
@@ -134,7 +135,6 @@ fn parse_shorthand_flag(
         argument: The argument to parse.
         arguments: The list of arguments passed via the command line.
         flags: The flags passed via the command line.
-        inherited_flags: The flags passed via the command line.
     """
     # Flag with value set like "-f=<value>"
     if argument.find("=") != -1:
@@ -143,7 +143,7 @@ fn parse_shorthand_flag(
         var value = flag[1]
         var name = flags[].lookup_name(shorthand).value()[]
 
-        if name not in flags[] or inherited_flags[]:
+        if name not in flags[]:
             raise Error("Command does not accept the flag supplied: " + name)
 
         return name, value, 1
@@ -160,24 +160,21 @@ fn parse_shorthand_flag(
         return name, String("True"), 1
 
     if i + 1 >= len(arguments):
-        raise Error("Flag " + name + " requires a value to be set but reached the end of arguments.")
+        raise Error("Flag `" + name + "` requires a value to be set but reached the end of arguments.")
 
     if arguments[i + 1].startswith("-", 0, 1):
-        raise Error("Flag " + name + " requires a value to be set but found another flag instead.")
+        raise Error("Flag `" + name + "` requires a value to be set but found another flag instead.")
 
     # Increment index by 2 because 2 args were used (one for name and value).
     return name, arguments[i + 1], 2
 
 
 # TODO: This parsing is dirty atm, will come back around and clean it up.
-fn get_flags(
-    inout flags: Arc[FlagSet], inout inherited_flags: Arc[FlagSet], arguments: List[String]
-) -> (List[String], Error):
+fn get_flags(inout flags: Arc[FlagSet], arguments: List[String]) -> (List[String], Error):
     """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
     Args:
         flags: The flags passed via the command line.
-        inherited_flags: The flags passed via the command line.
         arguments: The arguments passed via the command line.
     """
     var remaining_args = List[String]()
@@ -198,11 +195,11 @@ fn get_flags(
         try:
             # Full flag
             if argument.startswith("--", 0, 2):
-                name, value, increment_by = parse_flag(i, argument, arguments, flags, inherited_flags)
+                name, value, increment_by = parse_flag(i, argument, arguments, flags)
 
             # Shorthand flag
             elif argument.startswith("-", 0, 1):
-                name, value, increment_by = parse_shorthand_flag(i, argument, arguments, flags, inherited_flags)
+                name, value, increment_by = parse_shorthand_flag(i, argument, arguments, flags)
 
             # Set the value of the flag directly, no more set_value function.
             var flag = flags[].lookup(name)

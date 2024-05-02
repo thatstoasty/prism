@@ -72,8 +72,15 @@ fn test_range_args():
 
 # fn test_match_all():
 #     var test = MojoTest("Testing args.match_all")
-#     var result = match_all[List[ArgValidator](range_args[0, 1](), valid_args[List[String]("Pineapple")]())]()(List[String]("abc", "123"))
-#     test.assert_equal(result.value()[], "Command accepts between 0 to 1 argument(s). Received: 2.")
+#     var cmd = Command(name="root", description="Base command.", run=dummy)
+#     var args = List[String]("abc", "123")
+#     alias validators = List[ArgValidator](
+#         range_args[0, 1](),
+#         valid_args[List[String]("Pineapple")]()
+#     )
+#     var validator = match_all[validators]()
+#     var results = validator(cmd, args)
+#     test.assert_equal(results.value()[], "Command accepts between 0 to 1 argument(s). Received: 2.")
 
 
 fn main():
