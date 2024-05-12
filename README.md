@@ -11,7 +11,11 @@ Inspired by: `Cobra`!
 
 ## Usage
 
-WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples and referencing the Cobra documentation. You should be able to build the package by running `mojo package prism -I external`.
+WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples and referencing the Cobra documentation. 
+
+You should be able to build the package by running `mojo package prism -I external`. For the easiest method, I recommend just copying the entire external folder into your repository, then copy the `prism` folder into the external folder as well.
+
+> NOTE: It seems like `.mojopkg` files don't like being part of another package, eg. sticking all of your external deps in an `external` or `vendor` package. The only way I've gotten mojopkg files to work is to be in the same directory as the file being executed, and that directory cannot be a mojo package.
 
 ### Basic Command and Subcommand
 
