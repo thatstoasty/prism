@@ -95,7 +95,7 @@ struct AHasher:
 @always_inline
 fn ahash(s: String) -> UInt64:
     var length = len(s)
-    var b = s._as_ptr().bitcast[DType.uint8]()
+    var b = s.unsafe_uint8_ptr()
     var hasher = AHasher(U256(0, 0, 0, 0))
 
     if length > 8:

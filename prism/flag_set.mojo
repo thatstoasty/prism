@@ -5,7 +5,7 @@ from .flag import Flag
 from .vector import to_string
 
 
-alias FlagVisitorFn = fn (flag: Arc[Flag]) capturing -> None
+alias FlagVisitorFn = fn (Reference[Flag]) capturing -> None
 
 
 fn string_to_bool(value: String) -> Bool:
@@ -51,10 +51,10 @@ fn string_to_float(s: String) raises -> Float64:
 
 @value
 struct FlagSet(Stringable, Sized):
-    var flags: List[Arc[Flag]]
+    var flags: List[Flag]
 
     fn __init__(inout self) -> None:
-        self.flags = List[Arc[Flag]]()
+        self.flags = List[Flag]()
 
     fn __init__(inout self, flag_set: Self) -> None:
         self = flag_set
@@ -63,7 +63,7 @@ struct FlagSet(Stringable, Sized):
         var result = String("Flags: [")
         for i in range(self.flags.size):
             var f = self.flags[i]
-            result += f[]
+            result += f
             if i != self.flags.size - 1:
                 result += String(", ")
         result += String("]")
@@ -77,7 +77,7 @@ struct FlagSet(Stringable, Sized):
 
     fn __contains__(self, value: Flag) -> Bool:
         for flag in self.flags:
-            if flag[][] == value:
+            if flag[] == value:
                 return True
         return False
 
@@ -88,7 +88,7 @@ struct FlagSet(Stringable, Sized):
         for i in range(len(self.flags)):
             var f = self.flags[i]
             var other_f = other.flags[i]
-            if f[] != other_f[]:
+            if f != other_f:
                 return False
         return True
 
@@ -104,20 +104,45 @@ struct FlagSet(Stringable, Sized):
     fn __iadd__(inout self, other: Self):
         self.add_flag_set(other)
 
-    fn lookup(self, name: String) -> Optional[Arc[Flag]]:
-        """Returns a reference to a Flag with the given name.
+    fn lookup(self: Reference[Self, _, _], name: String) -> Optional[Reference[Flag, self.is_mutable, self.lifetime]]:
+        """Returns an mutable or immutable reference to a Flag with the given name.
+        Mutable if FlagSet is  mutable, immutable if FlagSet is immutable.
 
         Args:
             name: The name of the flag to return.
         """
-        for flag in self.flags:
-            if flag[][].name == name:
-                return flag[]
+        for i in range(len(self[].flags)):
+            if self[].flags[i].name == name:
+                return self[].flags.__get_ref(i)
 
         return None
 
-    fn get_flag_of_type(self, name: String, type: String) raises -> Arc[Flag]:
-        """Returns a reference to a Flag with the given name and type.
+    # fn lookup(inout self, name: String) -> Optional[Reference[Flag, i1_1, __lifetime_of(self)]]:
+    #     """Returns an mutable reference to a Flag with the given name.
+
+    #     Args:
+    #         name: The name of the flag to return.
+    #     """
+    #     for i in range(len(self.flags)):
+    #         if self.flags[i].name == name:
+    #             return self.flags.__get_ref(i)
+
+    #     return None
+
+    # fn immutable_lookup(self, name: String) -> Optional[Reference[Flag, i1_0, __lifetime_of(self)]]:
+    #     """Returns an immutable reference to a Flag with the given name.
+
+    #     Args:
+    #         name: The name of the flag to return.
+    #     """
+    #     for i in range(len(self.flags)):
+    #         if self.flags[i].name == name:
+    #             return self.flags.__get_ref(i)
+
+    #     return None
+
+    fn get_flag_of_type(self, name: String, type: String) raises -> Reference[Flag, i1_0, __lifetime_of(self)]:
+        """Returns an immutable reference to a Flag with the given name and type.
 
         Args:
             name: The name of the flag to return.
@@ -127,8 +152,8 @@ struct FlagSet(Stringable, Sized):
             ARC pointer to the Flag.
         """
         for flag in self.flags:
-            if flag[][].name == name and flag[][].type == type:
-                return flag[]
+            if flag[].name == name and flag[].type == type:
+                return flag
 
         raise Error("FlagNotFound: Could not find flag with name: " + name)
 
@@ -312,26 +337,26 @@ struct FlagSet(Stringable, Sized):
         except e:
             return None
 
-    fn get_flags_with_values(self) -> List[Arc[Flag]]:
-        """Returns a list of references to all flags in the flag set that have values set."""
-        var result = List[Arc[Flag]]()
-        for flag in self.flags:
-            if flag[][].value.value()[] != "":
-                result.append(flag[])
-        return result
+    # fn get_flags_with_values(self) -> List[Reference[Flag, i1_0, __lifetime_of(self)]]:
+    #     """Returns a list of immutable references to all flags in the flag set that have values set."""
+    #     var result = List[Reference[Flag, i1_0, __lifetime_of(self)]]()
+    #     for flag in self.flags:
+    #         if flag[].value.value()[] != "":
+    #             result.append(flag)
+    #     return result
 
     fn get_names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set."""
         var result = List[String]()
         for flag in self.flags:
-            result.append(flag[][].name)
+            result.append(flag[].name)
         return result
 
     fn get_shorthands(self) -> List[String]:
         """Returns a list of shorthands of all flags in the flag set."""
         var result = List[String]()
         for flag in self.flags:
-            result.append(flag[][].shorthand)
+            result.append(flag[].shorthand)
         return result
 
     fn lookup_name(self, shorthand: String) -> Optional[String]:
@@ -341,8 +366,8 @@ struct FlagSet(Stringable, Sized):
             shorthand: The shorthand of the flag to lookup.
         """
         for flag in self.flags:
-            if flag[][].shorthand == shorthand:
-                return flag[][].name
+            if flag[].shorthand == shorthand:
+                return flag[].name
         return None
 
     fn _add_flag(
@@ -361,7 +386,7 @@ struct FlagSet(Stringable, Sized):
         """
         # Use var to set the mutability of flag, then add it to the list
         var flag = Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=default, type=type)
-        self.flags.append(Arc(flag))
+        self.flags.append(flag)
 
     fn add_bool_flag(
         inout self,
@@ -542,7 +567,6 @@ struct FlagSet(Stringable, Sized):
             return Error("FlagSet.set_annotation: Could not find flag with name: " + name)
 
         result.value()[][].annotations.put(key, values)
-
         return Error()
 
     fn visit_all[visitor: FlagVisitorFn](self) -> None:
@@ -552,7 +576,7 @@ struct FlagSet(Stringable, Sized):
             visitor: The visitor function to call for each flag.
         """
         for flag in self.flags:
-            visitor(flag[])
+            visitor(flag)
 
     fn add_flag_set(inout self, new_set: Self) -> None:
         """Adds flags from another FlagSet. If a flag is already present, the flag from the new set is ignored.
@@ -562,7 +586,7 @@ struct FlagSet(Stringable, Sized):
         """
 
         @always_inline
-        fn add_flag(flag: Arc[Flag]) capturing -> None:
+        fn add_flag(flag: Reference[Flag]) capturing -> None:
             if not self.lookup(flag[].name):
                 self.flags.append(flag[])
 
@@ -570,7 +594,7 @@ struct FlagSet(Stringable, Sized):
 
 
 fn process_flag_for_group_annotation(
-    flags: Arc[FlagSet], flag: Arc[Flag], annotation: String, inout group_status: Dict[Dict[Bool]]
+    flags: Reference[FlagSet], flag: Reference[Flag], annotation: String, inout group_status: Dict[Dict[Bool]]
 ) -> Error:
     var group_info = flag[].annotations.get(annotation, List[String]())
     if group_info:
@@ -600,7 +624,7 @@ fn process_flag_for_group_annotation(
     return Error()
 
 
-fn has_all_flags(flags: Arc[FlagSet], flag_names: List[String]) -> Bool:
+fn has_all_flags(flags: Reference[FlagSet], flag_names: List[String]) -> Bool:
     for name in flag_names:
         if not flags[].lookup(name[]):
             return False
@@ -645,7 +669,7 @@ fn validate_required_flag_group(data: Dict[Dict[Bool]]) -> None:
     for i in range(len(data.values)):
         var unset = List[String]()
         var flag_list = data.values[i]
-        var flag_name_and_status = flag_list.get(keys[i], False)
+        # var flag_name_and_status = flag_list.get(keys[i], False)
         for j in range(len(flag_list.values)):
             var is_set = flag_list.values[j]
             if not is_set:
@@ -680,7 +704,7 @@ fn validate_one_required_flag_group(data: Dict[Dict[Bool]]) -> None:
     for i in range(len(data.values)):
         var set = List[String]()
         var flag_list = data.values[i]
-        var flag_name_and_status = flag_list.get(keys[i], False)
+        # var flag_name_and_status = flag_list.get(keys[i], False)
         for j in range(len(flag_list.values)):
             var is_set = flag_list.values[j]
             if is_set:
@@ -709,7 +733,7 @@ fn validate_mutually_exclusive_flag_group(data: Dict[Dict[Bool]]) -> None:
     for i in range(len(data.values)):
         var set = List[String]()
         var flag_list = data.values[i]
-        var flag_name_and_status = flag_list.get(keys[i], False)
+        # var flag_name_and_status = flag_list.get(keys[i], False)
         for j in range(len(flag_list.values)):
             var is_set = flag_list.values[j]
             if is_set:

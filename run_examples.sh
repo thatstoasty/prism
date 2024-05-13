@@ -42,6 +42,5 @@ cd temp
 ./validators exact_args Hello from Mojo!
 ./validators range_args Hello from Mojo!
 
-
 cd ..
 rm -R ./temp

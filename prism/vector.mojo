@@ -1,4 +1,3 @@
-from memory._arc import Arc
 from collections.vector import InlinedFixedVector
 
 

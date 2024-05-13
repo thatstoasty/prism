@@ -4,7 +4,7 @@ fn eq(a: StringRef, b: String) -> Bool:
     if l != len(b):
         return False
     var p1 = a.data
-    var p2 = b._as_ptr()
+    var p2 = b.unsafe_uint8_ptr()
     var offset = 0
     alias step = 16
     while l - offset >= step and (p1.load[width=step](offset) == p2.load[width=step](offset)).reduce_and():

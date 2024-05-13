@@ -1,4 +1,3 @@
-from memory._arc import Arc
 from collections.optional import Optional
 from external.string_dict import Dict
 
@@ -85,7 +84,7 @@ struct Flag(CollectionElement, Stringable):
 
 
 fn parse_flag(
-    i: Int, argument: String, arguments: List[String], flags: Arc[FlagSet]
+    i: Int, argument: String, arguments: List[String], flags: Reference[FlagSet]
 ) raises -> Tuple[String, String, Int]:
     """Parses a flag and returns the name, value, and the index to increment by.
 
@@ -126,7 +125,7 @@ fn parse_flag(
 
 
 fn parse_shorthand_flag(
-    i: Int, argument: String, arguments: List[String], flags: Arc[FlagSet]
+    i: Int, argument: String, arguments: List[String], flags: Reference[FlagSet]
 ) raises -> Tuple[String, String, Int]:
     """Parses a shorthand flag and returns the name, value, and the index to increment by.
 
@@ -170,7 +169,7 @@ fn parse_shorthand_flag(
 
 
 # TODO: This parsing is dirty atm, will come back around and clean it up.
-fn get_flags(inout flags: Arc[FlagSet], arguments: List[String]) -> (List[String], Error):
+fn get_flags(inout flags: FlagSet, arguments: List[String]) -> (List[String], Error):
     """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
     Args:
@@ -202,7 +201,7 @@ fn get_flags(inout flags: Arc[FlagSet], arguments: List[String]) -> (List[String
                 name, value, increment_by = parse_shorthand_flag(i, argument, arguments, flags)
 
             # Set the value of the flag directly, no more set_value function.
-            var flag = flags[].lookup(name)
+            var flag = flags.lookup(name)
             if not flag:
                 return List[String](), Error("No flag found with the name: " + name)
 
