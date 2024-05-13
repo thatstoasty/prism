@@ -11,7 +11,7 @@ Inspired by: `Cobra`!
 
 ## Usage
 
-WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples and referencing the Cobra documentation. 
+WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples. 
 
 You should be able to build the package by running `mojo package prism -I external`. For the easiest method, I recommend just copying the entire external folder into your repository, then copy the `prism` folder into the external folder as well.
 
