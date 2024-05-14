@@ -67,7 +67,7 @@ fn default_help(command: Command) -> String:
 
 alias CommandFunction = fn (Command, List[String]) -> None
 alias CommandFunctionErr = fn (Command, List[String]) -> Error
-alias HelpFunction = fn (Command) -> String
+alias HelpFunction = fn (Command) escaping -> String
 alias ArgValidator = fn (Command, List[String]) escaping -> Optional[String]
 alias ParentVisitorFn = fn (Command) capturing -> None
 
@@ -102,7 +102,7 @@ fn parse_command_from_args(start: Command) -> (Command, List[String]):
 
 # TODO: For parent Optional[Reference[Self, mutability, lifetime]]] works but Optional[Reference[Self]] causes compiler issues.
 @value
-struct Command(CollectionElement):
+struct Command[mutability: i1, lifetime: AnyLifetime[mutability].type](CollectionElement):
     """A struct representing a command that can be executed from the command line.
 
     Args:
@@ -130,7 +130,7 @@ struct Command(CollectionElement):
     var aliases: List[String]
 
     # Generates help text.
-    var help: HelpFunction
+    var help: HelpFunction[mutability, lifetime]
 
     # The group id under which this subcommand is grouped in the 'help' output of its parent.
     var group_id: String
@@ -149,7 +149,7 @@ struct Command(CollectionElement):
     var persistent_erroring_pre_run: Optional[CommandFunctionErr]
     var persistent_erroring_post_run: Optional[CommandFunctionErr]
 
-    var arg_validator: ArgValidator
+    var arg_validator: ArgValidator[mutability, lifetime]
     var valid_args: List[String]
 
     # Local flags for the command. TODO: Use this field to store cached results for local flags.
@@ -164,10 +164,12 @@ struct Command(CollectionElement):
     # Cached results from self._merge_flags().
     var _inherited_flags: Arc[FlagSet]
 
-    var children: List[Arc[Self]]
-    var parent: Arc[Optional[Self]]
+    var children: List[Reference[Self, mutability, lifetime]]
+    var parent: Optional[Reference[Self, mutability, lifetime]]
 
-    fn __init__(
+    fn __init__[
+        help: HelpFunction[mutability, lifetime] = default_help[mutability, lifetime]
+    ](
         inout self,
         name: String,
         description: String,
@@ -183,7 +185,6 @@ struct Command(CollectionElement):
         persistent_post_run: Optional[CommandFunction] = None,
         persistent_erroring_pre_run: Optional[CommandFunctionErr] = None,
         persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
-        help: HelpFunction = default_help,
     ):
         if not run and not erroring_run:
             panic("A command must have a run or erroring_run function.")
@@ -208,11 +209,11 @@ struct Command(CollectionElement):
         self.persistent_erroring_pre_run = persistent_erroring_pre_run
         self.persistent_erroring_post_run = persistent_erroring_post_run
 
-        self.arg_validator = arbitrary_args
+        self.arg_validator = arbitrary_args[mutability, lifetime]
         self.valid_args = valid_args
 
-        self.children = List[Arc[Self]]()
-        self.parent = Arc[Optional[Command]](None)
+        self.children = List[Reference[Self, mutability, lifetime]]()
+        self.parent = None
 
         # These need to be mutable so we can add flags to them.
         self.flags = Arc(FlagSet())
@@ -222,11 +223,13 @@ struct Command(CollectionElement):
         self.flags[].add_bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
 
     # TODO: Why do we have 2 almost indentical init functions? Setting a default arg_validator value, breaks the compiler as of 24.2.
-    fn __init__(
+    fn __init__[
+        help: HelpFunction[mutability, lifetime] = default_help[mutability, lifetime]
+    ](
         inout self,
         name: String,
         description: String,
-        arg_validator: ArgValidator,
+        arg_validator: ArgValidator[mutability, lifetime],
         aliases: List[String] = List[String](),
         valid_args: List[String] = List[String](),
         run: Optional[CommandFunction] = None,
@@ -239,7 +242,6 @@ struct Command(CollectionElement):
         persistent_post_run: Optional[CommandFunction] = None,
         persistent_erroring_pre_run: Optional[CommandFunctionErr] = None,
         persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
-        help: HelpFunction = default_help,
     ):
         if not run and not erroring_run:
             panic("A command must have a run or erroring_run function.")
@@ -264,8 +266,8 @@ struct Command(CollectionElement):
         self.persistent_erroring_pre_run = persistent_erroring_pre_run
         self.persistent_erroring_post_run = persistent_erroring_post_run
 
-        self.children = List[Arc[Self]]()
-        self.parent = Arc[Optional[Command]](None)
+        self.children = List[Reference[Self, mutability, lifetime]]()
+        self.parent = None
 
         self.arg_validator = arg_validator
         self.valid_args = valid_args
@@ -343,7 +345,7 @@ struct Command(CollectionElement):
     fn __repr__(inout self) -> String:
         var parent_name: String = ""
         if self.has_parent():
-            parent_name = self.parent[].value()[].name
+            parent_name = self.parent.value()[][].name
         return (
             "Name: "
             + self.name
@@ -354,7 +356,7 @@ struct Command(CollectionElement):
             + "\nFlags: "
             + str(self.flags[])
             + "\nCommands: "
-            + to_string(self.children)
+            # + to_string(self.children)
             + "\nParent: "
             + parent_name
         )
@@ -362,15 +364,16 @@ struct Command(CollectionElement):
     fn _full_command(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
         if self.has_parent():
-            var ancestor: String = self.parent[].value()[]._full_command()
+            var ancestor: String = self.parent.value()[][]._full_command()
             return ancestor + " " + self.name
         else:
             return self.name
 
-    fn _root(inout self) -> Reference[Command, i1_1, __lifetime_of(self)]:
+    fn _root(self: Reference[Self]) -> Reference[Command[mutability, lifetime], self.is_mutable, self.lifetime]:
         """Returns the root command of the command tree."""
-        if self.has_parent():
-            return self.parent[].value()[]._root()
+        if self[].has_parent():
+            var res = self[].parent.value()[]._root()
+            return res
 
         return self
 
@@ -416,15 +419,15 @@ struct Command(CollectionElement):
         # Merge local and inherited flags
         command._merge_flags()
 
-        var parents = List[Arc[Optional[Self]]]()
-        var parent = Arc[Optional[Self]](command)
+        var parents = List[Optional[Reference[Self, self.mutability, self.lifetime]]]()
+        var parent = Optional[Reference[Self, self.mutability, self.lifetime]](command)
 
         # Add all parents to the list to check if they have persistent pre/post hooks.
         while True:
             parents.append(parent)
-            if not parent[].value()[].parent[]:
+            if not parent.value()[][].parent:
                 break
-            parent = parent[].value()[].parent
+            parent = parent.value()[][].parent
 
         # If ENABLE_TRAVERSE_RUN_HOOKS is True, reverse the list to start from the root command rather than
         # from the child. This is because all of the persistent hooks will be run.
@@ -460,8 +463,8 @@ struct Command(CollectionElement):
 
         # Run the persistent pre-run hooks.
         for parent in parents:
-            if parent[][]:
-                var cmd = parent[][].value()
+            if parent[]:
+                var cmd = parent[].value()[]
                 if cmd[].persistent_erroring_pre_run:
                     err = cmd[].persistent_erroring_pre_run.value()[](command, remaining_args)
                     if err:
@@ -492,8 +495,8 @@ struct Command(CollectionElement):
 
         # Run the persistent post-run hooks.
         for parent in parents:
-            if parent[][]:
-                var cmd = parent[][].value()
+            if parent[]:
+                var cmd = parent[].value()
                 if cmd[].persistent_erroring_post_run:
                     err = cmd[].persistent_erroring_post_run.value()[](command, remaining_args)
                     if err:
@@ -545,7 +548,7 @@ struct Command(CollectionElement):
             command: The command to add as a child of self.
         """
         self.children.append(command)
-        command.parent = Arc[Optional[Command]](self)
+        command.parent = Reference[Command[self.mutability, self.lifetime], self.mutability, self.lifetime](self)
 
     fn mark_flag_required(inout self, flag_name: String) -> None:
         """Marks the given flag with annotations so that Prism errors
@@ -666,8 +669,8 @@ struct Command(CollectionElement):
             func: The function to invoke on each parent.
         """
         if self.has_parent():
-            func(self.parent[].value()[])
-            self.parent[].value()[].visit_parents[func]()
+            func(self.parent.value()[][])
+            self.parent.value()[][].visit_parents[func]()
 
     fn validate_required_flags(self) -> Error:
         """Validates all required flags are present and returns an error otherwise."""

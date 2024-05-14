@@ -104,7 +104,7 @@ struct FlagSet(Stringable, Sized):
     fn __iadd__(inout self, other: Self):
         self.add_flag_set(other)
 
-    fn lookup(self: Reference[Self, _, _], name: String) -> Optional[Reference[Flag, self.is_mutable, self.lifetime]]:
+    fn lookup(self: Reference[Self], name: String) -> Optional[Reference[Flag, self.is_mutable, self.lifetime]]:
         """Returns an mutable or immutable reference to a Flag with the given name.
         Mutable if FlagSet is  mutable, immutable if FlagSet is immutable.
 
