@@ -1,11 +1,10 @@
-from external.string_dict import Dict
 from external.gojo.builtins import panic
 from external.gojo.fmt import sprintf
 from .flag import Flag
-from .vector import to_string
+from .vector import to_string, StringKey
 
 
-alias FlagVisitorFn = fn (Reference[Flag]) capturing -> None
+alias FlagVisitorFn = fn (flag: Flag) capturing -> None
 
 
 fn string_to_bool(value: String) -> Bool:
@@ -51,10 +50,10 @@ fn string_to_float(s: String) raises -> Float64:
 
 @value
 struct FlagSet(Stringable, Sized):
-    var flags: List[Flag]
+    var flags: List[Arc[Flag]]
 
     fn __init__(inout self) -> None:
-        self.flags = List[Flag]()
+        self.flags = List[Arc[Flag]]()
 
     fn __init__(inout self, flag_set: Self) -> None:
         self = flag_set
@@ -63,7 +62,7 @@ struct FlagSet(Stringable, Sized):
         var result = String("Flags: [")
         for i in range(self.flags.size):
             var f = self.flags[i]
-            result += f
+            result += f[]
             if i != self.flags.size - 1:
                 result += String(", ")
         result += String("]")
@@ -77,7 +76,7 @@ struct FlagSet(Stringable, Sized):
 
     fn __contains__(self, value: Flag) -> Bool:
         for flag in self.flags:
-            if flag[] == value:
+            if flag[][] == value:
                 return True
         return False
 
@@ -88,7 +87,7 @@ struct FlagSet(Stringable, Sized):
         for i in range(len(self.flags)):
             var f = self.flags[i]
             var other_f = other.flags[i]
-            if f != other_f:
+            if f[] != other_f[]:
                 return False
         return True
 
@@ -104,45 +103,20 @@ struct FlagSet(Stringable, Sized):
     fn __iadd__(inout self, other: Self):
         self.add_flag_set(other)
 
-    fn lookup(self: Reference[Self], name: String) -> Optional[Reference[Flag, self.is_mutable, self.lifetime]]:
-        """Returns an mutable or immutable reference to a Flag with the given name.
-        Mutable if FlagSet is  mutable, immutable if FlagSet is immutable.
+    fn lookup(self, name: String) -> Optional[Arc[Flag]]:
+        """Returns a reference to a Flag with the given name.
 
         Args:
             name: The name of the flag to return.
         """
-        for i in range(len(self[].flags)):
-            if self[].flags[i].name == name:
-                return self[].flags.__get_ref(i)
+        for flag in self.flags:
+            if flag[][].name == name:
+                return flag[]
 
         return None
 
-    # fn lookup(inout self, name: String) -> Optional[Reference[Flag, i1_1, __lifetime_of(self)]]:
-    #     """Returns an mutable reference to a Flag with the given name.
-
-    #     Args:
-    #         name: The name of the flag to return.
-    #     """
-    #     for i in range(len(self.flags)):
-    #         if self.flags[i].name == name:
-    #             return self.flags.__get_ref(i)
-
-    #     return None
-
-    # fn immutable_lookup(self, name: String) -> Optional[Reference[Flag, i1_0, __lifetime_of(self)]]:
-    #     """Returns an immutable reference to a Flag with the given name.
-
-    #     Args:
-    #         name: The name of the flag to return.
-    #     """
-    #     for i in range(len(self.flags)):
-    #         if self.flags[i].name == name:
-    #             return self.flags.__get_ref(i)
-
-    #     return None
-
-    fn get_flag_of_type(self, name: String, type: String) raises -> Reference[Flag, i1_0, __lifetime_of(self)]:
-        """Returns an immutable reference to a Flag with the given name and type.
+    fn get_flag_of_type(self, name: String, type: String) raises -> Arc[Flag]:
+        """Returns a reference to a Flag with the given name and type.
 
         Args:
             name: The name of the flag to return.
@@ -152,8 +126,8 @@ struct FlagSet(Stringable, Sized):
             ARC pointer to the Flag.
         """
         for flag in self.flags:
-            if flag[].name == name and flag[].type == type:
-                return flag
+            if flag[][].name == name and flag[][].type == type:
+                return flag[]
 
         raise Error("FlagNotFound: Could not find flag with name: " + name)
 
@@ -337,26 +311,26 @@ struct FlagSet(Stringable, Sized):
         except e:
             return None
 
-    # fn get_flags_with_values(self) -> List[Reference[Flag, i1_0, __lifetime_of(self)]]:
-    #     """Returns a list of immutable references to all flags in the flag set that have values set."""
-    #     var result = List[Reference[Flag, i1_0, __lifetime_of(self)]]()
-    #     for flag in self.flags:
-    #         if flag[].value.value()[] != "":
-    #             result.append(flag)
-    #     return result
+    fn get_flags_with_values(self) -> List[Arc[Flag]]:
+        """Returns a list of references to all flags in the flag set that have values set."""
+        var result = List[Arc[Flag]]()
+        for flag in self.flags:
+            if flag[][].value.value()[] != "":
+                result.append(flag[])
+        return result
 
     fn get_names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set."""
         var result = List[String]()
         for flag in self.flags:
-            result.append(flag[].name)
+            result.append(flag[][].name)
         return result
 
     fn get_shorthands(self) -> List[String]:
         """Returns a list of shorthands of all flags in the flag set."""
         var result = List[String]()
         for flag in self.flags:
-            result.append(flag[].shorthand)
+            result.append(flag[][].shorthand)
         return result
 
     fn lookup_name(self, shorthand: String) -> Optional[String]:
@@ -366,8 +340,8 @@ struct FlagSet(Stringable, Sized):
             shorthand: The shorthand of the flag to lookup.
         """
         for flag in self.flags:
-            if flag[].shorthand == shorthand:
-                return flag[].name
+            if flag[][].shorthand == shorthand:
+                return flag[][].name
         return None
 
     fn _add_flag(
@@ -386,7 +360,7 @@ struct FlagSet(Stringable, Sized):
         """
         # Use var to set the mutability of flag, then add it to the list
         var flag = Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=default, type=type)
-        self.flags.append(flag)
+        self.flags.append(Arc(flag))
 
     fn add_bool_flag(
         inout self,
@@ -567,6 +541,7 @@ struct FlagSet(Stringable, Sized):
             return Error("FlagSet.set_annotation: Could not find flag with name: " + name)
 
         result.value()[][].annotations.put(key, values)
+
         return Error()
 
     fn visit_all[visitor: FlagVisitorFn](self) -> None:
@@ -576,7 +551,7 @@ struct FlagSet(Stringable, Sized):
             visitor: The visitor function to call for each flag.
         """
         for flag in self.flags:
-            visitor(flag)
+            visitor(flag[][])
 
     fn add_flag_set(inout self, new_set: Self) -> None:
         """Adds flags from another FlagSet. If a flag is already present, the flag from the new set is ignored.
@@ -586,23 +561,24 @@ struct FlagSet(Stringable, Sized):
         """
 
         @always_inline
-        fn add_flag(flag: Reference[Flag]) capturing -> None:
-            if not self.lookup(flag[].name):
-                self.flags.append(flag[])
+        fn add_flag(flag: Flag) capturing -> None:
+            if not self.lookup(flag.name):
+                self.flags.append(flag)
 
         new_set.visit_all[add_flag]()
 
 
 fn process_flag_for_group_annotation(
-    flags: Reference[FlagSet], flag: Reference[Flag], annotation: String, inout group_status: Dict[Dict[Bool]]
+    flags: FlagSet, flag: Flag, annotation: String, inout group_status: Dict[StringKey, Dict[StringKey, Bool]]
 ) -> Error:
-    var group_info = flag[].annotations.get(annotation, List[String]())
+    var group_info = flag.annotations.get(annotation, List[String]())
     if group_info:
         for group in group_info:
-            if len(group_status.get(group[], Dict[Bool]())) == 0:
+            var group_name = group[]
+            if len(group_status.get(group_name, Dict[StringKey, Bool]())) == 0:
                 var flag_names = List[String]()
                 try:
-                    flag_names = group[].split(" ")
+                    flag_names = group_name.split(delimiter=" ")
                 except e:
                     return Error("Failed to split group names: " + str(e))
 
@@ -610,76 +586,52 @@ fn process_flag_for_group_annotation(
                 if not has_all_flags(flags, flag_names):
                     continue
 
-                group_status.put(group[], Dict[Bool]())
                 for name in flag_names:
-                    var group_value = group_status.get(group[], Dict[Bool]())
-                    group_value.put(name[], False)
-                    group_status.put(group[], group_value)
+                    try:
+                        group_status[group[]][name[]] = False
+                    except e:
+                        return Error("Failed to set group status to False for unset flag: " + str(e))
 
             # If flag.changed = True, then it had a value set on it.
-            var group_value = group_status.get(group[], Dict[Bool]())
-            group_value.put(flag[].name, flag[].changed)
-            group_status.put(group[], group_value)
+            try:
+                group_status[group[]][flag.name] = flag.changed
+            except e:
+                return Error("Failed to set group status: " + str(e))
 
     return Error()
 
 
-fn has_all_flags(flags: Reference[FlagSet], flag_names: List[String]) -> Bool:
+fn has_all_flags(flags: FlagSet, flag_names: List[String]) -> Bool:
     for name in flag_names:
-        if not flags[].lookup(name[]):
+        if not flags.lookup(name[]):
             return False
     return True
 
 
-fn dict_keys_to_list[T: CollectionElement](data: Dict[T]) -> (List[String], Error):
-    """Converts the keys of a dictionary to a list of strings.
-
-    Args:
-        data: The dictionary to convert the keys of. This is a string_dict compact dict.
-
-    Returns:
-        A list of strings containing the keys of the dictionary and an Error.
-    """
-    var keys = List[String]()
-    var dict_keys = data.keys.keys_vec()
-    try:
-        for i in range(len(dict_keys)):
-            var element = dict_keys[i]
-            var split_keys = String(element).split(" ")
-            for key in split_keys:
-                keys.append(key[])
-        return keys, Error()
-    except e:
-        return List[String](), Error("Failed to get keys for flag group validation: " + str(e))
-
-
-fn validate_required_flag_group(data: Dict[Dict[Bool]]) -> None:
+fn validate_required_flag_group(data: Dict[StringKey, Dict[StringKey, Bool]]) -> None:
     """Validates that all flags in a group are set if any are set.
     This is for flags that are marked as required via `Command().mark_flags_required_together()`.
 
     Args:
         data: The dictionary of flag groups to validate.
     """
-    var keys: List[String]
-    var err: Error
-    keys, err = dict_keys_to_list(data)
-
     # Within each group, is a Dict of flag name and if they're set.
     # If it's unset then add to a list to check the condition of all required flags being set.
-    for i in range(len(data.values)):
+    for pair in data.items():
         var unset = List[String]()
-        var flag_list = data.values[i]
-        # var flag_name_and_status = flag_list.get(keys[i], False)
-        for j in range(len(flag_list.values)):
-            var is_set = flag_list.values[j]
-            if not is_set:
-                unset.append(keys[j])
+        for flag in pair[].value.items():
+            if not flag[].value:
+                unset.append(flag[].key)
 
-        if len(unset) == len(flag_list) or len(unset) == 0:
+        if len(unset) == len(pair[].value) or len(unset) == 0:
             continue
 
         # Sort values, so they can be tested/scripted against consistently.
         # unset.sort()
+        var keys = List[String]()
+        for key in pair[].value.keys():
+            keys.append(key[])
+
         panic(
             sprintf(
                 "if any flags in the group, %s, are set they must all be set; missing %s",
@@ -689,61 +641,55 @@ fn validate_required_flag_group(data: Dict[Dict[Bool]]) -> None:
         )
 
 
-fn validate_one_required_flag_group(data: Dict[Dict[Bool]]) -> None:
+fn validate_one_required_flag_group(data: Dict[StringKey, Dict[StringKey, Bool]]) -> None:
     """Validates that at least one flag in a group is set.
     This is for flags that are marked as required via `Command().mark_flag_required()`.
 
     Args:
         data: The dictionary of flag groups to validate.
     """
-    var keys: List[String]
-    var err: Error
-    keys, err = dict_keys_to_list(data)
-
     # Check if at least one key is set.
-    for i in range(len(data.values)):
+    for pair in data.items():
         var set = List[String]()
-        var flag_list = data.values[i]
-        # var flag_name_and_status = flag_list.get(keys[i], False)
-        for j in range(len(flag_list.values)):
-            var is_set = flag_list.values[j]
-            if is_set:
-                set.append(keys[j])
+        for flag in pair[].value.items():
+            if flag[].value:
+                set.append(flag[].key)
 
         if len(set) >= 1:
             continue
 
         # Sort values, so they can be tested/scripted against consistently.
         # unset.sort()
+        var keys = List[String]()
+        for key in pair[].value.keys():
+            keys.append(key[])
+
         panic(sprintf("at least one of the flags in the group %s is required", to_string(keys)))
 
 
-fn validate_mutually_exclusive_flag_group(data: Dict[Dict[Bool]]) -> None:
+fn validate_mutually_exclusive_flag_group(data: Dict[StringKey, Dict[StringKey, Bool]]) -> None:
     """Validates that only one flag in a group is set.
     This is for flags that are marked as required via `Command().mark_flags_mutually_exclusive()`.
 
     Args:
         data: The dictionary of flag groups to validate.
     """
-    var keys: List[String]
-    var err: Error
-    keys, err = dict_keys_to_list(data)
-
     # Check if more than one mutually exclusive flag is set.
-    for i in range(len(data.values)):
+    for pair in data.items():
         var set = List[String]()
-        var flag_list = data.values[i]
-        # var flag_name_and_status = flag_list.get(keys[i], False)
-        for j in range(len(flag_list.values)):
-            var is_set = flag_list.values[j]
-            if is_set:
-                set.append(keys[j])
+        for flag in pair[].value.items():
+            if flag[].value:
+                set.append(flag[].key)
 
         if len(set) == 0 or len(set) == 1:
             continue
 
         # Sort values, so they can be tested/scripted against consistently.
         # unset.sort()
+        var keys = List[String]()
+        for key in pair[].value.keys():
+            keys.append(key[])
+
         panic(
             sprintf(
                 "if any flags in the group %s are set none of the others can be; %s were all set",
@@ -754,9 +700,9 @@ fn validate_mutually_exclusive_flag_group(data: Dict[Dict[Bool]]) -> None:
 
 
 fn validate_flag_groups(
-    group_status: Dict[Dict[Bool]],
-    one_required_group_status: Dict[Dict[Bool]],
-    mutually_exclusive_group_status: Dict[Dict[Bool]],
+    group_status: Dict[StringKey, Dict[StringKey, Bool]],
+    one_required_group_status: Dict[StringKey, Dict[StringKey, Bool]],
+    mutually_exclusive_group_status: Dict[StringKey, Dict[StringKey, Bool]],
 ) -> None:
     """Validates the status of flag groups.
     Checks for flag groups that are required together, at least one required, and mutually exclusive.
