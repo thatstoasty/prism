@@ -1,11 +1,11 @@
-from prism import Flag, Command, CommandArc
+from prism import Flag, Command
 
 
-fn test(command: CommandArc, args: List[String]) -> None:
+fn test(command: Arc[Command], args: List[String]) -> None:
     print("Pass chromeria as a subcommand!")
 
 
-fn hello(command: CommandArc, args: List[String]) -> None:
+fn hello(command: Arc[Command], args: List[String]) -> None:
     print("Hello from Chromeria!")
 
 

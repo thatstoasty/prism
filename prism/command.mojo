@@ -69,7 +69,7 @@ alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> None
 alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) -> Error
 alias HelpFunction = fn (Arc[Command]) -> String
 alias ArgValidator = fn (command: Arc[Command], args: List[String]) escaping -> Optional[String]
-alias ParentVisitorFn = fn (parent: Arc[Optional[Command]]) capturing -> None
+alias ParentVisitorFn = fn (parent: Reference[Command]) capturing -> None
 
 # Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 # If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down.
@@ -398,6 +398,9 @@ struct Command(CollectionElement):
         # Validate required flag groups
         validate_flag_groups(group_status, one_required_group_status, mutually_exclusive_group_status)
 
+    # fn validate_args(self, args: List[String]) -> Optional[String]:
+    #     return self.arg_validator(self, args)
+
     fn execute(inout self) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch."""
         # Traverse from the root command through the children to find a match for the current argument.
@@ -412,10 +415,9 @@ struct Command(CollectionElement):
         var remaining_args: List[String]
         var command: Self
         command, remaining_args = parse_command_from_args(self)
-        var command_ref = Arc(command)
 
         # Merge local and inherited flags
-        command_ref[]._merge_flags()
+        command._merge_flags()
 
         var parents = List[Arc[Optional[Command]]]()
         var parent = Arc[Optional[Command]](command)
@@ -436,26 +438,26 @@ struct Command(CollectionElement):
         # Get the flags for the command to be executed.
         # store flags as a mutable ref
         var err: Error
-        remaining_args, err = get_flags(command_ref[].flags, remaining_args)
+        remaining_args, err = get_flags(command.flags, remaining_args)
         if err:
             panic(err)
 
         # Check if the help flag was passed
-        var help_passed = command_ref[].flags.get_as_bool("help")
+        var help_passed = command.flags.get_as_bool("help")
         if help_passed.value()[] == True:
-            print(command.help(command_ref))
+            print(command.help(command))
             return None
 
         # Validate individual required flags (eg: flag is required)
-        err = command_ref[].validate_required_flags()
+        err = command.validate_required_flags()
         if err:
             panic(err)
 
         # Validate flag groups (eg: one of required, mutually exclusive, required together)
-        command_ref[].validate_flag_groups()
+        command.validate_flag_groups()
 
         # Validate the remaining arguments
-        var error_message = command_ref[].arg_validator(command_ref, remaining_args)
+        var error_message = command.arg_validator(command, remaining_args)
         if error_message:
             panic(error_message.value()[])
 
@@ -464,7 +466,7 @@ struct Command(CollectionElement):
             if parent[][]:
                 var cmd = parent[][].value()[]
                 if cmd.persistent_erroring_pre_run:
-                    err = cmd.persistent_erroring_pre_run.value()[](command_ref, remaining_args)
+                    err = cmd.persistent_erroring_pre_run.value()[](command, remaining_args)
                     if err:
                         panic(err)
 
@@ -473,25 +475,25 @@ struct Command(CollectionElement):
                         break
                 else:
                     if cmd.persistent_pre_run:
-                        cmd.persistent_pre_run.value()[](command_ref, remaining_args)
+                        cmd.persistent_pre_run.value()[](command, remaining_args)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
         # Run the pre-run hooks.
-        if command_ref[].pre_run:
-            command.pre_run.value()[](command_ref, remaining_args)
-        elif command_ref[].erroring_pre_run:
-            err = command.erroring_pre_run.value()[](command_ref, remaining_args)
+        if command.pre_run:
+            command.pre_run.value()[](command, remaining_args)
+        elif command.erroring_pre_run:
+            err = command.erroring_pre_run.value()[](command, remaining_args)
             if err:
                 panic(err)
 
         # Run the function's commands.
-        if command_ref[].run:
-            command_ref[].run.value()[](command_ref, remaining_args)
+        if command.run:
+            command.run.value()[](command, remaining_args)
         else:
-            err = command_ref[].erroring_run.value()[](command_ref, remaining_args)
+            err = command.erroring_run.value()[](command, remaining_args)
             if err:
                 panic(err)
 
@@ -500,7 +502,7 @@ struct Command(CollectionElement):
             if parent[][]:
                 var cmd = parent[][].value()[]
                 if cmd.persistent_erroring_post_run:
-                    err = cmd.persistent_erroring_post_run.value()[](command_ref, remaining_args)
+                    err = cmd.persistent_erroring_post_run.value()[](command, remaining_args)
                     if err:
                         panic(err)
 
@@ -509,17 +511,17 @@ struct Command(CollectionElement):
                         break
                 else:
                     if cmd.persistent_post_run:
-                        cmd.persistent_post_run.value()[](command_ref, remaining_args)
+                        cmd.persistent_post_run.value()[](command, remaining_args)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
         # Run the post-run hooks.
-        if command_ref[].post_run:
-            command.post_run.value()[](command_ref, remaining_args)
-        elif command_ref[].erroring_post_run:
-            err = command.erroring_post_run.value()[](command_ref, remaining_args)
+        if command.post_run:
+            command.post_run.value()[](command, remaining_args)
+        elif command.erroring_post_run:
+            err = command.erroring_post_run.value()[](command, remaining_args)
             if err:
                 panic(err)
 
@@ -532,10 +534,9 @@ struct Command(CollectionElement):
         var i_flags = FlagSet()
 
         @always_inline
-        fn add_parent_persistent_flags(parent: Arc[Optional[Self]]) capturing -> None:
-            var p = parent
-            if p[].value()[].persistent_flags:
-                i_flags += p[].value()[].persistent_flags
+        fn add_parent_persistent_flags(parent: Reference[Self]) capturing -> None:
+            if parent[].persistent_flags:
+                i_flags += parent[].persistent_flags
 
         self.visit_parents[add_parent_persistent_flags]()
 
@@ -676,7 +677,7 @@ struct Command(CollectionElement):
             func: The function to invoke on each parent.
         """
         if self.has_parent():
-            func(self.parent)
+            func(self.parent[].value()[])
             self.parent[].value()[].visit_parents[func]()
 
     fn validate_required_flags(self) -> Error:
