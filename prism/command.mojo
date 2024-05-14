@@ -65,7 +65,7 @@ fn default_help(command: Arc[Command]) -> String:
 
 
 alias CommandArc = Arc[Command]
-alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> None
+alias CommandFunction = fn (command: Reference[Command], args: List[String]) -> None
 alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) -> Error
 alias HelpFunction = fn (Arc[Command]) -> String
 alias ArgValidator = fn (command: Arc[Command], args: List[String]) escaping -> Optional[String]
