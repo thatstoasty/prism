@@ -53,10 +53,10 @@ fn default_help(command: Arc[Command]) -> String:
         for child in cmd[].children:
             _ = builder.write_string(sprintf("\n  %s", str(child[][])))
 
-    if cmd[].flag_list():
+    if cmd[].flags.flags:
         _ = builder.write_string("\n\nAvailable flags:")
-        for flag in cmd[].flag_list():
-            _ = builder.write_string(sprintf("\n  -%s, --%s    %s", flag[][].shorthand, flag[][].name, flag[][].usage))
+        for flag in cmd[].flags.flags:
+            _ = builder.write_string(sprintf("\n  -%s, --%s    %s", flag[].shorthand, flag[].name, flag[].usage))
 
     _ = builder.write_string(
         sprintf('\n\nUse "%s [command] --help" for more information about a command.', full_command)
@@ -380,8 +380,7 @@ struct Command(CollectionElement):
         var mutually_exclusive_group_status = Dict[StringKey, Dict[StringKey, Bool]]()
 
         @always_inline
-        fn flag_checker(flag: Flag) capturing:
-            print("here")
+        fn flag_checker(flag: Reference[Flag]) capturing:
             var err = process_flag_for_group_annotation(self.flags, flag, REQUIRED_AS_GROUP, group_status)
             if err:
                 panic("Failed to process flag for REQUIRED_AS_GROUP annotation: " + str(err))
@@ -684,11 +683,11 @@ struct Command(CollectionElement):
         """Validates all required flags are present and returns an error otherwise."""
         var missing_flag_names = List[String]()
 
-        fn check_required_flag(flag: Flag) capturing -> None:
-            var required_annotation = flag.annotations.get(REQUIRED, List[String]())
+        fn check_required_flag(flag: Reference[Flag]) capturing -> None:
+            var required_annotation = flag[].annotations.get(REQUIRED, List[String]())
             if required_annotation:
-                if required_annotation[0] == "true" and not flag.changed:
-                    missing_flag_names.append(flag.name)
+                if required_annotation[0] == "true" and not flag[].changed:
+                    missing_flag_names.append(flag[].name)
 
         self.flags.visit_all[check_required_flag]()
 
@@ -698,12 +697,12 @@ struct Command(CollectionElement):
 
     # NOTE: These wrappers are just nice to have. Feels good to call Command().add_flag()
     # instead of Command().flags[].add_flag()
-    fn flag_list(self) -> List[Arc[Flag]]:
-        """Returns a list of references to all flags in the merged flag set (local, persistent, inherited).
+    # fn flag_list(self) -> List[Arc[Flag]]:
+    #     """Returns a list of references to all flags in the merged flag set (local, persistent, inherited).
 
-        This is just a convenience function to avoid having to call Command().flags[].get_flags().
-        """
-        return self.flags.flags
+    #     This is just a convenience function to avoid having to call Command().flags[].get_flags().
+    #     """
+    #     return self.flags.flags
 
     fn add_bool_flag(
         inout self,

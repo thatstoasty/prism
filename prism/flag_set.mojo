@@ -4,7 +4,7 @@ from .flag import Flag
 from .vector import to_string, StringKey
 
 
-alias FlagVisitorFn = fn (flag: Flag) capturing -> None
+alias FlagVisitorFn = fn (Reference[Flag]) capturing -> None
 
 
 fn string_to_bool(value: String) -> Bool:
@@ -45,15 +45,15 @@ fn string_to_float(s: String) raises -> Float64:
         var result: Float64 = atol(int_str) + frac
         return result
     except:
-        raise Error("Failed to convert " + s + " to a float.")
+        raise Error("string_to_float: Failed to convert " + s + " to a float.")
 
 
 @value
 struct FlagSet(Stringable, Sized):
-    var flags: List[Arc[Flag]]
+    var flags: List[Flag]
 
     fn __init__(inout self) -> None:
-        self.flags = List[Arc[Flag]]()
+        self.flags = List[Flag]()
 
     fn __init__(inout self, flag_set: Self) -> None:
         self = flag_set
@@ -62,7 +62,7 @@ struct FlagSet(Stringable, Sized):
         var result = String("Flags: [")
         for i in range(self.flags.size):
             var f = self.flags[i]
-            result += f[]
+            result += f
             if i != self.flags.size - 1:
                 result += String(", ")
         result += String("]")
@@ -76,7 +76,7 @@ struct FlagSet(Stringable, Sized):
 
     fn __contains__(self, value: Flag) -> Bool:
         for flag in self.flags:
-            if flag[][] == value:
+            if flag[] == value:
                 return True
         return False
 
@@ -87,7 +87,7 @@ struct FlagSet(Stringable, Sized):
         for i in range(len(self.flags)):
             var f = self.flags[i]
             var other_f = other.flags[i]
-            if f[] != other_f[]:
+            if f != other_f:
                 return False
         return True
 
@@ -103,33 +103,40 @@ struct FlagSet(Stringable, Sized):
     fn __iadd__(inout self, other: Self):
         self.add_flag_set(other)
 
-    fn lookup(self, name: String) -> Optional[Arc[Flag]]:
-        """Returns a reference to a Flag with the given name.
+    fn lookup(self: Reference[Self], name: String) -> Optional[Reference[Flag, self.is_mutable, self.lifetime]]:
+        """Returns an mutable or immutable reference to a Flag with the given name.
+        Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
         Args:
             name: The name of the flag to return.
+
+        Returns:
+            Optional Reference to the Flag.
         """
-        for flag in self.flags:
-            if flag[][].name == name:
-                return flag[]
+        for i in range(len(self[].flags)):
+            if self[].flags[i].name == name:
+                return self[].flags.__get_ref(i)
 
         return None
 
-    fn get_flag_of_type(self, name: String, type: String) raises -> Arc[Flag]:
-        """Returns a reference to a Flag with the given name and type.
+    fn lookup_with_type(
+        self: Reference[Self], name: String, type: String
+    ) -> Optional[Reference[Flag, self.is_mutable, self.lifetime]]:
+        """Returns an mutable or immutable reference to a Flag with the given name.
+        Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
         Args:
             name: The name of the flag to return.
             type: The type of the flag to return.
 
         Returns:
-            ARC pointer to the Flag.
+            Optional Reference to the Flag.
         """
-        for flag in self.flags:
-            if flag[][].name == name and flag[][].type == type:
-                return flag[]
+        for i in range(len(self[].flags)):
+            if self[].flags[i].name == name and self[].flags[i].type == type:
+                return self[].flags.__get_ref(i)
 
-        raise Error("FlagNotFound: Could not find flag with name: " + name)
+        return None
 
     fn get_as_string(self, name: String) -> Optional[String]:
         """Returns the value of a flag as a String. If it isn't set, then return the default value.
@@ -137,14 +144,15 @@ struct FlagSet(Stringable, Sized):
         Args:
             name: The name of the flag to return.
         """
-        try:
-            var flag = self.get_flag_of_type(name, "String")[]
-            if not flag.value:
-                return flag.default
+        var result = self.lookup_with_type(name, "String")
+        if not result:
+            None
 
-            return flag.value
-        except e:
-            return None
+        var flag = result.value()[]
+        if not flag[].value:
+            return flag[].default
+
+        return flag[].value
 
     fn get_as_bool(self, name: String) -> Optional[Bool]:
         """Returns the value of a flag as a Bool. If it isn't set, then return the default value.
@@ -152,14 +160,15 @@ struct FlagSet(Stringable, Sized):
         Args:
             name: The name of the flag to return.
         """
-        try:
-            var flag = self.get_flag_of_type(name, "Bool")[]
-            if not flag.value:
-                return string_to_bool(flag.default)
+        var result = self.lookup_with_type(name, "Bool")
+        if not result:
+            None
 
-            return string_to_bool(flag.value.value()[])
-        except:
-            return None
+        var flag = result.value()[]
+        if not flag[].value:
+            return string_to_bool(flag[].default)
+
+        return string_to_bool(flag[].value.value()[])
 
     fn get_as_int(self, name: String) -> Optional[Int]:
         """Returns the value of a flag as an Int. If it isn't set, then return the default value.
@@ -167,13 +176,19 @@ struct FlagSet(Stringable, Sized):
         Args:
             name: The name of the flag to return.
         """
-        try:
-            var flag = self.get_flag_of_type(name, "Int")[]
-            if not flag.value:
-                return atol(flag.default)
+        var result = self.lookup_with_type(name, "Int")
+        if not result:
+            None
 
-            return atol(flag.value.value()[])
-        except:
+        var flag = result.value()[]
+
+        # TODO: I don't like this swallowing up a failure to convert to int. Maybe return a tuple of optional and error?
+        try:
+            if not flag[].value:
+                return atol(flag[].default)
+
+            return atol(flag[].value.value()[])
+        except e:
             return None
 
     fn get_as_int8(self, name: String) -> Optional[Int8]:
@@ -302,35 +317,41 @@ struct FlagSet(Stringable, Sized):
         Args:
             name: The name of the flag to return.
         """
-        try:
-            var flag = self.get_flag_of_type(name, "Float64")[]
-            if not flag.value:
-                return string_to_float(flag.default)
+        var result = self.lookup_with_type(name, "Float64")
+        if not result:
+            None
 
-            return string_to_float(flag.value.value()[])
+        var flag = result.value()[]
+
+        # TODO: I don't like this swallowing up a failure to convert to int. Maybe return a tuple of optional and error?
+        try:
+            if not flag[].value:
+                return string_to_float(flag[].default)
+
+            return string_to_float(flag[].value.value()[])
         except e:
             return None
 
-    fn get_flags_with_values(self) -> List[Arc[Flag]]:
-        """Returns a list of references to all flags in the flag set that have values set."""
-        var result = List[Arc[Flag]]()
-        for flag in self.flags:
-            if flag[][].value.value()[] != "":
-                result.append(flag[])
-        return result
+    # fn get_flags_with_values(self) -> List[Reference[Flag, i1_0, __lifetime_of(self)]]:
+    #     """Returns a list of immutable references to all flags in the flag set that have values set."""
+    #     var result = List[Reference[Flag, i1_0, __lifetime_of(self)]]()
+    #     for flag in self.flags:
+    #         if flag[].value.value()[] != "":
+    #             result.append(flag)
+    #     return result
 
     fn get_names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set."""
         var result = List[String]()
         for flag in self.flags:
-            result.append(flag[][].name)
+            result.append(flag[].name)
         return result
 
     fn get_shorthands(self) -> List[String]:
         """Returns a list of shorthands of all flags in the flag set."""
         var result = List[String]()
         for flag in self.flags:
-            result.append(flag[][].shorthand)
+            result.append(flag[].shorthand)
         return result
 
     fn lookup_name(self, shorthand: String) -> Optional[String]:
@@ -340,8 +361,8 @@ struct FlagSet(Stringable, Sized):
             shorthand: The shorthand of the flag to lookup.
         """
         for flag in self.flags:
-            if flag[][].shorthand == shorthand:
-                return flag[][].name
+            if flag[].shorthand == shorthand:
+                return flag[].name
         return None
 
     fn _add_flag(
@@ -360,7 +381,7 @@ struct FlagSet(Stringable, Sized):
         """
         # Use var to set the mutability of flag, then add it to the list
         var flag = Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=default, type=type)
-        self.flags.append(Arc(flag))
+        self.flags.append(flag)
 
     fn add_bool_flag(
         inout self,
@@ -541,7 +562,6 @@ struct FlagSet(Stringable, Sized):
             return Error("FlagSet.set_annotation: Could not find flag with name: " + name)
 
         result.value()[][].annotations.put(key, values)
-
         return Error()
 
     fn visit_all[visitor: FlagVisitorFn](self) -> None:
@@ -551,7 +571,7 @@ struct FlagSet(Stringable, Sized):
             visitor: The visitor function to call for each flag.
         """
         for flag in self.flags:
-            visitor(flag[][])
+            visitor(flag)
 
     fn add_flag_set(inout self, new_set: Self) -> None:
         """Adds flags from another FlagSet. If a flag is already present, the flag from the new set is ignored.
@@ -561,17 +581,20 @@ struct FlagSet(Stringable, Sized):
         """
 
         @always_inline
-        fn add_flag(flag: Flag) capturing -> None:
-            if not self.lookup(flag.name):
-                self.flags.append(flag)
+        fn add_flag(flag: Reference[Flag]) capturing -> None:
+            if not self.lookup(flag[].name):
+                self.flags.append(flag[])
 
         new_set.visit_all[add_flag]()
 
 
 fn process_flag_for_group_annotation(
-    flags: FlagSet, flag: Flag, annotation: String, inout group_status: Dict[StringKey, Dict[StringKey, Bool]]
+    flags: FlagSet,
+    flag: Reference[Flag],
+    annotation: String,
+    inout group_status: Dict[StringKey, Dict[StringKey, Bool]],
 ) -> Error:
-    var group_info = flag.annotations.get(annotation, List[String]())
+    var group_info = flag[].annotations.get(annotation, List[String]())
     if group_info:
         for group in group_info:
             var group_name = group[]
@@ -580,7 +603,7 @@ fn process_flag_for_group_annotation(
                 try:
                     flag_names = group_name.split(delimiter=" ")
                 except e:
-                    return Error("Failed to split group names: " + str(e))
+                    return Error("process_flag_for_group_annotation: Failed to split group names: " + str(e))
 
                 # Only consider this flag group at all if all the flags are defined.
                 if not has_all_flags(flags, flag_names):
@@ -590,13 +613,16 @@ fn process_flag_for_group_annotation(
                     try:
                         group_status[group[]][name[]] = False
                     except e:
-                        return Error("Failed to set group status to False for unset flag: " + str(e))
+                        return Error(
+                            "process_flag_for_group_annotation: Failed to set group status to False for unset flag: "
+                            + str(e)
+                        )
 
             # If flag.changed = True, then it had a value set on it.
             try:
-                group_status[group[]][flag.name] = flag.changed
+                group_status[group[]][flag[].name] = flag[].changed
             except e:
-                return Error("Failed to set group status: " + str(e))
+                return Error("process_flag_for_group_annotation: Failed to set group status: " + str(e))
 
     return Error()
 
