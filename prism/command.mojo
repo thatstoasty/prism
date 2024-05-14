@@ -1,6 +1,6 @@
 from sys import argv
 from collections.optional import Optional
-from memory._arc import Arc
+from memory.arc import Arc
 from external.string_dict import Dict
 from external.gojo.fmt import sprintf
 from external.gojo.builtins import panic
@@ -33,29 +33,30 @@ fn get_args_as_list() -> List[String]:
 
 fn default_help(command: Arc[Command]) -> String:
     """Prints the help information for the command."""
+    var cmd = command
     var builder = StringBuilder()
-    _ = builder.write_string(command[].description)
+    _ = builder.write_string(cmd[].description)
 
-    if command[].aliases:
+    if cmd[].aliases:
         _ = builder.write_string("\n\nAliases:")
-        _ = builder.write_string(sprintf("\n  %s", to_string(command[].aliases)))
+        _ = builder.write_string(sprintf("\n  %s", to_string(cmd[].aliases)))
 
     # Build usage statement arguments depending on the command's children and flags.
-    var full_command = command[]._full_command()
+    var full_command = cmd[]._full_command()
     _ = builder.write_string(sprintf("\n\nUsage:\n  %s%s", full_command, String(" [args]")))
-    if len(command[].children) > 0:
+    if len(cmd[].children) > 0:
         _ = builder.write_string(" [command]")
-    if len(command[].flags[]) > 0:
+    if len(cmd[].flags[]) > 0:
         _ = builder.write_string(" [flags]")
 
-    if command[].children:
+    if cmd[].children:
         _ = builder.write_string("\n\nAvailable commands:")
-        for child in command[].children:
+        for child in cmd[].children:
             _ = builder.write_string(sprintf("\n  %s", str(child[][])))
 
-    if command[].flag_list():
+    if cmd[].flag_list():
         _ = builder.write_string("\n\nAvailable flags:")
-        for flag in command[].flag_list():
+        for flag in cmd[].flag_list():
             _ = builder.write_string(sprintf("\n  -%s, --%s    %s", flag[][].shorthand, flag[][].name, flag[][].usage))
 
     _ = builder.write_string(
@@ -381,7 +382,7 @@ struct Command(CollectionElement):
         var mutually_exclusive_group_status = Dict[Dict[Bool]]()
 
         @always_inline
-        fn flag_checker(flag: Arc[Flag]) capturing:
+        fn flag_checker(flag: Flag) capturing:
             var err = process_flag_for_group_annotation(self.flags, flag, REQUIRED_AS_GROUP, group_status)
             if err:
                 panic("Failed to process flag for REQUIRED_AS_GROUP annotation: " + str(err))
@@ -407,7 +408,8 @@ struct Command(CollectionElement):
 
         # Always execute from the root command, regardless of what command was executed in main.
         if self.has_parent():
-            return self._root()[].execute()
+            var root = self._root()
+            return root[].execute()
 
         var remaining_args: List[String]
         var command: Self
@@ -526,8 +528,9 @@ struct Command(CollectionElement):
 
         @always_inline
         fn add_parent_persistent_flags(parent: Arc[Optional[Self]]) capturing -> None:
-            if parent[].value()[].persistent_flags[]:
-                i_flags += parent[].value()[].persistent_flags[]
+            var p = parent
+            if p[].value()[].persistent_flags[]:
+                i_flags += p[].value()[].persistent_flags[]
 
         self.visit_parents[add_parent_persistent_flags]()
 
@@ -675,11 +678,11 @@ struct Command(CollectionElement):
         """Validates all required flags are present and returns an error otherwise."""
         var missing_flag_names = List[String]()
 
-        fn check_required_flag(flag: Arc[Flag]) capturing -> None:
-            var required_annotation = flag[].annotations.get(REQUIRED, List[String]())
+        fn check_required_flag(flag: Flag) capturing -> None:
+            var required_annotation = flag.annotations.get(REQUIRED, List[String]())
             if required_annotation:
-                if required_annotation[0] == "true" and not flag[].changed:
-                    missing_flag_names.append(flag[].name)
+                if required_annotation[0] == "true" and not flag.changed:
+                    missing_flag_names.append(flag.name)
 
         self.flags[].visit_all[check_required_flag]()
 

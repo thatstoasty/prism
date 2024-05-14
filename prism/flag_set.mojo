@@ -5,7 +5,7 @@ from .flag import Flag
 from .vector import to_string
 
 
-alias FlagVisitorFn = fn (flag: Arc[Flag]) capturing -> None
+alias FlagVisitorFn = fn (flag: Flag) capturing -> None
 
 
 fn string_to_bool(value: String) -> Bool:

@@ -59,7 +59,7 @@ struct KeysContainer[KeyEndType: DType = DType.uint32](Sized):
             self.keys.free()
             self.keys = keys
 
-        memcpy(self.keys.offset(prev_end), key._as_ptr(), key_length)
+        memcpy(self.keys.offset(prev_end), key.unsafe_ptr(), key_length)
         var count = self.count + 1
         if count >= self.capacity:
             var new_capacity = self.capacity + (self.capacity >> 1)

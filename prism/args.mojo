@@ -1,4 +1,4 @@
-from memory._arc import Arc
+from memory.arc import Arc
 from collections.optional import Optional
 from external.gojo.fmt import sprintf
 from .vector import contains
