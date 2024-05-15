@@ -1,18 +1,17 @@
-from prism import Flag, Command
-from prism.command import CommandArc
+from prism import FlagSet, Command
 
 
-fn say(command: CommandArc, args: List[String]) -> None:
+fn say(flag_set: FlagSet, args: List[String]) -> None:
     print("Shouldn't be here!")
     return None
 
 
-fn say_hello(command: CommandArc, args: List[String]) -> None:
+fn say_hello(flag_set: FlagSet, args: List[String]) -> None:
     print("Hello World!")
     return None
 
 
-fn say_goodbye(command: CommandArc, args: List[String]) -> None:
+fn say_goodbye(flag_set: FlagSet, args: List[String]) -> None:
     print("Goodbye World!")
     return None
 

@@ -2,7 +2,7 @@ from memory.arc import Arc
 from collections.optional import Optional
 from external.gojo.fmt import sprintf
 from .vector import contains
-from .command import CommandArc, ArgValidator
+from .command import CommandArc, ArgValidatorFn
 
 
 fn no_args(command: CommandArc, args: List[String]) -> Optional[String]:
@@ -28,7 +28,7 @@ fn arbitrary_args(command: CommandArc, args: List[String]) -> Optional[String]:
     return None
 
 
-fn minimum_n_args[n: Int]() -> ArgValidator:
+fn minimum_n_args[n: Int]() -> ArgValidatorFn:
     """Returns an error if there is not at least n arguments.
 
     Params:
@@ -52,7 +52,7 @@ fn minimum_n_args[n: Int]() -> ArgValidator:
     return less_than_n_args
 
 
-fn maximum_n_args[n: Int]() -> ArgValidator:
+fn maximum_n_args[n: Int]() -> ArgValidatorFn:
     """Returns an error if there are more than n arguments.
 
     Params:
@@ -71,7 +71,7 @@ fn maximum_n_args[n: Int]() -> ArgValidator:
     return more_than_n_args
 
 
-fn exact_args[n: Int]() -> ArgValidator:
+fn exact_args[n: Int]() -> ArgValidatorFn:
     """Returns an error if there are not exactly n arguments.
 
     Params:
@@ -90,7 +90,7 @@ fn exact_args[n: Int]() -> ArgValidator:
     return exactly_n_args
 
 
-fn valid_args[valid: List[String]]() -> ArgValidator:
+fn valid_args[valid: List[String]]() -> ArgValidatorFn:
     """Returns an error if threre are any positional args that are not in the command's valid_args.
 
     Params:
@@ -108,7 +108,7 @@ fn valid_args[valid: List[String]]() -> ArgValidator:
     return only_valid_args
 
 
-fn range_args[minimum: Int, maximum: Int]() -> ArgValidator:
+fn range_args[minimum: Int, maximum: Int]() -> ArgValidatorFn:
     """Returns an error if there are not exactly n arguments.
 
     Params:
@@ -135,11 +135,11 @@ fn range_args[minimum: Int, maximum: Int]() -> ArgValidator:
 
 
 # TODO: Having some issues with varadic list of functions, so using List for now.
-fn match_all[arg_validators: List[ArgValidator]]() -> ArgValidator:
+fn match_all[arg_validators: List[ArgValidatorFn]]() -> ArgValidatorFn:
     """Returns an error if any of the arg_validators return an error.
 
     Params:
-        arg_validators: A list of ArgValidator functions that check the arguments.
+        arg_validators: A list of ArgValidatorFn functions that check the arguments.
 
     Returns:
         A function that checks all the arguments using the arg_validators list..

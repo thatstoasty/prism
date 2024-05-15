@@ -1,8 +1,7 @@
-from prism import Flag, Command
-from prism.command import CommandArc
+from prism import FlagSet, Command
 
 
-fn printer(command: CommandArc, args: List[String]) -> None:
+fn printer(flag_set: FlagSet, args: List[String]) -> None:
     if len(args) == 0:
         print("No args provided.")
         return

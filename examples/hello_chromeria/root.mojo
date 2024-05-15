@@ -1,11 +1,12 @@
-from prism import Flag, Command
+from prism import FlagSet, Command
+from time import now
 
 
-fn test(command: Arc[Command], args: List[String]) -> None:
+fn test(flags: FlagSet, args: List[String]) -> None:
     print("Pass chromeria as a subcommand!")
 
 
-fn hello(command: Arc[Command], args: List[String]) -> None:
+fn hello(flags: FlagSet, args: List[String]) -> None:
     print("Hello from Chromeria!")
 
 

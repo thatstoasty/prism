@@ -1,13 +1,24 @@
-from prism import Flag, Command, CommandArc, no_args, valid_args, minimum_n_args, maximum_n_args, exact_args, range_args
+from prism import (
+    Flag,
+    FlagSet,
+    Command,
+    CommandArc,
+    no_args,
+    valid_args,
+    minimum_n_args,
+    maximum_n_args,
+    exact_args,
+    range_args,
+)
 
 
-fn test(command: CommandArc, args: List[String]) -> None:
+fn test(flags: FlagSet, args: List[String]) -> None:
     for arg in args:
         print("Received", arg[])
 
 
-fn hello(command: CommandArc, args: List[String]) -> None:
-    print(command[].name, "Hello from Chromeria!")
+fn hello(flags: FlagSet, args: List[String]) -> None:
+    print("Hello from Chromeria!")
 
 
 fn init() -> None:

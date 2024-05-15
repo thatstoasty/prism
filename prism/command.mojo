@@ -7,7 +7,7 @@ from external.gojo.strings import StringBuilder
 from .flag import Flag, get_flags
 from .flag_set import FlagSet, process_flag_for_group_annotation, validate_flag_groups
 from .args import arbitrary_args, get_args
-from .vector import join, to_string, contains, StringKey
+from .vector import join, to_string, contains
 
 # Individual flag annotations
 alias REQUIRED = "REQUIRED"
@@ -65,11 +65,11 @@ fn default_help(command: Arc[Command]) -> String:
 
 
 alias CommandArc = Arc[Command]
-alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> None
-alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) -> Error
-alias HelpFunction = fn (Arc[Command]) -> String
-alias ArgValidator = fn (command: Arc[Command], args: List[String]) escaping -> Optional[String]
-alias ParentVisitorFn = fn (parent: Reference[Command]) capturing -> None
+alias CommandFn = fn (FlagSet, List[String]) -> None
+alias CommandFnErr = fn (FlagSet, List[String]) -> Error
+alias HelpFn = fn (Arc[Command]) -> String
+alias ArgValidatorFn = fn (Arc[Command], List[String]) escaping -> Optional[String]
+alias ParentVisitorFn = fn (Reference[Command]) capturing -> None
 
 # Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 # If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down.
@@ -130,26 +130,26 @@ struct Command(CollectionElement):
     var aliases: List[String]
 
     # Generates help text.
-    var help: HelpFunction
+    var help: HelpFn
 
     # The group id under which this subcommand is grouped in the 'help' output of its parent.
     var group_id: String
 
-    var pre_run: Optional[CommandFunction]
-    var run: Optional[CommandFunction]
-    var post_run: Optional[CommandFunction]
+    var pre_run: Optional[CommandFn]
+    var run: Optional[CommandFn]
+    var post_run: Optional[CommandFn]
 
-    var erroring_pre_run: Optional[CommandFunctionErr]
-    var erroring_run: Optional[CommandFunctionErr]
-    var erroring_post_run: Optional[CommandFunctionErr]
+    var erroring_pre_run: Optional[CommandFnErr]
+    var erroring_run: Optional[CommandFnErr]
+    var erroring_post_run: Optional[CommandFnErr]
 
-    var persistent_pre_run: Optional[CommandFunction]
-    var persistent_post_run: Optional[CommandFunction]
+    var persistent_pre_run: Optional[CommandFn]
+    var persistent_post_run: Optional[CommandFn]
 
-    var persistent_erroring_pre_run: Optional[CommandFunctionErr]
-    var persistent_erroring_post_run: Optional[CommandFunctionErr]
+    var persistent_erroring_pre_run: Optional[CommandFnErr]
+    var persistent_erroring_post_run: Optional[CommandFnErr]
 
-    var arg_validator: ArgValidator
+    var arg_validator: ArgValidatorFn
     var valid_args: List[String]
 
     # Local flags for the command. TODO: Use this field to store cached results for local flags.
@@ -173,17 +173,17 @@ struct Command(CollectionElement):
         description: String,
         aliases: List[String] = List[String](),
         valid_args: List[String] = List[String](),
-        run: Optional[CommandFunction] = None,
-        pre_run: Optional[CommandFunction] = None,
-        post_run: Optional[CommandFunction] = None,
-        erroring_run: Optional[CommandFunctionErr] = None,
-        erroring_pre_run: Optional[CommandFunctionErr] = None,
-        erroring_post_run: Optional[CommandFunctionErr] = None,
-        persistent_pre_run: Optional[CommandFunction] = None,
-        persistent_post_run: Optional[CommandFunction] = None,
-        persistent_erroring_pre_run: Optional[CommandFunctionErr] = None,
-        persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
-        help: HelpFunction = default_help,
+        run: Optional[CommandFn] = None,
+        pre_run: Optional[CommandFn] = None,
+        post_run: Optional[CommandFn] = None,
+        erroring_run: Optional[CommandFnErr] = None,
+        erroring_pre_run: Optional[CommandFnErr] = None,
+        erroring_post_run: Optional[CommandFnErr] = None,
+        persistent_pre_run: Optional[CommandFn] = None,
+        persistent_post_run: Optional[CommandFn] = None,
+        persistent_erroring_pre_run: Optional[CommandFnErr] = None,
+        persistent_erroring_post_run: Optional[CommandFnErr] = None,
+        help: HelpFn = default_help,
     ):
         if not run and not erroring_run:
             panic("A command must have a run or erroring_run function.")
@@ -226,20 +226,20 @@ struct Command(CollectionElement):
         inout self,
         name: String,
         description: String,
-        arg_validator: ArgValidator,
+        arg_validator: ArgValidatorFn,
         aliases: List[String] = List[String](),
         valid_args: List[String] = List[String](),
-        run: Optional[CommandFunction] = None,
-        pre_run: Optional[CommandFunction] = None,
-        post_run: Optional[CommandFunction] = None,
-        erroring_run: Optional[CommandFunctionErr] = None,
-        erroring_pre_run: Optional[CommandFunctionErr] = None,
-        erroring_post_run: Optional[CommandFunctionErr] = None,
-        persistent_pre_run: Optional[CommandFunction] = None,
-        persistent_post_run: Optional[CommandFunction] = None,
-        persistent_erroring_pre_run: Optional[CommandFunctionErr] = None,
-        persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
-        help: HelpFunction = default_help,
+        run: Optional[CommandFn] = None,
+        pre_run: Optional[CommandFn] = None,
+        post_run: Optional[CommandFn] = None,
+        erroring_run: Optional[CommandFnErr] = None,
+        erroring_pre_run: Optional[CommandFnErr] = None,
+        erroring_post_run: Optional[CommandFnErr] = None,
+        persistent_pre_run: Optional[CommandFn] = None,
+        persistent_post_run: Optional[CommandFn] = None,
+        persistent_erroring_pre_run: Optional[CommandFnErr] = None,
+        persistent_erroring_post_run: Optional[CommandFnErr] = None,
+        help: HelpFn = default_help,
     ):
         if not run and not erroring_run:
             panic("A command must have a run or erroring_run function.")
@@ -375,9 +375,9 @@ struct Command(CollectionElement):
         return self
 
     fn validate_flag_groups(self):
-        var group_status = Dict[StringKey, Dict[StringKey, Bool]]()
-        var one_required_group_status = Dict[StringKey, Dict[StringKey, Bool]]()
-        var mutually_exclusive_group_status = Dict[StringKey, Dict[StringKey, Bool]]()
+        var group_status = Dict[String, Dict[String, Bool]]()
+        var one_required_group_status = Dict[String, Dict[String, Bool]]()
+        var mutually_exclusive_group_status = Dict[String, Dict[String, Bool]]()
 
         @always_inline
         fn flag_checker(flag: Reference[Flag]) capturing:
@@ -401,7 +401,7 @@ struct Command(CollectionElement):
     # fn validate_args(self, args: List[String]) -> Optional[String]:
     #     return self.arg_validator(self, args)
 
-    fn execute(inout self) -> None:
+    fn execute(self) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch."""
         # Traverse from the root command through the children to find a match for the current argument.
         # Any additional arguments past the last matched command name are considered arguments.
@@ -419,15 +419,14 @@ struct Command(CollectionElement):
         # Merge local and inherited flags
         command._merge_flags()
 
-        var parents = List[Arc[Optional[Command]]]()
-        var parent = Arc[Optional[Command]](command)
-
         # Add all parents to the list to check if they have persistent pre/post hooks.
-        while True:
-            parents.append(parent)
-            if not parent[].value()[].parent[]:
-                break
-            parent = parent[].value()[].parent[]
+        var parents = List[Arc[Command]]()
+
+        @always_inline
+        fn append_parent(command: Reference[Command]) capturing -> None:
+            parents.append(command[])
+
+        command.visit_parents[append_parent]()
 
         # If ENABLE_TRAVERSE_RUN_HOOKS is True, reverse the list to start from the root command rather than
         # from the child. This is because all of the persistent hooks will be run.
@@ -463,65 +462,63 @@ struct Command(CollectionElement):
 
         # Run the persistent pre-run hooks.
         for parent in parents:
-            if parent[][]:
-                var cmd = parent[][].value()[]
-                if cmd.persistent_erroring_pre_run:
-                    err = cmd.persistent_erroring_pre_run.value()[](command, remaining_args)
-                    if err:
-                        panic(err)
+            var cmd = parent[]
+            if cmd[].persistent_erroring_pre_run:
+                err = cmd[].persistent_erroring_pre_run.value()[](command.flags, remaining_args)
+                if err:
+                    panic(err)
+
+                @parameter
+                if not ENABLE_TRAVERSE_RUN_HOOKS:
+                    break
+            else:
+                if cmd[].persistent_pre_run:
+                    cmd[].persistent_pre_run.value()[](command.flags, remaining_args)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
-                else:
-                    if cmd.persistent_pre_run:
-                        cmd.persistent_pre_run.value()[](command, remaining_args)
-
-                        @parameter
-                        if not ENABLE_TRAVERSE_RUN_HOOKS:
-                            break
 
         # Run the pre-run hooks.
         if command.pre_run:
-            command.pre_run.value()[](command, remaining_args)
+            command.pre_run.value()[](command.flags, remaining_args)
         elif command.erroring_pre_run:
-            err = command.erroring_pre_run.value()[](command, remaining_args)
+            err = command.erroring_pre_run.value()[](command.flags, remaining_args)
             if err:
                 panic(err)
 
         # Run the function's commands.
         if command.run:
-            command.run.value()[](command, remaining_args)
+            command.run.value()[](command.flags, remaining_args)
         else:
-            err = command.erroring_run.value()[](command, remaining_args)
+            err = command.erroring_run.value()[](command.flags, remaining_args)
             if err:
                 panic(err)
 
         # Run the persistent post-run hooks.
         for parent in parents:
-            if parent[][]:
-                var cmd = parent[][].value()[]
-                if cmd.persistent_erroring_post_run:
-                    err = cmd.persistent_erroring_post_run.value()[](command, remaining_args)
-                    if err:
-                        panic(err)
+            var cmd = parent[]
+            if cmd[].persistent_erroring_post_run:
+                err = cmd[].persistent_erroring_post_run.value()[](command.flags, remaining_args)
+                if err:
+                    panic(err)
+
+                @parameter
+                if not ENABLE_TRAVERSE_RUN_HOOKS:
+                    break
+            else:
+                if cmd[].persistent_post_run:
+                    cmd[].persistent_post_run.value()[](command.flags, remaining_args)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
-                else:
-                    if cmd.persistent_post_run:
-                        cmd.persistent_post_run.value()[](command, remaining_args)
-
-                        @parameter
-                        if not ENABLE_TRAVERSE_RUN_HOOKS:
-                            break
 
         # Run the post-run hooks.
         if command.post_run:
-            command.post_run.value()[](command, remaining_args)
+            command.post_run.value()[](command.flags, remaining_args)
         elif command.erroring_post_run:
-            err = command.erroring_post_run.value()[](command, remaining_args)
+            err = command.erroring_post_run.value()[](command.flags, remaining_args)
             if err:
                 panic(err)
 

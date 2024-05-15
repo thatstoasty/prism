@@ -1,5 +1,4 @@
-from prism import Flag, Command, arbitrary_args
-from prism.command import CommandArc
+from prism import FlagSet, Command, arbitrary_args
 from prism.vector import to_string
 from examples.hello_world.say import (
     build_say_command,
@@ -10,9 +9,9 @@ from examples.hello_world.printer import build_printer_command
 from memory.arc import Arc
 
 
-fn test(command: CommandArc, args: List[String]) -> None:
-    for item in command[].flag_list():
-        print(item[][].name, item[][].value.value()[])
+fn test(flag_set: FlagSet, args: List[String]) -> None:
+    for item in flag_set.flags:
+        print(item[].name, item[].value.value()[])
 
     return None
 

@@ -1,7 +1,7 @@
 from external.gojo.builtins import panic
 from external.gojo.fmt import sprintf
 from .flag import Flag
-from .vector import to_string, StringKey
+from .vector import to_string
 
 
 alias FlagVisitorFn = fn (Reference[Flag]) capturing -> None
@@ -592,13 +592,13 @@ fn process_flag_for_group_annotation(
     flags: FlagSet,
     flag: Reference[Flag],
     annotation: String,
-    inout group_status: Dict[StringKey, Dict[StringKey, Bool]],
+    inout group_status: Dict[String, Dict[String, Bool]],
 ) -> Error:
     var group_info = flag[].annotations.get(annotation, List[String]())
     if group_info:
         for group in group_info:
             var group_name = group[]
-            if len(group_status.get(group_name, Dict[StringKey, Bool]())) == 0:
+            if len(group_status.get(group_name, Dict[String, Bool]())) == 0:
                 var flag_names = List[String]()
                 try:
                     flag_names = group_name.split(delimiter=" ")
@@ -634,7 +634,7 @@ fn has_all_flags(flags: FlagSet, flag_names: List[String]) -> Bool:
     return True
 
 
-fn validate_required_flag_group(data: Dict[StringKey, Dict[StringKey, Bool]]) -> None:
+fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
     """Validates that all flags in a group are set if any are set.
     This is for flags that are marked as required via `Command().mark_flags_required_together()`.
 
@@ -667,7 +667,7 @@ fn validate_required_flag_group(data: Dict[StringKey, Dict[StringKey, Bool]]) ->
         )
 
 
-fn validate_one_required_flag_group(data: Dict[StringKey, Dict[StringKey, Bool]]) -> None:
+fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
     """Validates that at least one flag in a group is set.
     This is for flags that are marked as required via `Command().mark_flag_required()`.
 
@@ -693,7 +693,7 @@ fn validate_one_required_flag_group(data: Dict[StringKey, Dict[StringKey, Bool]]
         panic(sprintf("at least one of the flags in the group %s is required", to_string(keys)))
 
 
-fn validate_mutually_exclusive_flag_group(data: Dict[StringKey, Dict[StringKey, Bool]]) -> None:
+fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
     """Validates that only one flag in a group is set.
     This is for flags that are marked as required via `Command().mark_flags_mutually_exclusive()`.
 
@@ -726,9 +726,9 @@ fn validate_mutually_exclusive_flag_group(data: Dict[StringKey, Dict[StringKey, 
 
 
 fn validate_flag_groups(
-    group_status: Dict[StringKey, Dict[StringKey, Bool]],
-    one_required_group_status: Dict[StringKey, Dict[StringKey, Bool]],
-    mutually_exclusive_group_status: Dict[StringKey, Dict[StringKey, Bool]],
+    group_status: Dict[String, Dict[String, Bool]],
+    one_required_group_status: Dict[String, Dict[String, Bool]],
+    mutually_exclusive_group_status: Dict[String, Dict[String, Bool]],
 ) -> None:
     """Validates the status of flag groups.
     Checks for flag groups that are required together, at least one required, and mutually exclusive.
