@@ -103,16 +103,16 @@ struct Profile:
             return NoColor()
 
         if color.isa[NoColor]():
-            return color.get[NoColor]()[]
+            return color[NoColor]
         elif color.isa[ANSIColor]():
-            return color.get[ANSIColor]()[]
+            return color[ANSIColor]
         elif color.isa[ANSI256Color]():
             if self.value == ANSI:
-                return ansi256_to_ansi(color.get[ANSIColor]()[].value)
+                return ansi256_to_ansi(color[ANSIColor].value)
 
-            return color.get[ANSI256Color]()[]
+            return color[ANSI256Color]
         elif color.isa[RGBColor]():
-            var h = hex_to_rgb(color.get[RGBColor]()[].value)
+            var h = hex_to_rgb(color[RGBColor].value)
 
             if self.value != TRUE_COLOR:
                 var ansi256 = hex_to_ansi256(h)
@@ -121,10 +121,10 @@ struct Profile:
 
                 return ansi256
 
-            return color.get[RGBColor]()[]
+            return color[RGBColor]
 
         # If it somehow gets here, just return No Color until I can figure out how to just return whatever color was passed in.
-        return color.get[NoColor]()[]
+        return color[NoColor]
 
     fn color(self, value: String) -> AnyColor:
         """Color creates a Color from a string. Valid inputs are hex colors, as well as

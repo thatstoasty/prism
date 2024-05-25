@@ -1,13 +1,11 @@
-from memory.arc import Arc
-from prism import Flag, Command, CommandArc
-from prism.vector import to_string
+from prism import FlagSet, Command
 
 
-fn test(command: CommandArc, args: List[String]) -> None:
+fn test(flags: FlagSet, args: List[String]) -> None:
     print("Pass tool, object, or thing as a subcommand!")
 
 
-fn tool_func(command: CommandArc, args: List[String]) -> None:
+fn tool_func(flags: FlagSet, args: List[String]) -> None:
     print("My tool!")
 
 

@@ -1,7 +1,6 @@
 # This code is based on https://github.com/tkaitchuck/aHash
 
-from math.bit import bswap
-from math.math import rotate_bits_left
+from bit import byte_reverse, rotate_bits_left
 
 alias U256 = SIMD[DType.uint64, 4]
 alias U128 = SIMD[DType.uint64, 2]
@@ -11,9 +10,9 @@ alias ROT = 23
 
 @always_inline
 fn folded_multiply(s: UInt64, by: UInt64) -> UInt64:
-    var b1 = s * bswap(by)
-    var b2 = bswap(s) * (~by)
-    return b1 ^ bswap(b2)
+    var b1 = s * byte_reverse(by)
+    var b2 = byte_reverse(s) * (~by)
+    return b1 ^ byte_reverse(b2)
 
 
 @always_inline

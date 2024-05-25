@@ -1,5 +1,5 @@
 # Adapted from https://github.com/maniartech/mojo-strings/blob/master/strings/builder.mojo
-# Modified to use List[Int8] instead of List[String]
+# Modified to use List[Byte] instead of List[String]
 
 import ..io
 from ..builtins import Byte
@@ -48,7 +48,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
             copy.append(0)
         return String(copy)
 
-    fn get_bytes(self) -> List[Int8]:
+    fn get_bytes(self) -> List[Byte]:
         """
         Returns a deepcopy of the byte array of the string builder.
 
@@ -57,7 +57,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
         """
         return List[Byte](self._vector)
 
-    fn get_null_terminated_bytes(self) -> List[Int8]:
+    fn get_null_terminated_bytes(self) -> List[Byte]:
         """
         Returns a deepcopy of the byte array of the string builder with a null terminator.
 
@@ -80,7 +80,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
         self._vector.extend(src)
         return len(src), Error()
 
-    fn write_byte(inout self, byte: Int8) -> (Int, Error):
+    fn write_byte(inout self, byte: Byte) -> (Int, Error):
         """
         Appends a byte array to the builder buffer.
 
@@ -122,7 +122,7 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
         """
         return self._vector[index]
 
-    fn __setitem__(inout self, index: Int, value: Int8):
+    fn __setitem__(inout self, index: Int, value: Byte):
         """
         Sets the string at the given index.
 
@@ -131,3 +131,91 @@ struct StringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWrite
           value: The value to set.
         """
         self._vector[index] = value
+
+
+@value
+struct NewStringBuilder(Stringable, Sized, io.Writer, io.ByteWriter, io.StringWriter):
+    """
+    A string builder class that allows for efficient string management and concatenation.
+    This class is useful when you need to build a string by appending multiple strings
+    together. It is around 20x faster than using the `+` operator to concatenate
+    strings because it avoids the overhead of creating and destroying many
+    intermediate strings and performs memcopy operations.
+
+    The result is a more efficient when building larger string concatenations. It
+    is generally not recommended to use this class for small concatenations such as
+    a few strings like `a + b + c + d` because the overhead of creating the string
+    builder and appending the strings is not worth the performance gain.
+
+    Example:
+      ```
+      from strings.builder import StringBuilder
+
+      var sb = StringBuilder()
+      sb.write_string("mojo")
+      sb.write_string("jojo")
+      print(sb) # mojojojo
+      ```
+    """
+
+    var _vector: DTypePointer[DType.uint8]
+    var _size: Int
+
+    fn __init__(inout self, *, size: Int = 4096):
+        self._vector = DTypePointer[DType.uint8]().alloc(size)
+        self._size = 0
+
+    fn __str__(self) -> String:
+        """
+        Converts the string builder to a string.
+
+        Returns:
+          The string representation of the string builder. Returns an empty
+          string if the string builder is empty.
+        """
+        var copy = DTypePointer[DType.uint8]().alloc(self._size)
+
+        for i in range(self._size):
+            memcpy(copy, self._vector, i)
+        return String(copy, self._size)
+
+    fn write(inout self, src: List[Byte]) -> (Int, Error):
+        """
+        Appends a byte array to the builder buffer.
+
+        Args:
+          src: The byte array to append.
+        """
+        for byte in src:
+            self._vector.store(self._size, byte[])
+            self._size += 1
+        return len(src), Error()
+
+    fn write_byte(inout self, byte: Byte) -> (Int, Error):
+        """
+        Appends a byte array to the builder buffer.
+
+        Args:
+            byte: The byte array to append.
+        """
+        self._vector.store(byte)
+        self._size += 1
+        return 1, Error()
+
+    fn write_string(inout self, src: String) -> (Int, Error):
+        """
+        Appends a string to the builder buffer.
+
+        Args:
+          src: The string to append.
+        """
+        return self.write(src.as_bytes())
+
+    fn __len__(self) -> Int:
+        """
+        Returns the length of the string builder.
+
+        Returns:
+          The length of the string builder.
+        """
+        return self._size

@@ -1,7 +1,4 @@
-from .list import equals
-
-
-alias Byte = Int8
+alias Byte = UInt8
 
 
 fn has_prefix(bytes: List[Byte], prefix: List[Byte]) -> Bool:
@@ -44,7 +41,6 @@ fn index_byte(bytes: List[Byte], delim: Byte) -> Int:
     Returns:
         The index of the first occurrence of the byte delim.
     """
-    var i = 0
     for i in range(len(bytes)):
         if bytes[i] == delim:
             return i

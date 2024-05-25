@@ -1,4 +1,3 @@
-from math import max
 from ..io import traits as io
 from ..builtins import copy, panic
 from ..builtins.bytes import Byte, index_byte

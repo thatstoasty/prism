@@ -1,9 +1,9 @@
-from prism import Flag, Command, CommandArc, minimum_n_args
+from prism import FlagSet, Command, minimum_n_args
 from examples.logging.log import logger, default_logger, json_logger
 
 
-fn handler(command: CommandArc, args: List[String]) -> None:
-    var print_type = command[].flags[].get_as_string("type").value()[]
+fn handler(flags: FlagSet, args: List[String]) -> None:
+    var print_type = flags.get_as_string("type").value()[]
     if print_type == "json":
         for arg in args:
             json_logger.info(arg[])

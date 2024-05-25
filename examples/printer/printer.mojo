@@ -1,15 +1,15 @@
-from time import now
-from prism import Flag, Command, CommandArc, exact_args
+from prism import FlagSet, Command
+from prism.command import exact_args
 from external.mist import TerminalStyle
 
 
-fn printer(command: CommandArc, args: List[String]) -> None:
+fn printer(flags: FlagSet, args: List[String]) -> None:
     if len(args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    var color = command[].flags[].get_as_string("color")
-    var formatting = command[].flags[].get_as_string("formatting")
+    var color = flags.get_as_string("color")
+    var formatting = flags.get_as_string("formatting")
     var style = TerminalStyle()
 
     if not color:
@@ -27,21 +27,17 @@ fn printer(command: CommandArc, args: List[String]) -> None:
         style = style.italic()
 
     print(style.render(args[0]))
-    return None
 
 
-fn pre_hook(command: CommandArc, args: List[String]) -> None:
+fn pre_hook(flags: FlagSet, args: List[String]) -> None:
     print("Pre-hook executed!")
-    return None
 
 
-fn post_hook(command: CommandArc, args: List[String]) -> None:
+fn post_hook(flags: FlagSet, args: List[String]) -> None:
     print("Post-hook executed!")
-    return None
 
 
 fn init() -> None:
-    var start = now()
     var root_command = Command(
         name="printer",
         description="Base command.",
@@ -55,7 +51,6 @@ fn init() -> None:
     root_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
 
     root_command.execute()
-    # print("duration", (now() - start) / 1e9)
 
 
 fn main() -> None:

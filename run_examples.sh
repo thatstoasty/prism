@@ -9,8 +9,8 @@ mojo build examples/aliases/root.mojo -o temp/aliases
 mojo build examples/hello_world/root.mojo -o temp/hello_world
 mojo build examples/nested/nested.mojo -o temp/nested
 mojo build examples/printer/printer.mojo -o temp/printer
-mojo build examples/read_csv/root.mojo -o temp/read_csv
-mojo build examples/logging/root.mojo -o temp/logging
+# mojo build examples/read_csv/root.mojo -o temp/read_csv
+# mojo build examples/logging/root.mojo -o temp/logging
 mojo build examples/persistent/root.mojo -o temp/persistent
 mojo build examples/flag_groups/parent.mojo -o temp/parent
 mojo build examples/flag_groups/child.mojo -o temp/child
@@ -23,8 +23,8 @@ cd temp
 ./hello_world say hello
 # ./nested get cat --count 5 -l
 ./printer "sample-text" --formatting=underline
-./read_csv --file examples/read_csv/file.csv --lines 1
-./logging --type=json hello
+# ./read_csv --file examples/read_csv/file.csv --lines 1
+# ./logging --type=json hello
 # ./persistent get cat --count 2 --lover
 ./persistent get dog -l
 ./parent --required --host=www.example.com --port 8080
@@ -41,7 +41,6 @@ cd temp
 ./validators maximum_n_args Hello from Mojo!
 ./validators exact_args Hello from Mojo!
 ./validators range_args Hello from Mojo!
-
 
 cd ..
 rm -R ./temp

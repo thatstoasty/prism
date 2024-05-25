@@ -146,7 +146,7 @@ struct FlagSet(Stringable, Sized):
         """
         var result = self.lookup_with_type(name, "String")
         if not result:
-            None
+            return None
 
         var flag = result.value()[]
         if not flag[].value:
@@ -162,7 +162,7 @@ struct FlagSet(Stringable, Sized):
         """
         var result = self.lookup_with_type(name, "Bool")
         if not result:
-            None
+            return None
 
         var flag = result.value()[]
         if not flag[].value:
@@ -178,7 +178,7 @@ struct FlagSet(Stringable, Sized):
         """
         var result = self.lookup_with_type(name, "Int")
         if not result:
-            None
+            return None
 
         var flag = result.value()[]
 
@@ -319,7 +319,7 @@ struct FlagSet(Stringable, Sized):
         """
         var result = self.lookup_with_type(name, "Float64")
         if not result:
-            None
+            return None
 
         var flag = result.value()[]
 
@@ -561,7 +561,7 @@ struct FlagSet(Stringable, Sized):
         if not result:
             return Error("FlagSet.set_annotation: Could not find flag with name: " + name)
 
-        result.value()[][].annotations.put(key, values)
+        result.value()[][].annotations[key] = values
         return Error()
 
     fn visit_all[visitor: FlagVisitorFn](self) -> None:
@@ -610,13 +610,9 @@ fn process_flag_for_group_annotation(
                     continue
 
                 for name in flag_names:
-                    try:
-                        group_status[group[]][name[]] = False
-                    except e:
-                        return Error(
-                            "process_flag_for_group_annotation: Failed to set group status to False for unset flag: "
-                            + str(e)
-                        )
+                    var entry = Dict[String, Bool]()
+                    entry[name[]] = False
+                    group_status[group[]] = entry
 
             # If flag.changed = True, then it had a value set on it.
             try:

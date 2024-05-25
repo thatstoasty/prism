@@ -1,7 +1,6 @@
 from collections.optional import Optional
-from ..builtins import cap, copy, Byte, Error, panic
+from ..builtins import cap, copy, Byte, panic
 from .traits import ERR_UNEXPECTED_EOF
-
 
 alias BUFFER_SIZE = 4096
 
@@ -419,7 +418,6 @@ fn read_all[R: Reader](inout reader: R) -> (List[Byte], Error):
     Returns:
         The data read."""
     var dest = List[Byte](capacity=BUFFER_SIZE)
-    var index: Int = 0
     var at_eof: Bool = False
 
     while True:

@@ -26,7 +26,7 @@ struct TimeZone(Stringable):
     @staticmethod
     fn local() -> TimeZone:
         var local_t = c_localtime(0)
-        return TimeZone(local_t.tm_gmtoff.to_int(), "local")
+        return TimeZone(int(local_t.tm_gmtoff), "local")
 
     @staticmethod
     fn from_utc(utc_str: String) raises -> TimeZone:

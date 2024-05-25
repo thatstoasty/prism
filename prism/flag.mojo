@@ -1,5 +1,4 @@
 from collections.optional import Optional
-from external.string_dict import Dict
 
 
 @value
@@ -14,7 +13,7 @@ struct Flag(CollectionElement, Stringable):
     var value: Optional[String]
     var default: String
     var type: String
-    var annotations: Dict[List[String]]
+    var annotations: Dict[String, List[String]]
     var changed: Bool
 
     fn __init__(
@@ -42,7 +41,7 @@ struct Flag(CollectionElement, Stringable):
         self.value = value
         self.default = default
         self.type = type
-        self.annotations = Dict[List[String]]()
+        self.annotations = Dict[String, List[String]]()
         self.changed = False
 
     fn __str__(self) -> String:
@@ -207,7 +206,6 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) -> (List[String], Er
 
             flag.value()[][].set_value(value)
         except e:
-            print(e)
             return remaining_args, e
 
         i += increment_by

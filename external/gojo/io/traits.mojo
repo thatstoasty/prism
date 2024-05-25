@@ -1,5 +1,5 @@
 from collections.optional import Optional
-from ..builtins import Byte, Error
+from ..builtins import Byte
 
 alias Rune = Int32
 

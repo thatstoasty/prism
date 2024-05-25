@@ -1,3 +1,5 @@
+from utils.static_tuple import StaticTuple
+
 # todo: hardcode for tmp
 alias _MAX_TIMESTAMP: Int = 32503737600
 alias MAX_TIMESTAMP = _MAX_TIMESTAMP

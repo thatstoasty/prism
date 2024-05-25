@@ -1,19 +1,18 @@
-from prism import Flag, Command, CommandArc
+from prism import FlagSet, Command
 from python import Python, PythonObject
 
 
-fn base(command: CommandArc, args: List[String]) -> None:
+fn base(flags: FlagSet, args: List[String]) -> None:
     print("This is the base command!")
     return None
 
 
-fn print_information(command: CommandArc, args: List[String]) -> None:
+fn print_information(flags: FlagSet, args: List[String]) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
     return None
 
 
-fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
-    var flags = command[].flags[]
+fn get_cat_fact(flags: FlagSet, args: List[String]) -> Error:
     var lover = flags.get_as_bool("lover")
     if lover and lover.value()[]:
         print("Hello fellow cat lover!")
@@ -43,8 +42,7 @@ fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
     return Error()
 
 
-fn get_dog_breeds(command: CommandArc, args: List[String]) -> Error:
-    var flags = command[].flags[]
+fn get_dog_breeds(flags: FlagSet, args: List[String]) -> Error:
     var lover = flags.get_as_bool("lover")
     if lover and lover.value()[]:
         print("Hello fellow dog lover!")
@@ -68,11 +66,11 @@ fn get_dog_breeds(command: CommandArc, args: List[String]) -> Error:
     return Error()
 
 
-fn pre_hook(command: CommandArc, args: List[String]) -> None:
+fn pre_hook(flags: FlagSet, args: List[String]) -> None:
     print("Pre-hook executed!")
 
 
-fn post_hook(command: CommandArc, args: List[String]) -> None:
+fn post_hook(flags: FlagSet, args: List[String]) -> None:
     print("Post-hook executed!")
 
 
@@ -86,7 +84,7 @@ fn init() -> None:
         persistent_pre_run=pre_hook,
         persistent_post_run=post_hook,
     )
-    get_command.persistent_flags[].add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
+    get_command.persistent_flags.add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
 
     var cat_command = Command(
         name="cat",

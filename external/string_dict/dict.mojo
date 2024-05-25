@@ -1,4 +1,4 @@
-from math.bit import bit_length, ctpop
+from bit import bit_width, pop_count
 from memory import memset_zero, memcpy
 from collections import List
 from .string_eq import eq
@@ -35,7 +35,7 @@ struct Dict[
             self.capacity = 8
         else:
             var icapacity = Int64(capacity)
-            self.capacity = capacity if ctpop(icapacity) == 1 else 1 << int(bit_length(icapacity))
+            self.capacity = capacity if pop_count(icapacity) == 1 else 1 << int(bit_width(icapacity))
         self.keys = KeysContainer[KeyOffsetType](capacity)
 
         @parameter

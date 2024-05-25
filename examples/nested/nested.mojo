@@ -1,19 +1,18 @@
-from prism import Flag, Command, CommandArc
+from prism import FlagSet, Command
 from python import Python, PythonObject
 
 
-fn base(command: CommandArc, args: List[String]) -> None:
+fn base(flags: FlagSet, args: List[String]) -> None:
     print("This is the base command!")
     return None
 
 
-fn print_information(command: CommandArc, args: List[String]) -> None:
+fn print_information(flags: FlagSet, args: List[String]) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
     return None
 
 
-fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
-    var flags = command[].flags[]
+fn get_cat_fact(flags: FlagSet, args: List[String]) -> Error:
     var lover = flags.get_as_bool("lover")
     if lover and lover.value()[]:
         print("Hello fellow cat lover!")
@@ -43,7 +42,7 @@ fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
     return Error()
 
 
-fn get_dog_breeds(command: CommandArc, args: List[String]) -> Error:
+fn get_dog_breeds(flags: FlagSet, args: List[String]) -> Error:
     try:
         var requests = Python.import_module("requests")
         # URL you want to send a GET request to

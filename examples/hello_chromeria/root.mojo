@@ -1,5 +1,4 @@
 from prism import FlagSet, Command
-from time import now
 
 
 fn test(flags: FlagSet, args: List[String]) -> None:
