@@ -2,7 +2,6 @@ from prism import (
     Flag,
     FlagSet,
     Command,
-    CommandArc,
     no_args,
     valid_args,
     minimum_n_args,
@@ -15,6 +14,8 @@ from prism import (
 fn test(flags: FlagSet, args: List[String]) -> None:
     for arg in args:
         print("Received", arg[])
+    # for flag in flags.flags:
+    #     print("Received", flag[].name)
 
 
 fn hello(flags: FlagSet, args: List[String]) -> None:

@@ -1,5 +1,5 @@
 from prism import FlagSet, Command
-from prism.command import exact_args
+import prism
 from external.mist import TerminalStyle
 
 
@@ -44,7 +44,7 @@ fn init() -> None:
         run=printer,
         pre_run=pre_hook,
         post_run=post_hook,
-        arg_validator=exact_args[1](),
+        arg_validator=prism.exact_args[1](),
     )
 
     root_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")

@@ -49,7 +49,7 @@ fn string_to_float(s: String) raises -> Float64:
 
 
 @value
-struct FlagSet(Stringable, Sized):
+struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
     var flags: List[Flag]
 
     fn __init__(inout self) -> None:
@@ -132,7 +132,9 @@ struct FlagSet(Stringable, Sized):
         Returns:
             Optional Reference to the Flag.
         """
+        print(name, type)
         for i in range(len(self[].flags)):
+            print(self[].flags[i].name, self[].flags[i].type)
             if self[].flags[i].name == name and self[].flags[i].type == type:
                 return self[].flags.__get_ref(i)
 

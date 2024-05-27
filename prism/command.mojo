@@ -6,8 +6,7 @@ from external.gojo.builtins import panic
 from external.gojo.strings import StringBuilder
 from .flag import Flag, get_flags
 from .flag_set import FlagSet, process_flag_for_group_annotation, validate_flag_groups
-
-# from .args import arbitrary_args, get_args
+from .args import arbitrary_args, get_args, ArgValidatorFn
 from .vector import join, to_string, contains
 
 # Individual flag annotations
@@ -31,32 +30,32 @@ fn get_args_as_list() -> List[String]:
     return args_list
 
 
-fn default_help(command: Arc[Command]) -> String:
+fn default_help(
+    description: String, aliases: List[String], full_command: String, children: List[String], flags: FlagSet
+) -> String:
     """Prints the help information for the command."""
-    var cmd = command
     var builder = StringBuilder()
-    _ = builder.write_string(cmd[].description)
+    _ = builder.write_string(description)
 
-    if cmd[].aliases:
+    if aliases:
         _ = builder.write_string("\n\nAliases:")
-        _ = builder.write_string(sprintf("\n  %s", to_string(cmd[].aliases)))
+        _ = builder.write_string(sprintf("\n  %s", to_string(aliases)))
 
     # Build usage statement arguments depending on the command's children and flags.
-    var full_command = cmd[]._full_command()
     _ = builder.write_string(sprintf("\n\nUsage:\n  %s%s", full_command, String(" [args]")))
-    if len(cmd[].children) > 0:
+    if len(children) > 0:
         _ = builder.write_string(" [command]")
-    if len(cmd[].flags) > 0:
+    if len(flags) > 0:
         _ = builder.write_string(" [flags]")
 
-    if cmd[].children:
+    if children:
         _ = builder.write_string("\n\nAvailable commands:")
-        for child in cmd[].children:
-            _ = builder.write_string(sprintf("\n  %s", str(child[][])))
+        for child in children:
+            _ = builder.write_string(sprintf("\n  %s", child[]))
 
-    if cmd[].flags.flags:
+    if flags.flags:
         _ = builder.write_string("\n\nAvailable flags:")
-        for flag in cmd[].flags.flags:
+        for flag in flags.flags:
             _ = builder.write_string(sprintf("\n  -%s, --%s    %s", flag[].shorthand, flag[].name, flag[].usage))
 
     _ = builder.write_string(
@@ -65,16 +64,39 @@ fn default_help(command: Arc[Command]) -> String:
     return str(builder)
 
 
-# alias CommandArc = Arc[Command]
-alias CommandFn = fn (FlagSet, List[String]) -> None
-alias CommandFnErr = fn (FlagSet, List[String]) -> Error
-alias HelpFn = fn (Arc[Command]) -> String
-alias ParentVisitorFn = fn (Arc[Command]) capturing -> None
+alias CommandFn = fn (flags: FlagSet, args: List[String]) -> None
+alias CommandFnErr = fn (flags: FlagSet, args: List[String]) -> Error
+alias HelpFn = fn (
+    description: String, aliases: List[String], full_command: String, children: List[String], flags: FlagSet
+) -> String
+alias ParentVisitorFn = fn (command: Command) capturing -> None
 
 # Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 # If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down.
 # TODO: For now it's locked to False until file scope variables.
 alias ENABLE_TRAVERSE_RUN_HOOKS = False
+
+
+fn parse_command_from_args(start: Command, args: List[String]) -> (Command, List[String]):
+    var number_of_args = len(args)
+    var command = start
+    var children = command.children
+    var leftover_args_start_index = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
+
+    for arg in args:
+        for command_ref in children:
+            if command_ref[][].name == arg[] or contains(command_ref[][].aliases, arg[]):
+                command = command_ref[][]
+                children = command.children
+                leftover_args_start_index += 1
+                break
+
+    # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
+    var remaining_args = List[String]()
+    if number_of_args >= leftover_args_start_index:
+        remaining_args = args[leftover_args_start_index:number_of_args]
+
+    return command, remaining_args
 
 
 # TODO: For parent Arc[Optional[Self]] works but Optional[Arc[Self]] causes compiler issues.
@@ -147,7 +169,8 @@ struct Command(CollectionElement):
     fn __init__(
         inout self,
         name: String,
-        description: String,
+        description: String = "",
+        arg_validator: ArgValidatorFn = arbitrary_args,
         aliases: List[String] = List[String](),
         valid_args: List[String] = List[String](),
         run: Optional[CommandFn] = None,
@@ -160,7 +183,7 @@ struct Command(CollectionElement):
         persistent_post_run: Optional[CommandFn] = None,
         persistent_erroring_pre_run: Optional[CommandFnErr] = None,
         persistent_erroring_post_run: Optional[CommandFnErr] = None,
-        # help: HelpFn = default_help
+        help: HelpFn = default_help,
     ):
         if not run and not erroring_run:
             panic("A command must have a run or erroring_run function.")
@@ -169,64 +192,7 @@ struct Command(CollectionElement):
         self.description = description
         self.aliases = aliases
 
-        self.help = default_help
-        self.group_id = ""
-
-        self.pre_run = pre_run
-        self.run = run
-        self.post_run = post_run
-
-        self.erroring_pre_run = erroring_pre_run
-        self.erroring_run = erroring_run
-        self.erroring_post_run = erroring_post_run
-
-        self.persistent_pre_run = persistent_pre_run
-        self.persistent_post_run = persistent_post_run
-        self.persistent_erroring_pre_run = persistent_erroring_pre_run
-        self.persistent_erroring_post_run = persistent_erroring_post_run
-
-        self.arg_validator = arbitrary_args
-        self.valid_args = valid_args
-
-        self.children = List[Arc[Self]]()
-        self.parent = Arc[Optional[Command]](None)
-
-        # These need to be mutable so we can add flags to them.
-        self.flags = FlagSet()
-        self.local_flags = FlagSet()
-        self.persistent_flags = FlagSet()
-        self._inherited_flags = FlagSet()
-        self.flags.add_bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
-
-    # TODO: Why do we have 2 almost indentical init functions? Setting a default arg_validator value, breaks the compiler as of 24.2.
-    fn __init__[
-        arg_validator: ArgValidatorFn
-    ](
-        inout self,
-        name: String,
-        description: String,
-        aliases: List[String] = List[String](),
-        valid_args: List[String] = List[String](),
-        run: Optional[CommandFn] = None,
-        pre_run: Optional[CommandFn] = None,
-        post_run: Optional[CommandFn] = None,
-        erroring_run: Optional[CommandFnErr] = None,
-        erroring_pre_run: Optional[CommandFnErr] = None,
-        erroring_post_run: Optional[CommandFnErr] = None,
-        persistent_pre_run: Optional[CommandFn] = None,
-        persistent_post_run: Optional[CommandFn] = None,
-        persistent_erroring_pre_run: Optional[CommandFnErr] = None,
-        persistent_erroring_post_run: Optional[CommandFnErr] = None,
-        # help: HelpFn = default_help
-    ):
-        if not run and not erroring_run:
-            panic("A command must have a run or erroring_run function.")
-
-        self.name = name
-        self.description = description
-        self.aliases = aliases
-
-        self.help = default_help
+        self.help = help
         self.group_id = ""
 
         self.pre_run = pre_run
@@ -254,6 +220,7 @@ struct Command(CollectionElement):
         self.flags.add_bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
 
     fn __copyinit__(inout self, existing: Self):
+        print("copying", existing.name)
         self.name = existing.name
         self.description = existing.description
         self.aliases = existing.aliases
@@ -345,12 +312,12 @@ struct Command(CollectionElement):
         else:
             return self.name
 
-    # fn _root(self: Reference[Self]) -> Arc[Command]:
-    #     """Returns the root command of the command tree."""
-    #     if self[].has_parent():
-    #         return self[].parent.value()[][]._root()
+    fn _root(self) -> ref [__lifetime_of(self)] Self:
+        """Returns the root command of the command tree."""
+        if self.has_parent():
+            return self.parent[].value()[]._root()
 
-    #     return self[]
+        return self
 
     fn validate_flag_groups(self):
         var group_status = Dict[String, Dict[String, Bool]]()
@@ -376,29 +343,26 @@ struct Command(CollectionElement):
         # Validate required flag groups
         validate_flag_groups(group_status, one_required_group_status, mutually_exclusive_group_status)
 
-    # fn validate_args(self, args: List[String]) -> Optional[String]:
-    #     return self.arg_validator(self, args)
+    # fn parse_command_from_args(start: Reference[Command], args: List[String]) -> (Command, List[String]):
+    #     var number_of_args = len(args)
+    #     var command = start
+    #     var children = command[].children
+    #     var leftover_args_start_index = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
 
-    fn parse_command_from_args(self, args: List[String]) -> (Self, List[String]):
-        var number_of_args = len(args)
-        var command = self
-        var children = self.children
-        var leftover_args_start_index = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
+    #     for arg in args:
+    #         for command_ref in children:
+    #             if command_ref[][].name == arg[] or contains(command_ref[][].aliases, arg[]):
+    #                 command = Reference(command_ref[][])
+    #                 children = command[].children
+    #                 leftover_args_start_index += 1
+    #                 break
 
-        for arg in args:
-            for command_ref in children:
-                if command_ref[][].name == arg[] or contains(command_ref[][].aliases, arg[]):
-                    command = command_ref[][]
-                    children = command.children
-                    leftover_args_start_index += 1
-                    break
+    #     # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
+    #     var remaining_args = List[String]()
+    #     if number_of_args >= leftover_args_start_index:
+    #         remaining_args = args[leftover_args_start_index:number_of_args]
 
-        # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
-        var remaining_args = List[String]()
-        if number_of_args >= leftover_args_start_index:
-            remaining_args = args[leftover_args_start_index:number_of_args]
-
-        return command, remaining_args
+    #     return command, remaining_args
 
     fn execute(self) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch."""
@@ -407,118 +371,124 @@ struct Command(CollectionElement):
         # TODO: Tree traversal is new to me, there's probably a better way to do this.
 
         # Always execute from the root command, regardless of what command was executed in main.
-        # print(self.name)
-        # if self.has_parent():
-        #     return self._root()[].execute()
+        if self.has_parent():
+            return self._root().execute()
 
         var args = get_args_as_list()
         var remaining_args: List[String]
         var command: Command
-        command, remaining_args = self.parse_command_from_args(args)
+        print("getting command")
+        command, remaining_args = parse_command_from_args(self, args)
+        print("got command")
 
-        # # Merge local and inherited flags
-        # command._merge_flags()
+        # Merge local and inherited flags
+        print("merging")
+        command._merge_flags()
+        print("merged")
 
-        # # Add all parents to the list to check if they have persistent pre/post hooks.
-        # var parents = List[Self]()
+        # Add all parents to the list to check if they have persistent pre/post hooks.
+        var parents = List[Self]()
 
-        # @always_inline
-        # fn append_parent(command: Self) capturing -> None:
-        #     parents.append(command)
+        @always_inline
+        fn append_parent(command: Self) capturing -> None:
+            parents.append(command)
 
-        # command.visit_parents[append_parent]()
+        command.visit_parents[append_parent]()
 
-        # # If ENABLE_TRAVERSE_RUN_HOOKS is True, reverse the list to start from the root command rather than
-        # # from the child. This is because all of the persistent hooks will be run.
-        # @parameter
-        # if ENABLE_TRAVERSE_RUN_HOOKS:
-        #     parents.reverse()
+        # If ENABLE_TRAVERSE_RUN_HOOKS is True, reverse the list to start from the root command rather than
+        # from the child. This is because all of the persistent hooks will be run.
+        @parameter
+        if ENABLE_TRAVERSE_RUN_HOOKS:
+            parents.reverse()
 
-        # # Get the flags for the command to be executed.
-        # # store flags as a mutable ref
-        # var err: Error
-        # remaining_args, err = get_flags(command.flags, remaining_args)
-        # if err:
-        #     panic(err)
+        # Get the flags for the command to be executed.
+        # store flags as a mutable ref
+        var err: Error
+        remaining_args, err = get_flags(command.flags, remaining_args)
+        if err:
+            panic(err)
 
-        # # Check if the help flag was passed
-        # var help_passed = command.flags.get_as_bool("help")
-        # if help_passed.value()[] == True:
-        #     print(command.help(command))
-        #     return None
+        # Check if the help flag was passed
+        var help_passed = command.flags.get_as_bool("help")
+        if help_passed.value()[] == True:
+            var children = List[String]()
+            for cmd in command.children:
+                children.append(str(cmd[][]))
+            print(command.help(command.description, command.aliases, command._full_command(), children, command.flags))
+            return None
 
-        # # Validate individual required flags (eg: flag is required)
-        # err = command.validate_required_flags()
-        # if err:
-        #     panic(err)
+        # Validate individual required flags (eg: flag is required)
+        err = command.validate_required_flags()
+        if err:
+            panic(err)
 
-        # # Validate flag groups (eg: one of required, mutually exclusive, required together)
-        # command.validate_flag_groups()
+        # Validate flag groups (eg: one of required, mutually exclusive, required together)
+        command.validate_flag_groups()
 
-        # # Validate the remaining arguments
-        # var error_message = command.arg_validator(command, remaining_args)
-        # if error_message:
-        #     panic(error_message.value()[])
+        # Validate the remaining arguments
+        var error_message = command.arg_validator(command.name, remaining_args)
+        if error_message:
+            panic(error_message.value()[])
 
-        # # Run the persistent pre-run hooks.
-        # for parent in parents:
-        #     if parent[].persistent_erroring_pre_run:
-        #         err = parent[].persistent_erroring_pre_run.value()[](command.flags, remaining_args)
-        #         if err:
-        #             panic(err)
+        # Run the persistent pre-run hooks.
+        for parent in parents:
+            if parent[].persistent_erroring_pre_run:
+                err = parent[].persistent_erroring_pre_run.value()[](command.flags, remaining_args)
+                if err:
+                    panic(err)
 
-        #         @parameter
-        #         if not ENABLE_TRAVERSE_RUN_HOOKS:
-        #             break
-        #     else:
-        #         if parent[].persistent_pre_run:
-        #             parent[].persistent_pre_run.value()[](command.flags, remaining_args)
+                @parameter
+                if not ENABLE_TRAVERSE_RUN_HOOKS:
+                    break
+            else:
+                if parent[].persistent_pre_run:
+                    parent[].persistent_pre_run.value()[](command.flags, remaining_args)
 
-        #             @parameter
-        #             if not ENABLE_TRAVERSE_RUN_HOOKS:
-        #                 break
+                    @parameter
+                    if not ENABLE_TRAVERSE_RUN_HOOKS:
+                        break
 
-        # # Run the pre-run hooks.
-        # if command.pre_run:
-        #     command.pre_run.value()[](command.flags, remaining_args)
-        # elif command.erroring_pre_run:
-        #     err = command.erroring_pre_run.value()[](command.flags, remaining_args)
-        #     if err:
-        #         panic(err)
+        # Run the pre-run hooks.
+        if command.pre_run:
+            command.pre_run.value()[](command.flags, remaining_args)
+        elif command.erroring_pre_run:
+            err = command.erroring_pre_run.value()[](command.flags, remaining_args)
+            if err:
+                panic(err)
 
-        # # Run the function's commands.
-        # if command.run:
-        #     command.run.value()[](command.flags, remaining_args)
-        # else:
-        #     err = command.erroring_run.value()[](command.flags, remaining_args)
-        #     if err:
-        #         panic(err)
+        # Run the function's commands.
+        if command.run:
+            command.run.value()[](command.flags, remaining_args)
+        else:
+            err = command.erroring_run.value()[](command.flags, remaining_args)
+            if err:
+                panic(err)
 
-        # # Run the persistent post-run hooks.
-        # for parent in parents:
-        #     if parent[].persistent_erroring_post_run:
-        #         err = parent[].persistent_erroring_post_run.value()[](command.flags, remaining_args)
-        #         if err:
-        #             panic(err)
+        # Run the persistent post-run hooks.
+        for parent in parents:
+            if parent[].persistent_erroring_post_run:
+                err = parent[].persistent_erroring_post_run.value()[](command.flags, remaining_args)
+                if err:
+                    panic(err)
 
-        #         @parameter
-        #         if not ENABLE_TRAVERSE_RUN_HOOKS:
-        #             break
-        #     else:
-        #         if parent[].persistent_post_run:
-        #             parent[].persistent_post_run.value()[](command.flags, remaining_args)
+                @parameter
+                if not ENABLE_TRAVERSE_RUN_HOOKS:
+                    break
+            else:
+                if parent[].persistent_post_run:
+                    parent[].persistent_post_run.value()[](command.flags, remaining_args)
 
-        #             @parameter
-        #             if not ENABLE_TRAVERSE_RUN_HOOKS:
-        #                 break
+                    @parameter
+                    if not ENABLE_TRAVERSE_RUN_HOOKS:
+                        break
 
-        # # Run the post-run hooks.
-        # if command.post_run:
-        #     command.post_run.value()[](command.flags, remaining_args)
-        # elif command.erroring_post_run:
-        #     err = command.erroring_post_run.value()[](command.flags, remaining_args)
-        #     if err:
-        #         panic(err)
+        # Run the post-run hooks.
+        if command.post_run:
+            command.post_run.value()[](command.flags, remaining_args)
+        elif command.erroring_post_run:
+            err = command.erroring_post_run.value()[](command.flags, remaining_args)
+            if err:
+                panic(err)
 
     fn inherited_flags(self) -> FlagSet:
         """Returns the flags for the command and inherited flags from its parent.
@@ -529,10 +499,9 @@ struct Command(CollectionElement):
         var i_flags = FlagSet()
 
         @always_inline
-        fn add_parent_persistent_flags(parent: Arc[Self]) capturing -> None:
-            var cmd = parent
-            if cmd[].persistent_flags:
-                i_flags += cmd[].persistent_flags
+        fn add_parent_persistent_flags(parent: Self) capturing -> None:
+            if parent.persistent_flags:
+                i_flags += parent.persistent_flags
 
         self.visit_parents[add_parent_persistent_flags]()
 
@@ -541,18 +510,22 @@ struct Command(CollectionElement):
     fn _merge_flags(inout self):
         """Returns all flags for the command and inherited flags from its parent."""
         # Set mutability of flag set by initializing it as a var.
+        print(self.name, len(self.flags))
         self.flags += self.persistent_flags
         self._inherited_flags = self.inherited_flags()
         self.flags += self._inherited_flags
+        print(self.name, len(self.flags))
 
-    fn add_command(inout self, inout command: Command):
+    fn add_command(inout self, inout command: Arc[Command]):
         """Adds child command and set's child's parent attribute to self.
 
         Args:
             command: The command to add as a child of self.
         """
-        self.children.append(Arc(command))
-        command.parent = self
+        print("maybe copying>?")
+        self.children.append(Arc(command[]))
+        print("maybe copied>?")
+        command[].parent = Arc[Optional[Self]](self)
 
     fn mark_flag_required(inout self, flag_name: String) -> None:
         """Marks the given flag with annotations so that Prism errors
@@ -693,13 +666,6 @@ struct Command(CollectionElement):
 
     # NOTE: These wrappers are just nice to have. Feels good to call Command().add_flag()
     # instead of Command().flags[].add_flag()
-    # fn flag_list(self) -> List[Arc[Flag]]:
-    #     """Returns a list of references to all flags in the merged flag set (local, persistent, inherited).
-
-    #     This is just a convenience function to avoid having to call Command().flags[].get_flags().
-    #     """
-    #     return self.flags.flags
-
     fn add_bool_flag(
         inout self,
         name: String,
@@ -865,180 +831,3 @@ struct Command(CollectionElement):
             default: The default value of the flag.
         """
         self.flags.add_float64_flag(name=name, usage=usage, default=default, shorthand=shorthand)
-
-
-# from collections.optional import Optional
-# from external.gojo.fmt import sprintf
-# from .vector import contains
-# from .command import Command
-
-alias ArgValidatorFn = fn (UnsafePointer[Command], List[String]) -> Optional[String]
-
-
-fn no_args(command: UnsafePointer[Command], args: List[String]) -> Optional[String]:
-    """Returns an error if the command has any arguments.
-
-    Args:
-        command: Reference to the command being executed.
-        args: The arguments to check.
-    """
-    var cmd = command
-    if len(args) > 0:
-        return sprintf("The command `%s` does not take any arguments.", cmd[].name)
-    return None
-
-
-fn arbitrary_args(command: UnsafePointer[Command], args: List[String]) -> Optional[String]:
-    """Never returns an error.
-
-    Args:
-        command: Reference to the command being executed.
-        args: The arguments to check.
-    """
-    return None
-
-
-fn minimum_n_args[n: Int]() -> ArgValidatorFn:
-    """Returns an error if there is not at least n arguments.
-
-    Params:
-        n: The minimum number of arguments.
-
-    Returns:
-        A function that checks the number of arguments.
-    """
-
-    fn less_than_n_args(command: UnsafePointer[Command], args: List[String]) -> Optional[String]:
-        var cmd = command
-        if len(args) < n:
-            return sprintf(
-                "The command `%s` accepts at least %d argument(s). Received: %d.",
-                cmd[].name,
-                n,
-                len(args),
-            )
-        return None
-
-    return less_than_n_args
-
-
-fn maximum_n_args[n: Int]() -> ArgValidatorFn:
-    """Returns an error if there are more than n arguments.
-
-    Params:
-        n: The maximum number of arguments.
-
-    Returns:
-        A function that checks the number of arguments.
-    """
-
-    fn more_than_n_args(command: UnsafePointer[Command], args: List[String]) -> Optional[String]:
-        var cmd = command
-        if len(args) > n:
-            return sprintf("The command `%s` accepts at most %d argument(s). Received: %d.", cmd[].name, n, len(args))
-        return None
-
-    return more_than_n_args
-
-
-fn exact_args[n: Int]() -> ArgValidatorFn:
-    """Returns an error if there are not exactly n arguments.
-
-    Params:
-        n: The number of arguments.
-
-    Returns:
-        A function that checks the number of arguments.
-    """
-
-    fn exactly_n_args(command: UnsafePointer[Command], args: List[String]) -> Optional[String]:
-        var cmd = command
-        if len(args) != n:
-            return sprintf("The command `%s` accepts exactly %d argument(s). Received: %d.", cmd[].name, n, len(args))
-        return None
-
-    return exactly_n_args
-
-
-fn valid_args[valid: List[String]]() -> ArgValidatorFn:
-    """Returns an error if threre are any positional args that are not in the command's valid_args.
-
-    Params:
-        valid: The valid arguments to check against.
-    """
-
-    fn only_valid_args(command: UnsafePointer[Command], args: List[String]) -> Optional[String]:
-        var cmd = command
-        if len(valid) > 0:
-            for arg in args:
-                if not contains(valid, arg[]):
-                    return sprintf("Invalid argument: `%s`, for the command `%s`.", arg[], cmd[].name)
-        return None
-
-    return only_valid_args
-
-
-fn range_args[minimum: Int, maximum: Int]() -> ArgValidatorFn:
-    """Returns an error if there are not exactly n arguments.
-
-    Params:
-        minimum: The minimum number of arguments.
-        maximum: The maximum number of arguments.
-
-    Returns:
-        A function that checks the number of arguments.
-    """
-
-    fn range_n_args(command: UnsafePointer[Command], args: List[String]) -> Optional[String]:
-        var cmd = command
-        if len(args) < minimum or len(args) > maximum:
-            return sprintf(
-                "The command `%s`, accepts between %d to %d argument(s). Received: %d.",
-                cmd[].name,
-                minimum,
-                maximum,
-                len(args),
-            )
-        return None
-
-    return range_n_args
-
-
-# TODO: Having some issues with varadic list of functions, so using List for now.
-fn match_all[arg_validators: List[ArgValidatorFn]]() -> ArgValidatorFn:
-    """Returns an error if any of the arg_validators return an error.
-
-    Params:
-        arg_validators: A list of ArgValidatorFn functions that check the arguments.
-
-    Returns:
-        A function that checks all the arguments using the arg_validators list..
-    """
-
-    fn match_all_args(command: UnsafePointer[Command], args: List[String]) -> Optional[String]:
-        for i in range(len(arg_validators)):
-            var error = arg_validators[i](command, args)
-            if error:
-                return error
-        return None
-
-    return match_all_args
-
-
-fn get_args(arguments: List[String]) -> List[String]:
-    """Parses flags and args from the args passed via the command line
-    and adds them to their appropriate collections.
-
-    Args:
-        arguments: The arguments passed via the command line.
-
-    Returns:
-        The arguments that are not flags.
-    """
-    var args = List[String]()
-    for i in range(len(arguments)):
-        # Argument is not a shorthand or full flag.
-        var argument = arguments[i]
-        if not (argument.startswith("-", 0, 1)):
-            args.append(argument)
-    return args

@@ -11,7 +11,7 @@ Inspired by: `Cobra`!
 
 ## Usage
 
-WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples. 
+WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples.
 
 You should be able to build the package by running `mojo package prism -I external`. For the easiest method, I recommend just copying the entire external folder into your repository, then copy the `prism` folder into the external folder as well.
 
@@ -285,10 +285,14 @@ fn init() -> None:
 
 - Tree traversal improvements.
 - Once we have kwarg unpacking, update `Command().add_flag` to pass kwargs along.
-- Considering adding convenience functions for adding persistent flags, but I don't want to make the Command struct too massive. It may be better to just limit setting flags to the `command[].flags[].add_flag()` pattern. Auto dereferencing will most likely make this look less verbose in the future. For now persistent flags will be set via `command[].persistent_flags[].add_flag()`.
+- Considering adding convenience functions for adding persistent flags, but I don't want to make the Command struct too massive. It may be better to just limit setting flags to the `command[].flags.add_flag()` pattern. Auto dereferencing will most likely make this look less verbose in the future. For now persistent flags will be set via `command[].persistent_flags.add_flag()`.
 - Once we have `Result[T]`, I will refactor raising functions to return results instead.
 
 ### Bugs
 
-- `Command` has 2 almost indentical init functions because setting a default `arg_validator` value, breaks the compiler as of 24.2.
 - Error message from `get_flags` comes up blank when finally exiting the program. For now, just printing the error message before the Error is returned. Seems like an issue with catching a raised Error and then returning it. Will try returning an Error instead of raising it.
+
+### Mojo Bugs
+
+- Self referential structs are not really supported yet, so any recursive references have been removed for the time being.
+- Calling functions stored within an optional leads to function arguments being incorrect when accessed.

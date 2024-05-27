@@ -82,9 +82,7 @@ struct Flag(CollectionElement, Stringable):
         self.changed = True
 
 
-fn parse_flag(
-    i: Int, argument: String, arguments: List[String], flags: Reference[FlagSet]
-) raises -> Tuple[String, String, Int]:
+fn parse_flag(i: Int, argument: String, arguments: List[String], flags: FlagSet) raises -> Tuple[String, String, Int]:
     """Parses a flag and returns the name, value, and the index to increment by.
 
     Args:
@@ -99,18 +97,18 @@ fn parse_flag(
         var name = flag[0][2:]
         var value = flag[1]
 
-        if name not in flags[]:
+        if name not in flags:
             raise Error("Command does not accept the flag supplied: " + name)
 
         return name, value, 1
 
     # Flag with value set like "--flag <value>"
     var name = argument[2:]
-    if name not in flags[]:
+    if name not in flags:
         raise Error("Command does not accept the flag supplied: " + name)
 
     # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-    if flags[].get_as_bool(name):
+    if flags.get_as_bool(name):
         return name, String("True"), 1
 
     if i + 1 >= len(arguments):
@@ -206,6 +204,7 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) -> (List[String], Er
 
             flag.value()[][].set_value(value)
         except e:
+            print(e)
             return remaining_args, e
 
         i += increment_by

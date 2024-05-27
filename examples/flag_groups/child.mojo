@@ -23,7 +23,8 @@ fn init() -> None:
     var tool_command = Command(name="tool", description="This is a dummy command!", run=tool_func)
     tool_command.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
     tool_command.add_string_flag(name="uri", shorthand="u", usage="URI")
-    root_command.add_command(tool_command)
+    var r = Arc(tool_command)
+    root_command.add_command(r)
 
     tool_command.mark_flag_required("also")
     tool_command.mark_flags_required_together("host", "port")

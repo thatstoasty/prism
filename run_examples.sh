@@ -25,7 +25,7 @@ cd temp
 ./printer "sample-text" --formatting=underline
 # ./read_csv --file examples/read_csv/file.csv --lines 1
 # ./logging --type=json hello
-# ./persistent get cat --count 2 --lover
+./persistent get cat --count 2 --lover
 ./persistent get dog -l
 ./parent --required --host=www.example.com --port 8080
 ./parent --required --host www.example.com
