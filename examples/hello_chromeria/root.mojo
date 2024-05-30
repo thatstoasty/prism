@@ -1,4 +1,4 @@
-from prism import FlagSet, Command
+from prism import FlagSet, Command, CLI
 
 
 fn test(flags: FlagSet, args: List[String]) -> None:
@@ -15,11 +15,11 @@ fn init() -> None:
         description="This is a dummy command!",
         run=test,
     )
-
     var hello_command = Command(name="chromeria", description="This is a dummy command!", run=hello)
-
-    root_command.add_command(hello_command)
-    root_command.execute()
+    var cli = CLI()
+    cli.add_command(root_command)
+    cli.add_command(hello_command, parent_name=root_command.name)
+    cli.run()
 
 
 fn main() -> None:

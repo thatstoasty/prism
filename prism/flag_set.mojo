@@ -132,9 +132,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         Returns:
             Optional Reference to the Flag.
         """
-        print(name, type)
         for i in range(len(self[].flags)):
-            print(self[].flags[i].name, self[].flags[i].type)
             if self[].flags[i].name == name and self[].flags[i].type == type:
                 return self[].flags.__get_ref(i)
 

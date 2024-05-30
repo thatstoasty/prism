@@ -19,7 +19,11 @@ from .args import (
 )
 from .flag import Flag
 from .flag_set import FlagSet
+from .cli import CLI
 
-alias i1 = __mlir_type.i1
-alias i1_1 = __mlir_attr.`1: i1`
-alias i1_0 = __mlir_attr.`0: i1`
+alias ID = Int
+
+# Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
+# If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down.
+# TODO: For now it's locked to False until file scope variables.
+alias ENABLE_TRAVERSE_RUN_HOOKS = False

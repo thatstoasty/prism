@@ -1,4 +1,4 @@
-from prism import FlagSet, Command
+from prism import FlagSet, Command, CLI
 
 
 fn test(flags: FlagSet, args: List[String]) -> None:
@@ -9,7 +9,8 @@ fn tool_func(flags: FlagSet, args: List[String]) -> None:
     print("My tool!")
 
 
-fn init() -> None:
+fn init() raises -> None:
+    var cli = CLI()
     var root_command = Command(
         name="my",
         description="This is a dummy command!",
@@ -21,16 +22,22 @@ fn init() -> None:
     root_command.mark_persistent_flag_required("required")
 
     var tool_command = Command(name="tool", description="This is a dummy command!", run=tool_func)
-    tool_command.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
-    tool_command.add_string_flag(name="uri", shorthand="u", usage="URI")
-    var r = Arc(tool_command)
-    root_command.add_command(r)
+    cli.add_command(root_command^)
+    cli.add_command(tool_command^, parent_name="my")
+    var tool = cli.lookup(tool_command.name)
 
-    tool_command.mark_flag_required("also")
-    tool_command.mark_flags_required_together("host", "port")
-    tool_command.mark_flags_mutually_exclusive("host", "uri")
+    tool.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
+    tool.add_string_flag(name="uri", shorthand="u", usage="URI")
+    tool.mark_flag_required("also")
+    tool.mark_flags_required_together("host", "port")
+    tool.mark_flags_mutually_exclusive("host", "uri")
+    # tool_command.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
+    # tool_command.add_string_flag(name="uri", shorthand="u", usage="URI")
+    # tool_command.mark_flag_required("also")
+    # tool_command.mark_flags_required_together("host", "port")
+    # tool_command.mark_flags_mutually_exclusive("host", "uri")
 
-    root_command.execute()
+    # cli.run()
 
 
 fn main() -> None:
