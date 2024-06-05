@@ -24,13 +24,13 @@ fn init() raises -> None:
     var tool_command = Command(name="tool", description="This is a dummy command!", run=tool_func)
     cli.add_command(root_command^)
     cli.add_command(tool_command^, parent_name="my")
-    var tool = cli.lookup(tool_command.name)
+    var tool = cli.lookup("tool")
 
-    tool.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
-    tool.add_string_flag(name="uri", shorthand="u", usage="URI")
-    tool.mark_flag_required("also")
-    tool.mark_flags_required_together("host", "port")
-    tool.mark_flags_mutually_exclusive("host", "uri")
+    tool[].add_bool_flag(name="also", shorthand="a", usage="Also always required.")
+    tool[].add_string_flag(name="uri", shorthand="u", usage="URI")
+    tool[].mark_flag_required("also")
+    tool[].mark_flags_required_together("host", "port")
+    tool[].mark_flags_mutually_exclusive("host", "uri")
     # tool_command.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
     # tool_command.add_string_flag(name="uri", shorthand="u", usage="URI")
     # tool_command.mark_flag_required("also")
@@ -40,5 +40,5 @@ fn init() raises -> None:
     # cli.run()
 
 
-fn main() -> None:
+fn main() raises -> None:
     init()

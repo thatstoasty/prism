@@ -34,31 +34,34 @@ struct CLI:
         if parent_name != "":
             var parent_id = self.get_id(parent_name)
             if parent_id:
-                var parent = self.lookup(parent_id.value()[])
-                parent.add_child(command.id)
-                command.add_parent(parent_id.value()[])
+                var parent = self.lookup(parent_id.value())
+                parent[].add_child(command.id)
+                command.add_parent(parent_id.value())
 
         self._merge_flags(command)
         self.commands[self.next_id] = command^
         self.next_id += 1
 
-    fn lookup(self, id: ID) -> Reference[Command, False, __lifetime_of(self)]:
+    fn imm_lookup(self, id: ID) -> Reference[Command, __lifetime_of(self)]:
         return self.commands.__get_ref(id)[]
 
-    fn lookup(self, name: String) raises -> Reference[Command, False, __lifetime_of(self)]:
+    fn lookup(inout self, id: ID) -> Reference[Command, __lifetime_of(self)]:
+        return self.commands.__get_ref(id)[]
+
+    fn lookup(inout self, name: String) raises -> Reference[Command, __lifetime_of(self)]:
         var id = self.get_id(name)
         if not id:
             raise Error("CLI.lookup: ID not found for the given name.")
-        return self.lookup(id.value()[])
+        return self.lookup(id.value())
 
-    fn lookup_deref(self, id: ID) -> ref [__lifetime_of(self)] Command:
+    fn lookup_deref(inout self, id: ID) -> ref [__lifetime_of(self)] Command:
         return self.commands.__get_ref(id)[]
 
-    fn lookup_deref(self, name: String) raises -> ref [__lifetime_of(self)] Command:
+    fn lookup_deref(inout self, name: String) raises -> ref [__lifetime_of(self)] Command:
         var id = self.get_id(name)
         if not id:
             raise Error("CLI.lookup: ID not found for the given name.")
-        return self.lookup_deref(id.value()[])
+        return self.lookup_deref(id.value())
 
     fn get_id(self, name: String) -> Optional[ID]:
         for command in self.commands:
@@ -75,9 +78,9 @@ struct CLI:
         var i_flags = FlagSet()
 
         @always_inline
-        fn add_parent_persistent_flags(parent: Command) capturing -> None:
-            if parent.persistent_flags:
-                i_flags += parent.persistent_flags
+        fn add_parent_persistent_flags(parent: Reference[Command]) capturing -> None:
+            if parent[].persistent_flags:
+                i_flags += parent[].persistent_flags
 
         self.visit_parents[add_parent_persistent_flags](command)
 
@@ -107,7 +110,7 @@ struct CLI:
         var number_of_args = len(args)
         var command_id = 0
         var command = self.lookup(command_id)
-        var children_ids = command.children
+        var children_ids = command[].children
         var leftover_args_start_index = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
 
         for arg in args:
@@ -119,7 +122,7 @@ struct CLI:
                         print("found command")
                         command = self.lookup(id[])
                         print("lookup done")
-                        children_ids = command.children
+                        children_ids = command[].children
                         leftover_args_start_index += 1
                         break
 
@@ -133,23 +136,23 @@ struct CLI:
         """Returns true if the command has a parent."""
         return command.parent.__bool__()
 
-    fn full_command(self, command: Command) -> String:
+    fn full_command(self, command: Reference[Command]) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
-        if command.has_parent():
-            var parent = self.lookup(command.parent.value()[])
+        if command[].has_parent():
+            var parent = self.imm_lookup(command[].parent.value())
             var ancestor: String = self.full_command(parent)
-            return ancestor + " " + command.name
+            return ancestor + " " + command[].name
         else:
-            return command.name
+            return command[].name
 
-    fn visit_parents[func: ParentVisitorFn](self, command: Command) -> None:
+    fn visit_parents[func: ParentVisitorFn](self, command: Reference[Command]) -> None:
         """Visits all parents of the command and invokes func on each parent.
 
         Params:
             func: The function to invoke on each parent.
         """
-        if command.has_parent():
-            var parent = self.lookup(command.parent.value()[])
+        if command[].has_parent():
+            var parent = self.imm_lookup(command[].parent.value())
             func(parent)
             self.visit_parents[func](parent)
 
@@ -169,15 +172,15 @@ struct CLI:
         var command = self.lookup(command_id)
 
         # Merge local and inherited flags
-        command._merge_flags()
+        command[]._merge_flags()
 
         # Add all parents to the list to check if they have persistent pre/post hooks.
         var parents = List[Command]()
 
         # TODO: Appending the commands here performs copies
         @always_inline
-        fn append_parent(command: Command) capturing -> None:
-            parents.append(command)
+        fn append_parent(command: Reference[Command]) capturing -> None:
+            parents.append(command[])
 
         self.visit_parents[append_parent](command)
 
@@ -190,20 +193,22 @@ struct CLI:
         # Get the flags for the command to be executed.
         # store flags as a mutable ref
         var err: Error
-        remaining_args, err = get_flags(command.flags, remaining_args)
+        remaining_args, err = get_flags(command[].flags, remaining_args)
         if err:
             panic(err)
 
         # Check if the help flag was passed
-        var help_passed = command.flags.get_as_bool("help")
-        if help_passed.value()[] == True:
+        var help_passed = command[].flags.get_as_bool("help")
+        if help_passed.value() == True:
             var children = List[String]()
-            for id in command.children:
+            for id in command[].children:
                 var child = self.lookup(id[])
-                children.append(str(child))
+                children.append(str(child[]))
             print(
-                command.help(command.description, command.aliases, self.full_command(command), children, command.flags)
+                command[].help(
+                    command[].description, command[].aliases, self.full_command(command), children, command[].flags
+                )
             )
             return None
 
-        command.execute(remaining_args, parents)
+        command[].execute(remaining_args, parents)

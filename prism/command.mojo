@@ -56,7 +56,7 @@ alias CommandFnErr = fn (flags: FlagSet, args: List[String]) -> Error
 alias HelpFn = fn (
     description: String, aliases: List[String], full_command: String, children: List[String], flags: FlagSet
 ) -> String
-alias ParentVisitorFn = fn (command: Command) capturing -> None
+alias ParentVisitorFn = fn (command: Reference[Command]) capturing -> None
 
 
 # TODO: For parent Arc[Optional[Self]] works but Optional[Arc[Self]] causes compiler issues.
@@ -253,7 +253,7 @@ struct Command(CollectionElement):
     # fn __repr__(inout self) -> String:
     #     var parent_name: String = ""
     #     if self.has_parent():
-    #         parent_name = self.parent[].value()[].name
+    #         parent_name = self.parent[].value().name
     #     return (
     #         "Name: "
     #         + self.name
@@ -306,12 +306,12 @@ struct Command(CollectionElement):
         # Validate the remaining arguments
         var error_message = self.arg_validator(self.name, args)
         if error_message:
-            panic(error_message.value()[])
+            panic(error_message.value())
 
         # Run the persistent pre-run hooks.
         for parent in parents:
             if parent[].persistent_erroring_pre_run:
-                err = parent[].persistent_erroring_pre_run.value()[](self.flags, args)
+                err = parent[].persistent_erroring_pre_run.value()(self.flags, args)
                 if err:
                     panic(err)
 
@@ -320,7 +320,7 @@ struct Command(CollectionElement):
                     break
             else:
                 if parent[].persistent_pre_run:
-                    parent[].persistent_pre_run.value()[](self.flags, args)
+                    parent[].persistent_pre_run.value()(self.flags, args)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
@@ -328,24 +328,24 @@ struct Command(CollectionElement):
 
         # Run the pre-run hooks.
         if self.pre_run:
-            self.pre_run.value()[](self.flags, args)
+            self.pre_run.value()(self.flags, args)
         elif self.erroring_pre_run:
-            err = self.erroring_pre_run.value()[](self.flags, args)
+            err = self.erroring_pre_run.value()(self.flags, args)
             if err:
                 panic(err)
 
         # Run the function's commands.
         if self.run:
-            self.run.value()[](self.flags, args)
+            self.run.value()(self.flags, args)
         else:
-            err = self.erroring_run.value()[](self.flags, args)
+            err = self.erroring_run.value()(self.flags, args)
             if err:
                 panic(err)
 
         # Run the persistent post-run hooks.
         for parent in parents:
             if parent[].persistent_erroring_post_run:
-                err = parent[].persistent_erroring_post_run.value()[](self.flags, args)
+                err = parent[].persistent_erroring_post_run.value()(self.flags, args)
                 if err:
                     panic(err)
 
@@ -354,7 +354,7 @@ struct Command(CollectionElement):
                     break
             else:
                 if parent[].persistent_post_run:
-                    parent[].persistent_post_run.value()[](self.flags, args)
+                    parent[].persistent_post_run.value()(self.flags, args)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
@@ -362,9 +362,9 @@ struct Command(CollectionElement):
 
         # Run the post-run hooks.
         if self.post_run:
-            self.post_run.value()[](self.flags, args)
+            self.post_run.value()(self.flags, args)
         elif self.erroring_post_run:
-            err = self.erroring_post_run.value()[](self.flags, args)
+            err = self.erroring_post_run.value()(self.flags, args)
             if err:
                 panic(err)
 
@@ -384,8 +384,6 @@ struct Command(CollectionElement):
     #     self.visit_parents[add_parent_persistent_flags]()
 
     #     return i_flags
-    fn __get_ref(inout self) -> Reference[Command, is_mutable, lifetime]:
-        return Reference(self)
 
     fn _merge_flags(inout self):
         """Returns all flags for the command and inherited flags from its parent."""
@@ -434,7 +432,7 @@ struct Command(CollectionElement):
             if not maybe_flag:
                 panic(sprintf("Failed to find flag %s and mark it as being required in a flag group", flag_name[]))
 
-            var flag = maybe_flag.value()[]
+            var flag = maybe_flag.value()
 
             # TODO: This inline join logic is temporary until we can pass around varadic lists or cast it to a list.
             var result: String = ""
@@ -462,7 +460,7 @@ struct Command(CollectionElement):
             if not maybe_flag:
                 panic(sprintf("Failed to find flag %s and mark it as being in a one-required flag group", flag_name[]))
 
-            var flag = maybe_flag.value()[]
+            var flag = maybe_flag.value()
             var result: String = ""
             for i in range(len(flag_names)):
                 result += flag_names[i]
@@ -492,7 +490,7 @@ struct Command(CollectionElement):
                     )
                 )
 
-            var flag = maybe_flag.value()[]
+            var flag = maybe_flag.value()
             var result: String = ""
             for i in range(len(flag_names)):
                 result += flag_names[i]

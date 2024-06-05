@@ -63,7 +63,7 @@ struct Flag(CollectionElement, Stringable):
             self.name == other.name
             and self.shorthand == other.shorthand
             and self.usage == other.usage
-            and self.value.value()[] == other.value.value()[]
+            and self.value.value() == other.value.value()
             and self.default == other.default
             and self.type == other.type
             and self.changed == other.changed
@@ -97,14 +97,14 @@ fn parse_flag(i: Int, argument: String, arguments: List[String], flags: FlagSet)
         var name = flag[0][2:]
         var value = flag[1]
 
-        if name not in flags:
+        if name not in flags.flags:
             raise Error("Command does not accept the flag supplied: " + name)
 
         return name, value, 1
 
     # Flag with value set like "--flag <value>"
     var name = argument[2:]
-    if name not in flags:
+    if name not in flags.flags:
         raise Error("Command does not accept the flag supplied: " + name)
 
     # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
@@ -122,7 +122,7 @@ fn parse_flag(i: Int, argument: String, arguments: List[String], flags: FlagSet)
 
 
 fn parse_shorthand_flag(
-    i: Int, argument: String, arguments: List[String], flags: Reference[FlagSet]
+    i: Int, argument: String, arguments: List[String], flags: FlagSet
 ) raises -> Tuple[String, String, Int]:
     """Parses a shorthand flag and returns the name, value, and the index to increment by.
 
@@ -137,22 +137,22 @@ fn parse_shorthand_flag(
         var flag = argument.split("=")
         var shorthand = flag[0][1:]
         var value = flag[1]
-        var name = flags[].lookup_name(shorthand).value()[]
+        var name = flags.lookup_name(shorthand).value()
 
-        if name not in flags[]:
+        if name not in flags.flags:
             raise Error("Command does not accept the flag supplied: " + name)
 
         return name, value, 1
 
     # Flag with value set like "-f <value>"
     var shorthand = argument[1:]
-    var result = flags[].lookup_name(shorthand)
+    var result = flags.lookup_name(shorthand)
     if not result:
         raise Error("Did not find name for shorthand: " + shorthand)
-    var name = result.value()[]
+    var name = result.value()
 
     # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-    if flags[].get_as_bool(name):
+    if flags.get_as_bool(name):
         return name, String("True"), 1
 
     if i + 1 >= len(arguments):
@@ -202,7 +202,7 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) -> (List[String], Er
             if not flag:
                 return List[String](), Error("No flag found with the name: " + name)
 
-            flag.value()[][].set_value(value)
+            flag.value()[].set_value(value)
         except e:
             print(e)
             return remaining_args, e
