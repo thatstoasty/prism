@@ -1,8 +1,7 @@
-from prism import Flag, Command
-from prism.command import CommandArc
+from prism import Command, CommandArc
 
 
-fn printer(command: CommandArc, args: List[String]) -> None:
+fn printer(command: Arc[Command], args: List[String]) -> None:
     if len(args) == 0:
         print("No args provided.")
         return
@@ -11,10 +10,12 @@ fn printer(command: CommandArc, args: List[String]) -> None:
     return
 
 
-fn build_printer_command() -> Command:
-    var cmd = Command(
-        name="printer",
-        description="Print the first arg.",
-        run=printer,
+fn build_printer_command() -> Arc[Command]:
+    var cmd = Arc(
+        Command(
+            name="printer",
+            description="Print the first arg.",
+            run=printer,
+        )
     )
     return cmd

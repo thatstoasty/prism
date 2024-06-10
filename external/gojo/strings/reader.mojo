@@ -3,7 +3,15 @@ from ..builtins import Byte, copy, panic
 
 
 @value
-struct Reader(Sized, io.Reader, io.ReaderAt, io.ByteReader, io.ByteScanner, io.Seeker, io.WriterTo):
+struct Reader(
+    Sized,
+    io.Reader,
+    io.ReaderAt,
+    io.ByteReader,
+    io.ByteScanner,
+    io.Seeker,
+    io.WriterTo,
+):
     """A Reader that implements the [io.Reader], [io.ReaderAt], [io.ByteReader], [io.ByteScanner], [io.Seeker], and [io.WriterTo] traits
     by reading from a string. The zero value for Reader operates like a Reader of an empty string.
     """
@@ -81,7 +89,7 @@ struct Reader(Sized, io.Reader, io.ReaderAt, io.ByteReader, io.ByteScanner, io.S
         if copied_elements_count < len(dest):
             error = Error(io.EOF)
 
-        return copied_elements_count, Error()
+        return copied_elements_count, error
 
     fn read_byte(inout self) -> (Byte, Error):
         """Reads the next byte from the underlying string.

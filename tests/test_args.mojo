@@ -1,4 +1,4 @@
-from memory._arc import Arc
+from memory.arc import Arc
 from tests.wrapper import MojoTest
 from prism import CommandArc, Command
 from prism.args import (

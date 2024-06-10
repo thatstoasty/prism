@@ -1,5 +1,5 @@
 from collections.optional import Optional
-from ..builtins import Byte, Error
+from ..builtins import Byte
 
 alias Rune = Int32
 
@@ -248,7 +248,7 @@ trait WriterAt:
 
     Implementations must not retain p."""
 
-    fn write_at(self, src: List[Byte], off: Int64) -> (Int, Error):
+    fn write_at(self, src: Span[Byte], off: Int64) -> (Int, Error):
         ...
 
 

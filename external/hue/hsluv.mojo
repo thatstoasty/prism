@@ -27,11 +27,11 @@ fn HSLuvToLuvLCh(h: Float64, s: Float64, l: Float64) -> (Float64, Float64, Float
 
     var c: Float64
     var max: Float64
-    if l > 99.9999999 or l < 0.00000001:
+    if tmp_l > 99.9999999 or tmp_l < 0.00000001:
         c = 0.0
     else:
         max = max_chroma_for_lh(l, h)
-        c = max / 100.0 * s
+        c = max / 100.0 * tmp_s
 
     # c is [-100..100], but for LCh it's supposed to be almost [-1..1]
     return clamp01(l / 100.0), c / 100.0, h
