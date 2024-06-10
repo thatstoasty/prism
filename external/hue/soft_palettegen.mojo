@@ -1,6 +1,6 @@
 from collections.optional import Optional
 from random import random_si64
-from math.limit import inf
+from utils.numerics import inf
 import math
 from .math import sq
 from .color import lab
@@ -39,7 +39,7 @@ fn in_stack(haystack: List[lab_t], upto: Int, needle: lab_t) -> Bool:
 fn labs_2_cols(labs: List[lab_t]) -> List[Color]:
     var lab_count = len(labs)
     var cols = List[Color](capacity=lab_count)
-    for i in range(lab_count):
+    for _ in range(lab_count):
         cols.append(Color(0.0, 0.0, 0.0))
 
     for i in range(lab_count):
@@ -93,7 +93,7 @@ fn soft_palette_ex(colors_count: Int, settings: SoftPaletteSettings) raises -> L
     @always_inline
     fn check(col: lab_t) -> Bool:
         var c = lab(col.L, col.A, col.B)
-        return c.is_valid() and settings.check_color.take()(col.L, col.A, col.B)
+        return c.is_valid() and settings.check_color.value()[](col.L, col.A, col.B)
 
     # Sample the color space. These will be the points k-means is run on.
     var dl = 0.05
@@ -120,9 +120,9 @@ fn soft_palette_ex(colors_count: Int, settings: SoftPaletteSettings) raises -> L
     if len(samples) < colors_count:
         raise Error(
             String("palettegen: more colors requested ")
-            + colors_count
+            + str(colors_count)
             + " than samples available "
-            + len(samples)
+            + str(len(samples))
             + " Your requested color count may be wrong, you might want to use many samples or your constraint fntion"
             " makes the valid color space too small"
         )
@@ -132,7 +132,7 @@ fn soft_palette_ex(colors_count: Int, settings: SoftPaletteSettings) raises -> L
     # We take the initial means out of the samples, so they are in fact medoids.
     # This helps us avoid infinite loops or arbitrary cutoffs with too restrictive constraints.
     var means = List[lab_t](capacity=colors_count)
-    for i in range(colors_count):
+    for _ in range(colors_count):
         means.append(lab_t(0.0, 0.0, 0.0))
 
     var i = 0

@@ -1,10 +1,10 @@
 from external.gojo.builtins import panic
-from external.gojo.fmt import sprintf
+import external.gojo.fmt
 from .flag import Flag
 from .vector import to_string
 
 
-alias FlagVisitorFn = fn (Reference[Flag]) capturing -> None
+alias FlagVisitorFn = fn (Flag) capturing -> None
 
 
 fn string_to_bool(value: String) -> Bool:
@@ -571,7 +571,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
             visitor: The visitor function to call for each flag.
         """
         for flag in self.flags:
-            visitor(flag)
+            visitor(flag[])
 
     fn add_flag_set(inout self, new_set: Self) -> None:
         """Adds flags from another FlagSet. If a flag is already present, the flag from the new set is ignored.
@@ -581,9 +581,9 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         """
 
         @always_inline
-        fn add_flag(flag: Reference[Flag]) capturing -> None:
-            if not self.lookup(flag[].name):
-                self.flags.append(flag[])
+        fn add_flag(flag: Flag) capturing -> None:
+            if not self.lookup(flag.name):
+                self.flags.append(flag)
 
         new_set.visit_all[add_flag]()
 
@@ -655,7 +655,7 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
             keys.append(key[])
 
         panic(
-            sprintf(
+            fmt.sprintf(
                 "if any flags in the group, %s, are set they must all be set; missing %s",
                 to_string(keys),
                 to_string(unset),
@@ -686,7 +686,7 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> N
         for key in pair[].value.keys():
             keys.append(key[])
 
-        panic(sprintf("at least one of the flags in the group %s is required", to_string(keys)))
+        panic(fmt.sprintf("at least one of the flags in the group %s is required", to_string(keys)))
 
 
 fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
@@ -713,7 +713,7 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
             keys.append(key[])
 
         panic(
-            sprintf(
+            fmt.sprintf(
                 "if any flags in the group %s are set none of the others can be; %s were all set",
                 to_string(keys),
                 to_string(set),

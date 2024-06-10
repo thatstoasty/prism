@@ -8,7 +8,7 @@ fn fast_happy_palette(colors_count: Int) -> List[Color]:
     evenly along their Hue. This is fast but not always pretty.
     If you've got time to spare, use Lab (the non-fast below)."""
     var colors = List[Color](capacity=colors_count)
-    for i in range(colors_count):
+    for _ in range(colors_count):
         colors.append(Color(0, 0, 0))
 
     var i = 0

@@ -11,7 +11,7 @@ Inspired by: `Cobra`!
 
 ## Usage
 
-WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples. 
+WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples.
 
 You should be able to build the package by running `mojo package prism -I external`. For the easiest method, I recommend just copying the entire external folder into your repository, then copy the `prism` folder into the external folder as well.
 
@@ -30,10 +30,10 @@ Here's an example of a basic command and subcommand!
 Commands can have typed flags added to them to enable different behaviors.
 
 ```mojo
-    var root_command = Command(
+    var root_command = Arc(Command(
         name="logger", description="Base command.", run=handler
-    )
-    root_command.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
+    ))
+    root_command[].flags.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
 ```
 
 ![Logging](https://github.com/thatstoasty/prism/blob/main/demos/tapes/logging.gif)
@@ -43,9 +43,9 @@ Commands can have typed flags added to them to enable different behaviors.
 Commands can also be aliased to enable different ways to call the same command. You can change the command underneath the alias and maintain the same behavior.
 
 ```mojo
-var tool_command = Command(
+var tool_command = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
-    )
+    ))
 ```
 
 ![Aliases](https://github.com/thatstoasty/prism/blob/main/demos/tapes/aliases.gif)
@@ -55,25 +55,24 @@ var tool_command = Command(
 Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
 
 ```mojo
-fn pre_hook(command: CommandArc, args: List[String]) -> None:
+fn pre_hook(command: Arc[Command], args: List[String]) -> None:
     print("Pre-hook executed!")
     return None
 
 
-fn post_hook(command: CommandArc, args: List[String]) -> None:
+fn post_hook(command: Arc[Command], args: List[String]) -> None:
     print("Post-hook executed!")
     return None
 
 
 fn init() -> None:
-    var start = now()
-    var root_command = Command(
+    var root_command = Arc(Command(
         name="printer",
         description="Base command.",
         run=printer,
         pre_run=pre_hook,
         post_run=post_hook,
-    )
+    ))
 ```
 
 ![Printer](https://github.com/thatstoasty/prism/blob/main/demos/tapes/printer.gif)
@@ -84,16 +83,16 @@ Flags and hooks can also be inherited by children commands! This can be useful f
 
 ```mojo
 fn init() -> None:
-    var root_command = Command(name="nested", description="Base command.", run=base)
+    var root_command = Arc(Command(name="nested", description="Base command.", run=base))
 
-    var get_command = Command(
+    var get_command = Arc(Command(
         name="get",
         description="Base command for getting some data.",
         run=print_information,
         persistent_pre_run=pre_hook,
         persistent_post_run=post_hook,
-    )
-    get_command.persistent_flags[].add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
+    ))
+    get_command[].flags.persistent_flags.add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
 ```
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/main/demos/tapes/persistent.gif)
@@ -105,23 +104,23 @@ Flags can be grouped together to enable relationships between them. This can be 
 By default flags are considered optional. If you want your command to report an error when a flag has not been set, mark it as required:
 
 ```mojo
-var tool_command = Command(
+var tool_command = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
-    )
-    tool_command.add_bool_flag(name="required", shorthand="r", usage="Always required.")
-    tool_command.mark_flag_required("required")
+    ))
+    tool_command[].flags.add_bool_flag(name="required", shorthand="r", usage="Always required.")
+    tool_command[].mark_flag_required("required")
 ```
 
 Same for persistent flags:
 
 ```mojo
-    var root_command = Command(
+    var root_command = Arc(Command(
         name="my",
         description="This is a dummy command!",
         run=test,
-    )
-    root_command.persistent_flags[].add_bool_flag(name="free", shorthand="f", usage="Always required.")
-    root_command.mark_persistent_flag_required("free")
+    ))
+    root_command[].persistent_flags.add_bool_flag(name="free", shorthand="f", usage="Always required.")
+    root_command[].mark_persistent_flag_required("free")
 ```
 
 ### Flag Groups
@@ -129,35 +128,35 @@ Same for persistent flags:
 If you have different flags that must be provided together (e.g. if they provide the `--color` flag they MUST provide the `--formatting` flag as well) then Prism can enforce that requirement:
 
 ```mojo
-    var tool_command = Command(
+    var tool_command = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
-    )
-    tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    tool_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
-    tool_command.mark_flags_required_together("color", "formatting")
+    ))
+    tool_command[].flags.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    tool_command[].flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    tool_command[].mark_flags_required_together("color", "formatting")
 ```
 
 You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
 
 ```mojo
-   var tool_command = Command(
+   var tool_command = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
-    )
-    tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    tool_command.add_string_flag(name="hue", shorthand="x", usage="Text color", default="#3464eb")
-    tool_command.mark_flags_mutually_exclusive("color", "hue")
+    ))
+    tool_command[].add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    tool_command[].add_string_flag(name="hue", shorthand="x", usage="Text color", default="#3464eb")
+    tool_command[].mark_flags_mutually_exclusive("color", "hue")
 ```
 
 If you want to require at least one flag from a group to be present, you can use `mark_flags_one_required`. This can be combined with `mark_flags_mutually_exclusive` to enforce exactly one flag from a given group:
 
 ```mojo
-   var tool_command = Command(
+   var tool_command = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
-    )
-    tool_command.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    tool_command.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
-    tool_command.mark_flags_one_required("color", "formatting")
-    tool_command.mark_flags_mutually_exclusive("color", "formatting")
+    ))
+    tool_command[].flags.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    tool_command[].flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    tool_command[].mark_flags_one_required("color", "formatting")
+    tool_command[].mark_flags_mutually_exclusive("color", "formatting")
 ```
 
 In these cases:
@@ -175,34 +174,34 @@ See `examples/flag_groups/child.mojo` for an example.
 
 ```mojo
 fn init() -> None:
-    var root_command = Command(
+    var root_command = Arc(Command(
         name="my",
         description="This is a dummy command!",
         run=test,
-    )
+    ))
     # Persistent flags are defined on the parent command.
-    root_command.persistent_flags[].add_bool_flag(name="required", shorthand="r", usage="Always required.")
-    root_command.persistent_flags[].add_string_flag(name="host", shorthand="h", usage="Host")
-    root_command.persistent_flags[].add_string_flag(name="port", shorthand="p", usage="Port")
-    root_command.mark_persistent_flag_required("required")
+    root_command[].persistent_flags.add_bool_flag(name="required", shorthand="r", usage="Always required.")
+    root_command[].persistent_flags.add_string_flag(name="host", shorthand="h", usage="Host")
+    root_command[].persistent_flags.add_string_flag(name="port", shorthand="p", usage="Port")
+    root_command[].mark_persistent_flag_required("required")
 
-    var tool_command = Command(
+    var tool_command = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func
-    )
-    tool_command.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
-    tool_command.add_string_flag(name="uri", shorthand="u", usage="URI")
+    ))
+    tool_command[].flags.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
+    tool_command[].flags.add_string_flag(name="uri", shorthand="u", usage="URI")
 
     # Child commands are added to the parent command.
-    root_command.add_command(tool_command)
+    root_command[].add_command(tool_command)
 
     # Rules are set on the child command, which can include persistent flags inherited from the parent command.
     # When executing `mark_flags_required_together()` or `mark_flags_mutually_exclusive()`,
-    # the inherited flags from all parents will merged into the tool_command.flags FlagSet.
-    tool_command.mark_flag_required("also")
-    tool_command.mark_flags_required_together("host", "port")
-    tool_command.mark_flags_mutually_exclusive("host", "uri")
+    # the inherited flags from all parents will merged into the tool_command[].flags FlagSet.
+    tool_command[].mark_flag_required("also")
+    tool_command[].mark_flags_required_together("host", "port")
+    tool_command[].mark_flags_mutually_exclusive("host", "uri")
 
-    root_command.execute()
+    root_command[].execute()
 ```
 
 ![Flag Groups 2](https://github.com/thatstoasty/prism/blob/main/demos/tapes/flag_groups-2.gif)
@@ -249,13 +248,13 @@ fn help_func(command: Arc[Command]) -> String:
     return ""
 
 fn init() -> None:
-    var root_command = Command(
+    var root_command = Arc(Command(
         name="hello",
         description="This is a dummy command!",
         run=test,
-    )
+    ))
 
-    var hello_command = Command(name="chromeria", description="This is a dummy command!", run=hello, help=help_func)
+    var hello_command = Arc(Command(name="chromeria", description="This is a dummy command!", run=hello, help=help_func))
 ```
 
 ![Help](https://github.com/thatstoasty/prism/blob/main/demos/tapes/help.gif)
@@ -284,11 +283,8 @@ fn init() -> None:
 ### Improvements
 
 - Tree traversal improvements.
-- Once we have kwarg unpacking, update `Command().add_flag` to pass kwargs along.
-- Considering adding convenience functions for adding persistent flags, but I don't want to make the Command struct too massive. It may be better to just limit setting flags to the `command[].flags[].add_flag()` pattern. Auto dereferencing will most likely make this look less verbose in the future. For now persistent flags will be set via `command[].persistent_flags[].add_flag()`.
 - Once we have `Result[T]`, I will refactor raising functions to return results instead.
 
 ### Bugs
 
 - `Command` has 2 almost indentical init functions because setting a default `arg_validator` value, breaks the compiler as of 24.2.
-- Error message from `get_flags` comes up blank when finally exiting the program. For now, just printing the error message before the Error is returned. Seems like an issue with catching a raised Error and then returning it. Will try returning an Error instead of raising it.

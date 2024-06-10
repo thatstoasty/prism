@@ -103,7 +103,7 @@ struct Scanner[R: io.Reader]():
                     at_eof = True
                 advance, token, err = self.split(self.buf[self.start : self.end], at_eof)
                 if err:
-                    if str(err) == ERR_FINAL_TOKEN:
+                    if str(err) == str(ERR_FINAL_TOKEN):
                         self.token = token
                         self.done = True
                         # When token is not nil, it means the scanning stops
@@ -149,7 +149,7 @@ struct Scanner[R: io.Reader]():
             if self.end == len(self.buf):
                 # Guarantee no overflow in the multiplication below.
                 if len(self.buf) >= self.max_token_size or len(self.buf) > int(MAX_INT / 2):
-                    self.set_err(Error(ERR_TOO_LONG))
+                    self.set_err(Error(str(ERR_TOO_LONG)))
                     return False
 
                 var new_size = len(self.buf) * 2
@@ -157,7 +157,7 @@ struct Scanner[R: io.Reader]():
                     new_size = START_BUF_SIZE
 
                 # Make a new List[Byte] buffer and copy the elements in
-                new_size = math.min(new_size, self.max_token_size)
+                new_size = min(new_size, self.max_token_size)
                 var new_buf = List[Byte](capacity=new_size)
                 _ = copy(new_buf, self.buf[self.start : self.end])
                 self.buf = new_buf
@@ -177,7 +177,7 @@ struct Scanner[R: io.Reader]():
                 bytes_read, err = self.reader.read(sl)
                 _ = copy(self.buf, sl, self.end)
                 if bytes_read < 0 or len(self.buf) - self.end < bytes_read:
-                    self.set_err(Error(ERR_BAD_READ_COUNT))
+                    self.set_err(Error(str(ERR_BAD_READ_COUNT)))
                     break
 
                 self.end += bytes_read
@@ -201,7 +201,7 @@ struct Scanner[R: io.Reader]():
             err: The error to set.
         """
         if self.err:
-            var value = String(self.err)
+            var value = str(self.err)
             if value == "" or value == io.EOF:
                 self.err = err
         else:
@@ -217,11 +217,11 @@ struct Scanner[R: io.Reader]():
             True if the advance was legal, False otherwise.
         """
         if n < 0:
-            self.set_err(Error(ERR_NEGATIVE_ADVANCE))
+            self.set_err(Error(str(ERR_NEGATIVE_ADVANCE)))
             return False
 
         if n > self.end - self.start:
-            self.set_err(Error(ERR_ADVANCE_TOO_FAR))
+            self.set_err(Error(str(ERR_ADVANCE_TOO_FAR)))
             return False
 
         self.start += n
@@ -286,7 +286,11 @@ struct Scanner[R: io.Reader]():
 # The function is never called with an empty data slice unless at_eof
 # is True. If at_eof is True, however, data may be non-empty and,
 # as always, holds unprocessed text.
-alias SplitFunction = fn (data: List[Byte], at_eof: Bool) -> (Int, List[Byte], Error)
+alias SplitFunction = fn (data: List[Byte], at_eof: Bool) -> (
+    Int,
+    List[Byte],
+    Error,
+)
 
 # # Errors returned by Scanner.
 alias ERR_TOO_LONG = Error("bufio.Scanner: token too long")
@@ -415,7 +419,7 @@ fn scan_lines(data: List[Byte], at_eof: Bool) -> (Int, List[Byte], Error):
     # return 0
 
 
-fn is_space(r: Int8) -> Bool:
+fn is_space(r: UInt8) -> Bool:
     alias ALL_WHITESPACES: String = " \t\n\r\x0b\f"
     if chr(int(r)) in ALL_WHITESPACES:
         return True

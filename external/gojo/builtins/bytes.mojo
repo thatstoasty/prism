@@ -1,7 +1,13 @@
-from .list import equals
+alias Byte = UInt8
 
 
-alias Byte = Int8
+fn equals(left: List[UInt8], right: List[UInt8]) -> Bool:
+    if len(left) != len(right):
+        return False
+    for i in range(len(left)):
+        if left[i] != right[i]:
+            return False
+    return True
 
 
 fn has_prefix(bytes: List[Byte], prefix: List[Byte]) -> Bool:
@@ -44,9 +50,26 @@ fn index_byte(bytes: List[Byte], delim: Byte) -> Int:
     Returns:
         The index of the first occurrence of the byte delim.
     """
-    var i = 0
     for i in range(len(bytes)):
         if bytes[i] == delim:
+            return i
+
+    return -1
+
+
+fn index_byte(bytes: DTypePointer[DType.uint8], size: Int, delim: Byte) -> Int:
+    """Return the index of the first occurrence of the byte delim.
+
+    Args:
+        bytes: The DTypePointer[DType.int8] struct to search.
+        size: The size of the bytes pointer.
+        delim: The byte to search for.
+
+    Returns:
+        The index of the first occurrence of the byte delim.
+    """
+    for i in range(size):
+        if UInt8(bytes[i]) == delim:
             return i
 
     return -1

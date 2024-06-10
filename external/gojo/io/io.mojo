@@ -1,7 +1,6 @@
 from collections.optional import Optional
-from ..builtins import cap, copy, Byte, Error, panic
+from ..builtins import cap, copy, Byte, panic
 from .traits import ERR_UNEXPECTED_EOF
-
 
 alias BUFFER_SIZE = 4096
 
@@ -133,7 +132,7 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 # }
 
 
-# fn copy_buffer[W: Writer, R: Reader](dst: W, src: R, buf: List[Byte]) raises -> Int64:
+# fn copy_buffer[W: Writer, R: Reader](dst: W, src: R, buf: Span[Byte]) raises -> Int64:
 #     """Actual implementation of copy and CopyBuffer.
 #     if buf is nil, one is allocated.
 #     """
@@ -153,11 +152,11 @@ fn read_full[R: Reader](inout reader: R, inout dest: List[Byte]) -> (Int, Error)
 #     return written
 
 
-# fn copy_buffer[W: Writer, R: ReaderWriteTo](dst: W, src: R, buf: List[Byte]) -> Int64:
+# fn copy_buffer[W: Writer, R: ReaderWriteTo](dst: W, src: R, buf: Span[Byte]) -> Int64:
 #     return src.write_to(dst)
 
 
-# fn copy_buffer[W: WriterReadFrom, R: Reader](dst: W, src: R, buf: List[Byte]) -> Int64:
+# fn copy_buffer[W: WriterReadFrom, R: Reader](dst: W, src: R, buf: Span[Byte]) -> Int64:
 #     return dst.read_from(src)
 
 # # LimitReader returns a Reader that reads from r
@@ -419,7 +418,6 @@ fn read_all[R: Reader](inout reader: R) -> (List[Byte], Error):
     Returns:
         The data read."""
     var dest = List[Byte](capacity=BUFFER_SIZE)
-    var index: Int = 0
     var at_eof: Bool = False
 
     while True:

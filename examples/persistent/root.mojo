@@ -1,19 +1,20 @@
-from prism import Flag, Command, CommandArc
+from prism import Command, CommandArc
 from python import Python, PythonObject
 
 
-fn base(command: CommandArc, args: List[String]) -> None:
+fn base(command: Arc[Command], args: List[String]) -> None:
     print("This is the base command!")
     return None
 
 
-fn print_information(command: CommandArc, args: List[String]) -> None:
+fn print_information(command: Arc[Command], args: List[String]) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
     return None
 
 
-fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
-    var flags = command[].flags[]
+fn get_cat_fact(command: Arc[Command], args: List[String]) -> Error:
+    var cmd = command
+    var flags = cmd[].flags
     var lover = flags.get_as_bool("lover")
     if lover and lover.value()[]:
         print("Hello fellow cat lover!")
@@ -43,8 +44,9 @@ fn get_cat_fact(command: CommandArc, args: List[String]) -> Error:
     return Error()
 
 
-fn get_dog_breeds(command: CommandArc, args: List[String]) -> Error:
-    var flags = command[].flags[]
+fn get_dog_breeds(command: Arc[Command], args: List[String]) -> Error:
+    var cmd = command
+    var flags = cmd[].flags
     var lover = flags.get_as_bool("lover")
     if lover and lover.value()[]:
         print("Hello fellow dog lover!")
@@ -68,43 +70,49 @@ fn get_dog_breeds(command: CommandArc, args: List[String]) -> Error:
     return Error()
 
 
-fn pre_hook(command: CommandArc, args: List[String]) -> None:
+fn pre_hook(command: Arc[Command], args: List[String]) -> None:
     print("Pre-hook executed!")
 
 
-fn post_hook(command: CommandArc, args: List[String]) -> None:
+fn post_hook(command: Arc[Command], args: List[String]) -> None:
     print("Post-hook executed!")
 
 
 fn init() -> None:
-    var root_command = Command(name="nested", description="Base command.", run=base)
+    var root_command = Arc(Command(name="nested", description="Base command.", run=base))
 
-    var get_command = Command(
-        name="get",
-        description="Base command for getting some data.",
-        run=print_information,
-        persistent_pre_run=pre_hook,
-        persistent_post_run=post_hook,
+    var get_command = Arc(
+        Command(
+            name="get",
+            description="Base command for getting some data.",
+            run=print_information,
+            persistent_pre_run=pre_hook,
+            persistent_post_run=post_hook,
+        )
     )
-    get_command.persistent_flags[].add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
+    get_command[].persistent_flags.add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
 
-    var cat_command = Command(
-        name="cat",
-        description="Get some cat facts!",
-        erroring_run=get_cat_fact,
+    var cat_command = Arc(
+        Command(
+            name="cat",
+            description="Get some cat facts!",
+            erroring_run=get_cat_fact,
+        )
     )
-    cat_command.add_int_flag(name="count", shorthand="c", usage="Number of facts to get.")
+    cat_command[].flags.add_int_flag(name="count", shorthand="c", usage="Number of facts to get.")
 
-    var dog_command = Command(
-        name="dog",
-        description="Get some dog breeds!",
-        erroring_run=get_dog_breeds,
+    var dog_command = Arc(
+        Command(
+            name="dog",
+            description="Get some dog breeds!",
+            erroring_run=get_dog_breeds,
+        )
     )
 
-    get_command.add_command(cat_command)
-    get_command.add_command(dog_command)
-    root_command.add_command(get_command)
-    root_command.execute()
+    get_command[].add_command(cat_command)
+    get_command[].add_command(dog_command)
+    root_command[].add_command(get_command)
+    root_command[].execute()
 
 
 fn main() -> None:

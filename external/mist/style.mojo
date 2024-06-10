@@ -1,3 +1,4 @@
+from external.gojo.strings import StringBuilder
 from .color import (
     Color,
     NoColor,
@@ -53,6 +54,7 @@ struct TerminalStyle:
     var styles: List[String]
     var profile: Profile
 
+    @always_inline
     fn __init__(inout self, profile: Profile, *, styles: List[String] = List[String]()):
         """Constructs a TerminalStyle. Use new instead of __init__ to chain function calls.
 
@@ -63,6 +65,7 @@ struct TerminalStyle:
         self.styles = styles
         self.profile = profile
 
+    @always_inline
     fn __init__(inout self, *, styles: List[String] = List[String]()):
         """Constructs a TerminalStyle. Use new instead of __init__ to chain function calls.
 
@@ -91,10 +94,12 @@ struct TerminalStyle:
         """
         return Self(styles=styles)
 
+    @always_inline
     fn copy(self) -> Self:
         """Creates a deepcopy of Self and returns that. Immutability instead of mutating the object."""
         return Self(self.profile, styles=self.get_styles())
 
+    @always_inline
     fn _add_style(self, style: String) -> Self:
         """Creates a deepcopy of Self, adds a style to it's list of styles, and returns that. Immutability instead of mutating the object.
 
@@ -105,42 +110,52 @@ struct TerminalStyle:
         new_styles.append(style)
         return Self(self.profile, styles=new_styles)
 
+    @always_inline
     fn get_styles(self) -> List[String]:
         """Return a deepcopy of the styles list."""
         return List[String](self.styles)
 
+    @always_inline
     fn bold(self) -> Self:
         """Makes the text bold when rendered."""
         return self._add_style(bold)
 
+    @always_inline
     fn faint(self) -> Self:
         """Makes the text faint when rendered."""
         return self._add_style(faint)
 
+    @always_inline
     fn italic(self) -> Self:
         """Makes the text italic when rendered."""
         return self._add_style(italic)
 
+    @always_inline
     fn underline(self) -> Self:
         """Makes the text underlined when rendered."""
         return self._add_style(underline)
 
+    @always_inline
     fn blink(self) -> Self:
         """Makes the text blink when rendered."""
         return self._add_style(blink)
 
+    @always_inline
     fn reverse(self) -> Self:
         """Makes the text have reversed background and foreground colors when rendered."""
         return self._add_style(reverse)
 
+    @always_inline
     fn crossout(self) -> Self:
         """Makes the text crossed out when rendered."""
         return self._add_style(crossout)
 
+    @always_inline
     fn overline(self) -> Self:
         """Makes the text overlined when rendered."""
         return self._add_style(overline)
 
+    @always_inline
     fn background(self, color: AnyColor) -> Self:
         """Set the background color of the text when it's rendered.
 
@@ -155,16 +170,17 @@ struct TerminalStyle:
 
         var sequence: String = ""
         if color.isa[ANSIColor]():
-            var c = color.get[ANSIColor]()[]
+            var c = color[ANSIColor]
             sequence = c.sequence(True)
         elif color.isa[ANSI256Color]():
-            var c = color.get[ANSI256Color]()[]
+            var c = color[ANSI256Color]
             sequence = c.sequence(True)
         elif color.isa[RGBColor]():
-            var c = color.get[RGBColor]()[]
+            var c = color[RGBColor]
             sequence = c.sequence(True)
         return self._add_style(sequence)
 
+    @always_inline
     fn background(self, color_value: String) -> Self:
         """Shorthand for using the style profile to set the background color of the text.
 
@@ -176,6 +192,7 @@ struct TerminalStyle:
         """
         return self.background(self.profile.color(color_value))
 
+    @always_inline
     fn background(self, color_value: StringLiteral) -> Self:
         """Shorthand for using the style profile to set the background color of the text.
 
@@ -187,6 +204,7 @@ struct TerminalStyle:
         """
         return self.background(self.profile.color(color_value))
 
+    @always_inline
     fn foreground(self, color: AnyColor) -> Self:
         """Set the foreground color of the text.
 
@@ -201,16 +219,17 @@ struct TerminalStyle:
 
         var sequence: String = ""
         if color.isa[ANSIColor]():
-            var c = color.get[ANSIColor]()[]
+            var c = color[ANSIColor]
             sequence = c.sequence(False)
         elif color.isa[ANSI256Color]():
-            var c = color.get[ANSI256Color]()[]
+            var c = color[ANSI256Color]
             sequence = c.sequence(False)
         elif color.isa[RGBColor]():
-            var c = color.get[RGBColor]()[]
+            var c = color[RGBColor]
             sequence = c.sequence(False)
         return self._add_style(sequence)
 
+    @always_inline
     fn foreground(self, color_value: String) -> Self:
         """Shorthand for using the style profile to set the foreground color of the text.
 
@@ -222,6 +241,7 @@ struct TerminalStyle:
         """
         return self.foreground(self.profile.color(color_value))
 
+    @always_inline
     fn foreground(self, color_value: StringLiteral) -> Self:
         """Shorthand for using the style profile to set the foreground color of the text.
 
@@ -233,6 +253,7 @@ struct TerminalStyle:
         """
         return self.foreground(self.profile.color(color_value))
 
+    @always_inline
     fn render(self, text: String) -> String:
         """Renders text with the styles applied to it.
 
@@ -242,14 +263,42 @@ struct TerminalStyle:
         Returns:
             The text with the styles applied.
         """
-        var start = time.now()
         if self.profile.value == ASCII:
             return text
 
         if len(self.styles) == 0:
             return text
 
-        var seq: String = ""
+        var builder = StringBuilder()
+        _ = builder.write_string(csi)
         for i in range(len(self.styles)):
-            seq = seq + ";" + self.styles[i]
-        return csi + seq + "m" + text + csi + reset + "m"
+            _ = builder.write_string(";")
+            _ = builder.write_string(self.styles[i])
+        _ = builder.write_string("m")
+        _ = builder.write_string(text)
+        _ = builder.write_string(csi)
+        _ = builder.write_string(reset)
+        _ = builder.write_string("m")
+
+        return builder.render()
+
+
+fn new_style() -> TerminalStyle:
+    """Creates a new TerminalStyle with no styles applied.
+
+    Returns:
+        A new TerminalStyle with the given color profile.
+    """
+    return TerminalStyle.new()
+
+
+fn new_style(profile: Profile) -> TerminalStyle:
+    """Creates a new TerminalStyle with no styles applied.
+
+    Args:
+        profile: The color profile to use for color conversion.
+
+    Returns:
+        A new TerminalStyle with the given color profile.
+    """
+    return TerminalStyle.new(profile)
