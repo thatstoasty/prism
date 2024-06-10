@@ -1,6 +1,6 @@
 # Prism
 
-![Mojo 24.3](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.3-purple)
+![Mojo 24.4](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.4-purple)
 
 A Budding CLI Library!
 
