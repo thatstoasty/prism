@@ -21,16 +21,16 @@ fn test_string_to_float() raises:
 
 fn test_get_flags():
     var test = MojoTest("Testing get_flags")
-    var flag_set = Arc(FlagSet())
-    flag_set[].add_string_flag("key", "description", "default")
-    flag_set[].add_bool_flag("flag", "description", "False")
+    var flag_set = FlagSet()
+    flag_set.add_string_flag("key", "description", "default")
+    flag_set.add_bool_flag("flag", "description", "False")
     var flags = List[String]("--key=value", "positional", "--flag")
 
     var remaining_args: List[String]
     var err: Error
     remaining_args, err = get_flags(flag_set, flags)
-    test.assert_equal(flag_set[].get_as_string("key").value()[], "value")
-    test.assert_equal(flag_set[].get_as_bool("flag").value()[], True)
+    test.assert_equal(flag_set.get_as_string("key").value()[], "value")
+    test.assert_equal(flag_set.get_as_bool("flag").value()[], True)
 
 
 fn test_parse_flag() raises:
@@ -42,12 +42,13 @@ fn test_parse_flag() raises:
     var name: String
     var value: String
     var increment_by: Int
-    name, value, increment_by = parse_flag(0, String("--key"), List[String]("--key", "value"), flag_set)
+    var err: Error
+    name, value, increment_by, err = parse_flag(0, String("--key"), List[String]("--key", "value"), flag_set)
     test.assert_equal(name, "key")
     test.assert_equal(value, "value")
     test.assert_equal(increment_by, 2)
 
-    name, value, increment_by = parse_flag(0, String("--key=value"), List[String]("--key=value"), flag_set)
+    name, value, increment_by, err = parse_flag(0, String("--key=value"), List[String]("--key=value"), flag_set)
     test.assert_equal(name, "key")
     test.assert_equal(value, "value")
     test.assert_equal(increment_by, 1)
@@ -62,12 +63,13 @@ fn test_parse_shorthand_flag() raises:
     var name: String
     var value: String
     var increment_by: Int
-    name, value, increment_by = parse_shorthand_flag(0, String("-k"), List[String]("-k", "value"), flag_set)
+    var err: Error
+    name, value, increment_by, err = parse_shorthand_flag(0, String("-k"), List[String]("-k", "value"), flag_set)
     test.assert_equal(name, "key")
     test.assert_equal(value, "value")
     test.assert_equal(increment_by, 2)
 
-    name, value, increment_by = parse_shorthand_flag(0, String("-k=value"), List[String]("-k=value"), flag_set)
+    name, value, increment_by, err = parse_shorthand_flag(0, String("-k=value"), List[String]("-k=value"), flag_set)
     test.assert_equal(name, "key")
     test.assert_equal(value, "value")
     test.assert_equal(increment_by, 1)
