@@ -1,4 +1,4 @@
-from prism import Flag, Command, CommandArc
+from prism import Command
 
 
 fn test(command: Arc[Command], args: List[String]) -> None:
