@@ -7,7 +7,7 @@ from examples.hello_world.say import (
     build_goodbye_command,
 )
 from examples.hello_world.printer import build_printer_command
-from memory._arc import Arc
+from memory.arc import Arc
 
 
 fn test(command: CommandArc, args: List[String]) -> None:

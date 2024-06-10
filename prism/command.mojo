@@ -1,6 +1,6 @@
 from sys import argv
 from collections.optional import Optional
-from memory._arc import Arc
+from memory.arc import Arc
 from external.string_dict import Dict
 from external.gojo.fmt import sprintf
 from external.gojo.builtins import panic

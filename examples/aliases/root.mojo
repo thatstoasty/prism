@@ -1,4 +1,4 @@
-from memory._arc import Arc
+from memory.arc import Arc
 from prism import Flag, Command, CommandArc
 from prism.vector import to_string
 

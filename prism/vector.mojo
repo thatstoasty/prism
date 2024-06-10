@@ -1,4 +1,4 @@
-from memory._arc import Arc
+from memory.arc import Arc
 from collections.vector import InlinedFixedVector
 
 
@@ -16,17 +16,7 @@ fn contains[T: EqualityComparableCollectionElement](vector: List[T], value: T) -
 fn to_string[T: StringableCollectionElement](vector: List[T]) -> String:
     var result = String("[")
     for i in range(vector.size):
-        result += vector[i]
-        if i < vector.size - 1:
-            result += String(", ")
-    result += String("]")
-    return result
-
-
-fn to_string[T: StringableCollectionElement](vector: InlinedFixedVector[T]) -> String:
-    var result = String("[")
-    for i in range(vector.size):
-        result += vector[i]
+        result += str(vector[i])
         if i < vector.size - 1:
             result += String(", ")
     result += String("]")
@@ -47,7 +37,7 @@ fn to_string[T: StringableCollectionElement](vector: List[Arc[T]]) -> String:
 fn join[T: StringableCollectionElement](separator: String, iterable: List[T]) -> String:
     var result: String = ""
     for i in range(len(iterable)):
-        result += iterable[i]
+        result += str(iterable[i])
         if i != len(iterable) - 1:
             result += separator
     return result

@@ -1,4 +1,4 @@
-from memory._arc import Arc
+from memory.arc import Arc
 from collections.optional import Optional
 from external.gojo.fmt import sprintf
 from .vector import contains
@@ -12,8 +12,9 @@ fn no_args(command: CommandArc, args: List[String]) -> Optional[String]:
         command: Reference to the command being executed.
         args: The arguments to check.
     """
+    var cmd = command
     if len(args) > 0:
-        return sprintf("The command `%s` does not take any arguments.", command[].name)
+        return sprintf("The command `%s` does not take any arguments.", cmd[].name)
     return None
 
 
@@ -38,10 +39,11 @@ fn minimum_n_args[n: Int]() -> ArgValidator:
     """
 
     fn less_than_n_args(command: CommandArc, args: List[String]) -> Optional[String]:
+        var cmd = command
         if len(args) < n:
             return sprintf(
                 "The command `%s` accepts at least %d argument(s). Received: %d.",
-                command[].name,
+                cmd[].name,
                 n,
                 len(args),
             )
@@ -61,10 +63,9 @@ fn maximum_n_args[n: Int]() -> ArgValidator:
     """
 
     fn more_than_n_args(command: CommandArc, args: List[String]) -> Optional[String]:
+        var cmd = command
         if len(args) > n:
-            return sprintf(
-                "The command `%s` accepts at most %d argument(s). Received: %d.", command[].name, n, len(args)
-            )
+            return sprintf("The command `%s` accepts at most %d argument(s). Received: %d.", cmd[].name, n, len(args))
         return None
 
     return more_than_n_args
@@ -81,10 +82,9 @@ fn exact_args[n: Int]() -> ArgValidator:
     """
 
     fn exactly_n_args(command: CommandArc, args: List[String]) -> Optional[String]:
+        var cmd = command
         if len(args) != n:
-            return sprintf(
-                "The command `%s` accepts exactly %d argument(s). Received: %d.", command[].name, n, len(args)
-            )
+            return sprintf("The command `%s` accepts exactly %d argument(s). Received: %d.", cmd[].name, n, len(args))
         return None
 
     return exactly_n_args
@@ -98,10 +98,11 @@ fn valid_args[valid: List[String]]() -> ArgValidator:
     """
 
     fn only_valid_args(command: CommandArc, args: List[String]) -> Optional[String]:
+        var cmd = command
         if len(valid) > 0:
             for arg in args:
                 if not contains(valid, arg[]):
-                    return sprintf("Invalid argument: `%s`, for the command `%s`.", arg[], command[].name)
+                    return sprintf("Invalid argument: `%s`, for the command `%s`.", arg[], cmd[].name)
         return None
 
     return only_valid_args
@@ -119,10 +120,11 @@ fn range_args[minimum: Int, maximum: Int]() -> ArgValidator:
     """
 
     fn range_n_args(command: CommandArc, args: List[String]) -> Optional[String]:
+        var cmd = command
         if len(args) < minimum or len(args) > maximum:
             return sprintf(
                 "The command `%s`, accepts between %d to %d argument(s). Received: %d.",
-                command[].name,
+                cmd[].name,
                 minimum,
                 maximum,
                 len(args),
