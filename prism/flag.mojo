@@ -25,7 +25,6 @@ struct Flag(CollectionElement, Stringable):
     var annotations: Dict[String, List[String]]
     var changed: Bool
 
-    @always_inline
     fn __init__(
         inout self,
         name: String,
@@ -54,7 +53,6 @@ struct Flag(CollectionElement, Stringable):
         self.annotations = Dict[String, List[String]]()
         self.changed = False
 
-    @always_inline
     fn __str__(self) -> String:
         return (
             String("(Name: ")
@@ -66,23 +64,20 @@ struct Flag(CollectionElement, Stringable):
             + String(")")
         )
 
-    @always_inline
     fn __eq__(self, other: Self) -> Bool:
         return (
             self.name == other.name
             and self.shorthand == other.shorthand
             and self.usage == other.usage
-            and self.value.value()[] == other.value.value()[]
+            and self.value.value() == other.value.value()
             and self.default == other.default
             and self.type == other.type
             and self.changed == other.changed
         )
 
-    @always_inline
     fn __ne__(self, other: Self) -> Bool:
         return not self == other
 
-    @always_inline
     fn set_value(inout self, value: String) -> None:
         """Sets the value of the flag.
 
@@ -93,7 +88,6 @@ struct Flag(CollectionElement, Stringable):
         self.changed = True
 
 
-@always_inline
 fn split(text: String, sep: String, max_split: Int = -1) -> List[String]:
     try:
         return text.split(sep, max_split)
@@ -171,10 +165,10 @@ fn parse_shorthand_flag(
         var value = flag[1]
         var name = flags.lookup_name(shorthand).value()
 
-        if name[] not in flags.get_names():
-            return name[], value, 0, Error("Command does not accept the flag supplied: " + name[])
+        if name not in flags.get_names():
+            return name, value, 0, Error("Command does not accept the flag supplied: " + name)
 
-        return name[], value, 1, Error()
+        return name, value, 1, Error()
 
     # Flag with value set like "-f <value>"
     var shorthand = argument[1:]
@@ -184,27 +178,27 @@ fn parse_shorthand_flag(
     var name = result.value()
 
     # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-    if flags.get_as_bool(name[]):
-        return name[], String("True"), 1, Error()
+    if flags.get_as_bool(name):
+        return name, String("True"), 1, Error()
 
     if i + 1 >= len(arguments):
         return (
-            name[],
+            name,
             String(""),
             0,
-            Error("Flag `" + name[] + "` requires a value to be set but reached the end of arguments."),
+            Error("Flag `" + name + "` requires a value to be set but reached the end of arguments."),
         )
 
     if arguments[i + 1].startswith("-", 0, 1):
         return (
-            name[],
+            name,
             String(""),
             0,
-            Error("Flag `" + name[] + "` requires a value to be set but found another flag instead."),
+            Error("Flag `" + name + "` requires a value to be set but found another flag instead."),
         )
 
     # Increment index by 2 because 2 args were used (one for name and value).
-    return name[], arguments[i + 1], 2, Error()
+    return name, arguments[i + 1], 2, Error()
 
 
 # TODO: This parsing is dirty atm, will come back around and clean it up.
@@ -246,7 +240,7 @@ fn get_flags(inout flags: FlagSet, arguments: List[String]) -> (List[String], Er
         if not flag:
             return List[String](), Error("No flag found with the name: " + name)
 
-        flag.value()[][].set_value(value)
+        flag.value()[].set_value(value)
         i += increment_by
 
     return remaining_args, Error()

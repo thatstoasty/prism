@@ -8,5 +8,5 @@ fn panic[T: Stringable](message: T, code: Int = 1):
         message: The message to panic with.
         code: The exit code to panic with.
     """
-    print("panic:", message)
+    print("panic:", str(message))
     exit(code)

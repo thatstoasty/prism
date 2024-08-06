@@ -57,7 +57,7 @@ fn index_byte(bytes: List[Byte], delim: Byte) -> Int:
     return -1
 
 
-fn index_byte(bytes: DTypePointer[DType.uint8], size: Int, delim: Byte) -> Int:
+fn index_byte(bytes: UnsafePointer[Scalar[DType.uint8]], size: Int, delim: Byte) -> Int:
     """Return the index of the first occurrence of the byte delim.
 
     Args:
@@ -70,6 +70,23 @@ fn index_byte(bytes: DTypePointer[DType.uint8], size: Int, delim: Byte) -> Int:
     """
     for i in range(size):
         if UInt8(bytes[i]) == delim:
+            return i
+
+    return -1
+
+
+fn index_byte(bytes: Span[UInt8], delim: Byte) -> Int:
+    """Return the index of the first occurrence of the byte delim.
+
+    Args:
+        bytes: The Span to search.
+        delim: The byte to search for.
+
+    Returns:
+        The index of the first occurrence of the byte delim.
+    """
+    for i in range(len(bytes)):
+        if bytes[i] == delim:
             return i
 
     return -1

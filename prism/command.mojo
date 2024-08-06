@@ -7,7 +7,27 @@ from external.gojo.strings import StringBuilder
 from .flag import Flag, get_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from .flag_set import FlagSet, process_flag_for_group_annotation, validate_flag_groups
 from .args import arbitrary_args, get_args
-from .vector import to_string
+
+
+fn to_string[T: StringableCollectionElement](vector: List[Arc[T]]) -> String:
+    var result = String("[")
+    for i in range(vector.size):
+        var flag = vector[i]
+        result += str(flag[])
+        if i < vector.size - 1:
+            result += String(", ")
+    result += String("]")
+    return result
+
+
+fn get_flag_names(flag_names: VariadicListMem[String, _, _]) -> String:
+    var result: String = ""
+    for i in range(len(flag_names)):
+        result += flag_names[i]
+        if i != len(flag_names) - 1:
+            result += " "
+
+    return result
 
 
 fn get_args_as_list() -> List[String]:
@@ -30,7 +50,7 @@ fn default_help(command: Arc[Command]) -> String:
 
     if cmd[].aliases:
         _ = builder.write_string("\n\nAliases:")
-        _ = builder.write_string(fmt.sprintf("\n  %s", to_string(cmd[].aliases)))
+        _ = builder.write_string(fmt.sprintf("\n  %s", cmd[].aliases.__str__()))
 
     # Build usage statement arguments depending on the command's children and flags.
     var full_command = cmd[]._full_command()
@@ -335,14 +355,14 @@ struct Command(CollectionElement):
     fn __repr__(inout self) -> String:
         var parent_name: String = ""
         if self.has_parent():
-            parent_name = self.parent[].value()[].name
+            parent_name = self.parent[].value().name
         return (
             "Name: "
             + self.name
             + "\nDescription: "
             + self.description
             + "\nArgs: "
-            + to_string(self.valid_args)
+            + self.valid_args.__str__()
             + "\nFlags: "
             + str(self.flags)
             + "\nCommands: "
@@ -354,7 +374,7 @@ struct Command(CollectionElement):
     fn _full_command(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
         if self.has_parent():
-            var ancestor: String = self.parent[].value()[]._full_command()
+            var ancestor: String = self.parent[].value()._full_command()
             return ancestor + " " + self.name
         else:
             return self.name
@@ -362,7 +382,7 @@ struct Command(CollectionElement):
     fn _root(self) -> Arc[Command]:
         """Returns the root command of the command tree."""
         if self.has_parent():
-            return self.parent[].value()[]._root()
+            return self.parent[].value()._root()
 
         return self
 
@@ -433,7 +453,7 @@ struct Command(CollectionElement):
 
         # Check if the help flag was passed
         var help_passed = command_ref[].flags.get_as_bool("help")
-        if help_passed.value()[] == True:
+        if help_passed.value() == True:
             print(command.help(command_ref))
             return None
 
@@ -448,12 +468,12 @@ struct Command(CollectionElement):
         # Validate the remaining arguments
         var error_message = command_ref[].arg_validator(command_ref, remaining_args)
         if error_message:
-            panic(error_message.value()[])
+            panic(error_message.value())
 
         # Run the persistent pre-run hooks.
         for parent in parents:
             if parent[].persistent_erroring_pre_run:
-                err = parent[].persistent_erroring_pre_run.value()[](command_ref, remaining_args)
+                err = parent[].persistent_erroring_pre_run.value()(command_ref, remaining_args)
                 if err:
                     panic(err)
 
@@ -462,7 +482,7 @@ struct Command(CollectionElement):
                     break
             else:
                 if parent[].persistent_pre_run:
-                    parent[].persistent_pre_run.value()[](command_ref, remaining_args)
+                    parent[].persistent_pre_run.value()(command_ref, remaining_args)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
@@ -470,24 +490,24 @@ struct Command(CollectionElement):
 
         # Run the pre-run hooks.
         if command_ref[].pre_run:
-            command.pre_run.value()[](command_ref, remaining_args)
+            command.pre_run.value()(command_ref, remaining_args)
         elif command_ref[].erroring_pre_run:
-            err = command.erroring_pre_run.value()[](command_ref, remaining_args)
+            err = command.erroring_pre_run.value()(command_ref, remaining_args)
             if err:
                 panic(err)
 
         # Run the function's commands.
         if command_ref[].run:
-            command_ref[].run.value()[](command_ref, remaining_args)
+            command_ref[].run.value()(command_ref, remaining_args)
         else:
-            err = command_ref[].erroring_run.value()[](command_ref, remaining_args)
+            err = command_ref[].erroring_run.value()(command_ref, remaining_args)
             if err:
                 panic(err)
 
         # Run the persistent post-run hooks.
         for parent in parents:
             if parent[].persistent_erroring_post_run:
-                err = parent[].persistent_erroring_post_run.value()[](command_ref, remaining_args)
+                err = parent[].persistent_erroring_post_run.value()(command_ref, remaining_args)
                 if err:
                     panic(err)
 
@@ -496,7 +516,7 @@ struct Command(CollectionElement):
                     break
             else:
                 if parent[].persistent_post_run:
-                    parent[].persistent_post_run.value()[](command_ref, remaining_args)
+                    parent[].persistent_post_run.value()(command_ref, remaining_args)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
@@ -504,9 +524,9 @@ struct Command(CollectionElement):
 
         # Run the post-run hooks.
         if command_ref[].post_run:
-            command.post_run.value()[](command_ref, remaining_args)
+            command.post_run.value()(command_ref, remaining_args)
         elif command_ref[].erroring_post_run:
-            err = command.erroring_post_run.value()[](command_ref, remaining_args)
+            err = command.erroring_post_run.value()(command_ref, remaining_args)
             if err:
                 panic(err)
 
@@ -568,14 +588,8 @@ struct Command(CollectionElement):
             if not maybe_flag:
                 panic(fmt.sprintf("Failed to find flag %s and mark it as being required in a flag group", flag_name[]))
 
-            var flag = maybe_flag.value()[]
-
-            # TODO: This inline join logic is temporary until we can pass around varadic lists or cast it to a list.
-            var result: String = ""
-            for i in range(len(flag_names)):
-                result += flag_names[i]
-                if i != len(flag_names) - 1:
-                    result += " "
+            var flag = maybe_flag.value()
+            var result = get_flag_names(flag_names)
 
             flag[].annotations[REQUIRED_AS_GROUP] = List[String](result)
             var err = self.flags.set_annotation(
@@ -599,12 +613,8 @@ struct Command(CollectionElement):
                     fmt.sprintf("Failed to find flag %s and mark it as being in a one-required flag group", flag_name[])
                 )
 
-            var flag = maybe_flag.value()[]
-            var result: String = ""
-            for i in range(len(flag_names)):
-                result += flag_names[i]
-                if i != len(flag_names) - 1:
-                    result += " "
+            var flag = maybe_flag.value()
+            var result = get_flag_names(flag_names)
 
             flag[].annotations[ONE_REQUIRED] = result
             var err = self.flags.set_annotation(
@@ -630,12 +640,8 @@ struct Command(CollectionElement):
                     )
                 )
 
-            var flag = maybe_flag.value()[]
-            var result: String = ""
-            for i in range(len(flag_names)):
-                result += flag_names[i]
-                if i != len(flag_names) - 1:
-                    result += " "
+            var flag = maybe_flag.value()
+            var result = get_flag_names(flag_names)
             flag[].annotations[MUTUALLY_EXCLUSIVE] = result
             var err = self.flags.set_annotation(
                 flag_name[], MUTUALLY_EXCLUSIVE, flag[].annotations.get(MUTUALLY_EXCLUSIVE, List[String]())
@@ -666,8 +672,8 @@ struct Command(CollectionElement):
             func: The function to invoke on each parent.
         """
         if self.has_parent():
-            func(self.parent[].value()[])
-            self.parent[].value()[].visit_parents[func]()
+            func(self.parent[].value())
+            self.parent[].value().visit_parents[func]()
 
     fn validate_required_flags(self) -> Error:
         """Validates all required flags are present and returns an error otherwise."""
@@ -682,5 +688,5 @@ struct Command(CollectionElement):
         self.flags.visit_all[check_required_flag]()
 
         if len(missing_flag_names) > 0:
-            return Error("required flag(s) " + to_string(missing_flag_names) + " not set")
+            return Error("required flag(s) " + missing_flag_names.__str__() + " not set")
         return Error()

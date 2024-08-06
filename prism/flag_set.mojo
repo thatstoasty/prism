@@ -1,10 +1,10 @@
 from external.gojo.builtins import panic
 import external.gojo.fmt
 from .flag import Flag
-from .vector import to_string
 
 
 alias FlagVisitorFn = fn (Flag) capturing -> None
+"""Function perform some action while visiting all flags."""
 
 
 fn string_to_bool(value: String) -> Bool:
@@ -16,9 +16,9 @@ fn string_to_bool(value: String) -> Bool:
     Returns:
         The boolean equivalent of the string.
     """
-    var truthy = List[String]("true", "True", "1")
-    for t in truthy:
-        if value == t[]:
+    alias truthy = List[String]("true", "True", "1")
+    for i in range(len(truthy)):
+        if value == truthy[i]:
             return True
     return False
 
@@ -55,8 +55,8 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
     fn __init__(inout self) -> None:
         self.flags = List[Flag]()
 
-    fn __init__(inout self, flag_set: Self) -> None:
-        self = flag_set
+    fn __init__(inout self, other: FlagSet) -> None:
+        self.flags = other.flags
 
     fn __str__(self) -> String:
         var result = String("Flags: [")
@@ -103,7 +103,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
     fn __iadd__(inout self, other: Self):
         self.add_flag_set(other)
 
-    fn lookup(self: Reference[Self], name: String) -> Optional[Reference[Flag, self.is_mutable, self.lifetime]]:
+    fn lookup(ref [_]self, name: String) -> Optional[Reference[Flag, __lifetime_of(self)]]:
         """Returns an mutable or immutable reference to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -113,15 +113,13 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         Returns:
             Optional Reference to the Flag.
         """
-        for i in range(len(self[].flags)):
-            if self[].flags[i].name == name:
-                return self[].flags.__get_ref(i)
+        for i in range(len(self.flags)):
+            if self.flags[i].name == name:
+                return Reference(self.flags[i])
 
         return None
 
-    fn lookup_with_type(
-        self: Reference[Self], name: String, type: String
-    ) -> Optional[Reference[Flag, self.is_mutable, self.lifetime]]:
+    fn lookup_with_type(ref [_]self, name: String, type: String) -> Optional[Reference[Flag, __lifetime_of(self)]]:
         """Returns an mutable or immutable reference to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -132,9 +130,9 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         Returns:
             Optional Reference to the Flag.
         """
-        for i in range(len(self[].flags)):
-            if self[].flags[i].name == name and self[].flags[i].type == type:
-                return self[].flags.__get_ref(i)
+        for i in range(len(self.flags)):
+            if self.flags[i].name == name and self.flags[i].type == type:
+                return Reference(self.flags[i])
 
         return None
 
@@ -148,7 +146,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not result:
             return None
 
-        var flag = result.value()[]
+        var flag = result.value()
         if not flag[].value:
             return flag[].default
 
@@ -164,11 +162,11 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not result:
             return None
 
-        var flag = result.value()[]
+        var flag = result.value()
         if not flag[].value:
             return string_to_bool(flag[].default)
 
-        return string_to_bool(flag[].value.value()[])
+        return string_to_bool(flag[].value.value())
 
     fn get_as_int(self, name: String) -> Optional[Int]:
         """Returns the value of a flag as an Int. If it isn't set, then return the default value.
@@ -180,14 +178,14 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not result:
             return None
 
-        var flag = result.value()[]
+        var flag = result.value()
 
         # TODO: I don't like this swallowing up a failure to convert to int. Maybe return a tuple of optional and error?
         try:
             if not flag[].value:
                 return atol(flag[].default)
 
-            return atol(flag[].value.value()[])
+            return atol(flag[].value.value())
         except e:
             return None
 
@@ -201,7 +199,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not value:
             return None
 
-        return Int8(value.value()[])
+        return Int8(value.value())
 
     fn get_as_int16(self, name: String) -> Optional[Int16]:
         """Returns the value of a flag as a Int16. If it isn't set, then return the default value.
@@ -213,7 +211,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not value:
             return None
 
-        return Int16(value.value()[])
+        return Int16(value.value())
 
     fn get_as_int32(self, name: String) -> Optional[Int32]:
         """Returns the value of a flag as a Int32. If it isn't set, then return the default value.
@@ -225,7 +223,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not value:
             return None
 
-        return Int32(value.value()[])
+        return Int32(value.value())
 
     fn get_as_int64(self, name: String) -> Optional[Int64]:
         """Returns the value of a flag as a Int64. If it isn't set, then return the default value.
@@ -237,7 +235,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not value:
             return None
 
-        return Int64(value.value()[])
+        return Int64(value.value())
 
     fn get_as_uint8(self, name: String) -> Optional[UInt8]:
         """Returns the value of a flag as a UInt8. If it isn't set, then return the default value.
@@ -249,7 +247,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not value:
             return None
 
-        return UInt8(value.value()[])
+        return UInt8(value.value())
 
     fn get_as_uint16(self, name: String) -> Optional[UInt16]:
         """Returns the value of a flag as a UInt16. If it isn't set, then return the default value.
@@ -261,7 +259,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not value:
             return None
 
-        return UInt16(value.value()[])
+        return UInt16(value.value())
 
     fn get_as_uint32(self, name: String) -> Optional[UInt32]:
         """Returns the value of a flag as a UInt32. If it isn't set, then return the default value.
@@ -273,7 +271,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not value:
             return None
 
-        return UInt32(value.value()[])
+        return UInt32(value.value())
 
     fn get_as_uint64(self, name: String) -> Optional[UInt64]:
         """Returns the value of a flag as a UInt64. If it isn't set, then return the default value.
@@ -285,7 +283,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not value:
             return None
 
-        return UInt64(value.value()[])
+        return UInt64(value.value())
 
     fn get_as_float16(self, name: String) -> Optional[Float16]:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
@@ -297,7 +295,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not value:
             return None
 
-        return Float16(value.value()[])
+        return value.value().cast[DType.float16]()
 
     fn get_as_float32(self, name: String) -> Optional[Float32]:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
@@ -309,7 +307,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not value:
             return None
 
-        return Float32(value.value()[])
+        return value.value().cast[DType.float32]()
 
     fn get_as_float64(self, name: String) -> Optional[Float64]:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
@@ -321,14 +319,14 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not result:
             return None
 
-        var flag = result.value()[]
+        var flag = result.value()
 
         # TODO: I don't like this swallowing up a failure to convert to int. Maybe return a tuple of optional and error?
         try:
             if not flag[].value:
                 return string_to_float(flag[].default)
 
-            return string_to_float(flag[].value.value()[])
+            return string_to_float(flag[].value.value())
         except e:
             return None
 
@@ -336,7 +334,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
     #     """Returns a list of immutable references to all flags in the flag set that have values set."""
     #     var result = List[Reference[Flag, i1_0, __lifetime_of(self)]]()
     #     for flag in self.flags:
-    #         if flag[].value.value()[][] != "":
+    #         if flag[].value.value()[] != "":
     #             result.append(flag)
     #     return result
 
@@ -561,7 +559,7 @@ struct FlagSet(Stringable, Sized, Boolable, EqualityComparable):
         if not result:
             return Error("FlagSet.set_annotation: Could not find flag with name: " + name)
 
-        result.value()[][].annotations[key] = values
+        result.value()[].annotations[key] = values
         return Error()
 
     fn visit_all[visitor: FlagVisitorFn](self) -> None:
@@ -657,8 +655,8 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
         panic(
             fmt.sprintf(
                 "if any flags in the group, %s, are set they must all be set; missing %s",
-                to_string(keys),
-                to_string(unset),
+                keys.__str__(),
+                unset.__str__(),
             )
         )
 
@@ -686,7 +684,7 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> N
         for key in pair[].value.keys():
             keys.append(key[])
 
-        panic(fmt.sprintf("at least one of the flags in the group %s is required", to_string(keys)))
+        panic(fmt.sprintf("at least one of the flags in the group %s is required", keys.__str__()))
 
 
 fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
@@ -715,8 +713,8 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
         panic(
             fmt.sprintf(
                 "if any flags in the group %s are set none of the others can be; %s were all set",
-                to_string(keys),
-                to_string(set),
+                keys.__str__(),
+                set.__str__(),
             )
         )
 
