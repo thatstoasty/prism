@@ -22,16 +22,16 @@ fn init() -> None:
     root_command[].persistent_flags.add_string_flag(name="port", shorthand="p", usage="Port")
     root_command[].mark_persistent_flag_required("required")
 
-    # var tool_command = Arc(Command(name="tool", description="This is a dummy command!", run=tool_func))
-    # tool_command[].flags.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
-    # tool_command[].flags.add_string_flag(name="uri", shorthand="u", usage="URI")
-    # root_command[].add_command(tool_command)
+    var tool_command = Arc(Command(name="tool", description="This is a dummy command!", run=tool_func))
+    tool_command[].flags.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
+    tool_command[].flags.add_string_flag(name="uri", shorthand="u", usage="URI")
+    root_command[].add_command(tool_command)
 
-    # # Make sure to add the child command to the parent before marking flags.
-    # # add_command() will merge persistent flags from the parent into the child's flags.
-    # tool_command[].mark_flag_required("also")
-    # tool_command[].mark_flags_required_together("host", "port")
-    # tool_command[].mark_flags_mutually_exclusive("host", "uri")
+    # Make sure to add the child command to the parent before marking flags.
+    # add_command() will merge persistent flags from the parent into the child's flags.
+    tool_command[].mark_flag_required("also")
+    tool_command[].mark_flags_required_together("host", "port")
+    tool_command[].mark_flags_mutually_exclusive("host", "uri")
 
     root_command[].execute()
 
