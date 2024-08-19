@@ -1,3 +1,4 @@
+from memory import Arc
 from tests.wrapper import MojoTest
 from prism.command import Command, CommandArc
 from prism.flag_set import FlagSet

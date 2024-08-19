@@ -29,8 +29,8 @@ fn test_get_flags():
     var remaining_args: List[String]
     var err: Error
     remaining_args, err = get_flags(flag_set, flags)
-    test.assert_equal(flag_set.get_as_string("key").value()[], "value")
-    test.assert_equal(flag_set.get_as_bool("flag").value()[], True)
+    test.assert_equal(flag_set.get_as_string("key").value(), "value")
+    test.assert_equal(flag_set.get_as_bool("flag").value(), True)
 
 
 fn test_parse_flag() raises:

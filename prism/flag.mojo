@@ -1,4 +1,4 @@
-from collections.optional import Optional
+from collections import Optional, Dict
 
 
 # Individual flag annotations

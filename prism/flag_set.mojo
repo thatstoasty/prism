@@ -1,5 +1,6 @@
-from external.gojo.builtins import panic
-import external.gojo.fmt
+from collections import Optional, Dict, InlineList
+from .gojo.builtins import panic
+import .gojo.fmt
 from .flag import Flag
 
 
@@ -16,7 +17,7 @@ fn string_to_bool(value: String) -> Bool:
     Returns:
         The boolean equivalent of the string.
     """
-    alias truthy = List[String]("true", "True", "1")
+    alias truthy = InlineList[String, 3]("true", "True", "1")
     for i in range(len(truthy)):
         if value == truthy[i]:
             return True

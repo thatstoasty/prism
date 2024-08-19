@@ -1,9 +1,9 @@
 from sys import argv
-from collections.optional import Optional
+from collections import Optional, Dict
 from memory.arc import Arc
-import external.gojo.fmt
-from external.gojo.builtins import panic
-from external.gojo.strings import StringBuilder
+import .gojo.fmt
+from .gojo.builtins import panic
+from .gojo.strings import StringBuilder
 from .flag import Flag, get_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from .flag_set import FlagSet, process_flag_for_group_annotation, validate_flag_groups
 from .args import arbitrary_args, get_args
@@ -20,7 +20,7 @@ fn to_string[T: StringableCollectionElement](vector: List[Arc[T]]) -> String:
     return result
 
 
-fn get_flag_names(flag_names: VariadicListMem[String, _, _]) -> String:
+fn get_flag_names(flag_names: VariadicListMem[String, _]) -> String:
     var result: String = ""
     for i in range(len(flag_names)):
         result += flag_names[i]
@@ -78,15 +78,20 @@ fn default_help(command: Arc[Command]) -> String:
 
 alias CommandArc = Arc[Command]
 alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> None
+"""The function for a command to run."""
 alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) -> Error
+"""The function for a command to run that can error."""
 alias HelpFunction = fn (Arc[Command]) -> String
+"""The function for a help function."""
 alias ArgValidator = fn (command: Arc[Command], args: List[String]) escaping -> Optional[String]
+"""The function for an argument validator."""
 alias ParentVisitorFn = fn (parent: Command) capturing -> None
+"""The function for visiting parents of a command."""
 
-# Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
-# If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down.
 # TODO: For now it's locked to False until file scope variables.
 alias ENABLE_TRAVERSE_RUN_HOOKS = False
+"""Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
+If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
 
 
 fn parse_command_from_args(start: Command) -> (Command, List[String]):
@@ -117,67 +122,85 @@ fn parse_command_from_args(start: Command) -> (Command, List[String]):
 struct Command(CollectionElement):
     """A struct representing a command that can be executed from the command line.
 
-    Args:
-        name: The name of the command.
-        description: The description of the command.
-        arg_validator: The function to validate the arguments passed to the command.
-        valid_args: The valid arguments for the command.
-        run: The function to run when the command is executed.
-        pre_run: The function to run before the command is executed.
-        post_run: The function to run after the command is executed.
-        erroring_run: The function to run when the command is executed that returns an error.
-        erroring_pre_run: The function to run before the command is executed that returns an error.
-        erroring_post_run: The function to run after the command is executed that returns an error.
-        persisting_pre_run: The function to run before the command is executed. This persists to children.
-        persisting_post_run: The function to run after the command is executed. This persists to children.
-        persisting_erroring_pre_run: The function to run before the command is executed that returns an error. This persists to children.
-        persisting_erroring_post_run: The function to run after the command is executed that returns an error. This persists to children.
-        help: The function to generate help text for the command.
+    ```mojo
+    from memory import Arc
+    from prism import Command
+
+    fn test(command: Arc[Command], args: List[String]) -> None:
+        print("Hello from Chromeria!")
+
+    fn main():
+        var command = Arc(Command(
+            name="hello",
+            description="This is a dummy command!",
+            run=test,
+        ))
+        command[].execute()
+    ```
+
+    Then execute the command by running the mojo file or binary.
+    ```sh
+    > mojo run hello.mojo
+    Hello from Chromeria!
+    ```
     """
 
     var name: String
+    """The name of the command."""
     var description: String
-
-    # Aliases that can be used instead of the first word in name.
+    """Description of the command."""
     var aliases: List[String]
-
-    # Generates help text.
+    """Aliases that can be used instead of the first word in name."""
     var help: HelpFunction
-
-    # The group id under which this subcommand is grouped in the 'help' output of its parent.
+    """Generates help text."""
     var group_id: String
+    """The group id under which this subcommand is grouped in the 'help' output of its parent."""
 
     var pre_run: Optional[CommandFunction]
+    """A function to run before the run function is executed."""
     var run: Optional[CommandFunction]
+    """A function to run when the command is executed."""
     var post_run: Optional[CommandFunction]
+    """A function to run after the run function is executed."""
 
     var erroring_pre_run: Optional[CommandFunctionErr]
+    """A raising function to run before the run function is executed."""
     var erroring_run: Optional[CommandFunctionErr]
+    """A raising function to run when the command is executed."""
     var erroring_post_run: Optional[CommandFunctionErr]
+    """A raising function to run after the run function is executed."""
 
     var persistent_pre_run: Optional[CommandFunction]
+    """A function to run before the run function is executed. This persists to children."""
     var persistent_post_run: Optional[CommandFunction]
+    """A function to run after the run function is executed. This persists to children."""
 
     var persistent_erroring_pre_run: Optional[CommandFunctionErr]
+    """A raising function to run before the run function is executed. This persists to children."""
     var persistent_erroring_post_run: Optional[CommandFunctionErr]
+    """A raising function to run after the run function is executed. This persists to children."""
 
     var arg_validator: ArgValidator
+    """Function to validate arguments passed to the command."""
     var valid_args: List[String]
+    """Valid arguments for the command."""
 
-    # Local flags for the command. TODO: Use this field to store cached results for local flags.
     var local_flags: FlagSet
+    """Local flags for the command. TODO: Use this field to store cached results for local flags."""
 
-    # Local flags that also persist to children.
     var persistent_flags: FlagSet
+    """Local flags that also persist to children."""
 
-    # It is all local, persistent, and inherited flags.
     var flags: FlagSet
+    """It is all local, persistent, and inherited flags."""
 
-    # Cached results from self._merge_flags().
     var _inherited_flags: FlagSet
+    """Cached results from self._merge_flags()."""
 
     var children: List[Arc[Self]]
+    """Child commands."""
     var parent: Arc[Optional[Self]]
+    """Parent command."""
 
     fn __init__(
         inout self,
@@ -197,6 +220,24 @@ struct Command(CollectionElement):
         persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
         help: HelpFunction = default_help,
     ):
+        """
+        Args:
+            name: The name of the command.
+            description: The description of the command.
+            arg_validator: The function to validate the arguments passed to the command.
+            valid_args: The valid arguments for the command.
+            run: The function to run when the command is executed.
+            pre_run: The function to run before the command is executed.
+            post_run: The function to run after the command is executed.
+            erroring_run: The function to run when the command is executed that returns an error.
+            erroring_pre_run: The function to run before the command is executed that returns an error.
+            erroring_post_run: The function to run after the command is executed that returns an error.
+            persisting_pre_run: The function to run before the command is executed. This persists to children.
+            persisting_post_run: The function to run after the command is executed. This persists to children.
+            persisting_erroring_pre_run: The function to run before the command is executed that returns an error. This persists to children.
+            persisting_erroring_post_run: The function to run after the command is executed that returns an error. This persists to children.
+            help: The function to generate help text for the command.
+        """
         if not run and not erroring_run:
             panic("A command must have a run or erroring_run function.")
 
@@ -253,6 +294,24 @@ struct Command(CollectionElement):
         persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
         help: HelpFunction = default_help,
     ):
+        """
+        Args:
+            name: The name of the command.
+            description: The description of the command.
+            arg_validator: The function to validate the arguments passed to the command.
+            valid_args: The valid arguments for the command.
+            run: The function to run when the command is executed.
+            pre_run: The function to run before the command is executed.
+            post_run: The function to run after the command is executed.
+            erroring_run: The function to run when the command is executed that returns an error.
+            erroring_pre_run: The function to run before the command is executed that returns an error.
+            erroring_post_run: The function to run after the command is executed that returns an error.
+            persisting_pre_run: The function to run before the command is executed. This persists to children.
+            persisting_post_run: The function to run after the command is executed. This persists to children.
+            persisting_erroring_pre_run: The function to run before the command is executed that returns an error. This persists to children.
+            persisting_erroring_post_run: The function to run after the command is executed that returns an error. This persists to children.
+            help: The function to generate help text for the command.
+        """
         if not run and not erroring_run:
             panic("A command must have a run or erroring_run function.")
 

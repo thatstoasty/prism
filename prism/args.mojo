@@ -1,6 +1,6 @@
 from memory.arc import Arc
 from collections.optional import Optional
-import external.gojo.fmt
+import .gojo.fmt
 from .command import CommandArc, ArgValidator
 
 
