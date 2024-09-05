@@ -346,36 +346,36 @@ struct Command(CollectionElement):
         self._inherited_flags = FlagSet()
         self.flags.add_bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
 
-    fn __copyinit__(inout self, existing: Self):
-        self.name = existing.name
-        self.description = existing.description
-        self.aliases = existing.aliases
+    # fn __copyinit__(inout self, existing: Self):
+    #     self.name = existing.name
+    #     self.description = existing.description
+    #     self.aliases = existing.aliases
 
-        self.help = existing.help
-        self.group_id = existing.group_id
+    #     self.help = existing.help
+    #     self.group_id = existing.group_id
 
-        self.pre_run = existing.pre_run
-        self.run = existing.run
-        self.post_run = existing.post_run
+    #     self.pre_run = existing.pre_run
+    #     self.run = existing.run
+    #     self.post_run = existing.post_run
 
-        self.erroring_pre_run = existing.erroring_pre_run
-        self.erroring_run = existing.erroring_run
-        self.erroring_post_run = existing.erroring_post_run
+    #     self.erroring_pre_run = existing.erroring_pre_run
+    #     self.erroring_run = existing.erroring_run
+    #     self.erroring_post_run = existing.erroring_post_run
 
-        self.persistent_pre_run = existing.persistent_pre_run
-        self.persistent_post_run = existing.persistent_post_run
-        self.persistent_erroring_pre_run = existing.persistent_erroring_pre_run
-        self.persistent_erroring_post_run = existing.persistent_erroring_post_run
+    #     self.persistent_pre_run = existing.persistent_pre_run
+    #     self.persistent_post_run = existing.persistent_post_run
+    #     self.persistent_erroring_pre_run = existing.persistent_erroring_pre_run
+    #     self.persistent_erroring_post_run = existing.persistent_erroring_post_run
 
-        self.arg_validator = existing.arg_validator
-        self.valid_args = existing.valid_args
-        self.flags = existing.flags
-        self.local_flags = existing.local_flags
-        self.persistent_flags = existing.persistent_flags
-        self._inherited_flags = existing._inherited_flags
+    #     self.arg_validator = existing.arg_validator
+    #     self.valid_args = existing.valid_args
+    #     self.flags = existing.flags
+    #     self.local_flags = existing.local_flags
+    #     self.persistent_flags = existing.persistent_flags
+    #     self._inherited_flags = existing._inherited_flags
 
-        self.children = existing.children
-        self.parent = existing.parent
+    #     self.children = existing.children
+    #     self.parent = existing.parent
 
     fn __moveinit__(inout self, owned existing: Self):
         self.name = existing.name^

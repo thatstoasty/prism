@@ -73,7 +73,10 @@ fn build_goodbye_command() -> Arc[Command]:
 fn test(command: Arc[Command], args: List[String]) -> None:
     var cmd = command
     for item in cmd[].flags.flags:
-        print(item[].name, item[].value.value())
+        if item[].value:
+            print(item[].name, item[].value.value())
+        else:
+            print(item[].name, "N/A")
 
     return None
 
