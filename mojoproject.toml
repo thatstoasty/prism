@@ -1,0 +1,17 @@
+[project]
+authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
+channels = ["conda-forge", "https://conda.modular.com/max-nightly", "https://repo.prefix.dev/mojo-community"]
+description = "Add a short description here"
+name = "prism"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+tests = "bash scripts/tests.sh"
+examples = "bash scripts/examples.sh"
+build = { cmd = "rattler-build build -r src -c https://conda.modular.com/max-nightly -c conda-forge -c https://repo.prefix.dev/mojo-community --skip-existing=all", env = {MODULAR_MOJO_NIGHTLY_IMPORT_PATH = "$CONDA_PREFIX/lib/mojo"} }
+publish = { cmd = "bash scripts/publish.sh", env = { PREFIX_API_KEY = "$PREFIX_API_KEY" } }
+
+[dependencies]
+max = ">=24.6.0.dev2024090605,<25"
+gojo = ">=0.1.3,<0.2"

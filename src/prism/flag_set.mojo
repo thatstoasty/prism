@@ -1,6 +1,6 @@
 from collections import Optional, Dict, InlineList
-from .gojo.builtins import panic
-import .gojo.fmt
+from gojo.builtins import panic
+import gojo.fmt
 from .flag import Flag
 
 

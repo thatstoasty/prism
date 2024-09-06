@@ -9,13 +9,11 @@ Inspired by: `Cobra`!
 > [!NOTE]
 > This library will often have breaking changes and it should not be used for anything in production.
 
-## Usage
+## Installation
 
-WIP: Documentation, but you should be able to figure out how to use the library by looking at the examples.
-
-You should be able to build the package by running `mojo package prism`. For the easiest method, I recommend just copying the entire `prism` directory into your project. If you want to build the dependencies and then the package in case it's fallen out of sync, you can run `bash scripts/build.sh package` from the root of the project.
-
-> NOTE: It seems like `.mojopkg` files don't like being part of another package, eg. sticking all of your external deps in an `external` or `vendor` package. The only way I've gotten mojopkg files to work is to be in the same directory as the file being executed, and that directory cannot be a mojo package.
+1. First, you'll need to configure your `mojoproject.toml` file to include my Conda channel. Add `"https://repo.prefix.dev/mojo-community"` to the list of channels.
+2. Next, add `prism` to your project's dependencies by running `magic add prism`.
+3. Finally, run `magic install` to install in `prism` and its dependencies. You should see the `.mojopkg` files in `$CONDA_PREFIX/lib/mojo/`.
 
 ### Basic Command and Subcommand
 

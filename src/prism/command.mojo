@@ -1,9 +1,9 @@
 from sys import argv
 from collections import Optional, Dict
 from memory.arc import Arc
-import .gojo.fmt
-from .gojo.builtins import panic
-from .gojo.strings import StringBuilder
+import gojo.fmt
+from gojo.builtins import panic
+from gojo.strings import StringBuilder
 from .flag import Flag, get_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from .flag_set import FlagSet, process_flag_for_group_annotation, validate_flag_groups
 from .args import arbitrary_args, get_args
