@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/prefix-dev/recipe-format/main/schema.json
+
+context:
+  version: "13.4.2"
+
+package:
+  name: "prism"
+  version: 0.1.2
+
+source:
+  - path: .
+  - path: ../LICENSE
+  - path: ../test
+
+build:
+  script:
+    - mkdir -p ${PREFIX}/lib/mojo
+    - magic run mojo package prism
+    - cp prism.mojopkg ${PREFIX}/lib/mojo/prism.mojopkg
+
+requirements:
+  run:
+    - max >= 24.5.0,<25
+    - gojo >= 0.1.9,<0.2
+
+tests:
+  - script:
+      # commands to run to test the package. If any of the commands
+      # returns with an error code, the test is considered failed.
+      # if I don't copy everything into a test dir, mojo test runs the tests in the .magic dir and fails :|
+      - mkdir -p test
+      - mv test_*.mojo test/
+      - mv prism.mojopkg test/
+      - magic run mojo test test
+
+    files:
+      # Extra files to be copied to the test directory from the "work directory"
+      source:
+        - prism.mojopkg
+        - mojoproject.toml
+        - test_*.mojo
+
+about:
+  homepage: https://github.com/thatstoasty/prism
+  license: MIT
+  license_file: LICENSE
+  summary: A Budding CLI Library! https://github.com/thatstoasty/prism
+  repository: https://github.com/thatstoasty/prism
