@@ -5,7 +5,7 @@ context:
 
 package:
   name: "prism"
-  version: 0.1.1.nightly
+  version: 0.1.2
 
 source:
   - path: .
@@ -20,7 +20,8 @@ build:
 
 requirements:
   run:
-    - max >= 24.6.0.dev2024090605
+    - max >= 24.5.0,<25
+    - gojo >= 0.1.9,<0.2
 
 tests:
   - script:
@@ -43,5 +44,5 @@ about:
   homepage: https://github.com/thatstoasty/prism
   license: MIT
   license_file: LICENSE
-  summary: prism lets you safely use advanced styling options on the terminal. https://github.com/thatstoasty/prism
+  summary: A Budding CLI Library! https://github.com/thatstoasty/prism
   repository: https://github.com/thatstoasty/prism

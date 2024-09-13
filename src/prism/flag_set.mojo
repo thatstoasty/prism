@@ -1,7 +1,7 @@
 from collections import Optional, Dict, InlineList
-from gojo.builtins import panic
 import gojo.fmt
 from .flag import Flag
+from .util import panic
 
 
 alias FlagVisitorFn = fn (Flag) capturing -> None

@@ -6,7 +6,7 @@ mkdir -p $TEMP_DIR
 
 echo "[INFO] Building $PACKAGE_NAME package and example binaries."
 magic run mojo package src/$PACKAGE_NAME -o $TEMP_DIR/$PACKAGE_NAME.mojopkg
-cp -R examples/* $TEMP_DIR
+cp -a examples/. $TEMP_DIR
 magic run mojo build $TEMP_DIR/aliases.mojo -o $TEMP_DIR/aliases
 magic run mojo build $TEMP_DIR/hello_world.mojo -o $TEMP_DIR/hello_world
 # magic run mojo build $TEMP_DIR/nested.mojo -o $TEMP_DIR/nested

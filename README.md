@@ -1,6 +1,6 @@
 # Prism
 
-![Mojo 24.4](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.4-purple)
+![Mojo 24.5](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.5-purple)
 
 A Budding CLI Library!
 
@@ -19,9 +19,9 @@ Inspired by: `Cobra`!
 
 Here's an example of a basic command and subcommand!
 
-![Basic Example](https://github.com/thatstoasty/prism/blob/main/demos/images/chromeria.png)
+![Basic Example](https://github.com/thatstoasty/prism/blob/main/doc/images/chromeria.png)
 
-![Chromeria](https://github.com/thatstoasty/prism/blob/main/demos/tapes/hello-chromeria.gif)
+![Chromeria](https://github.com/thatstoasty/prism/blob/main/doc/tapes/hello-chromeria.gif)
 
 ### Command Flags
 
@@ -34,7 +34,7 @@ Commands can have typed flags added to them to enable different behaviors.
     root_command[].flags.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
 ```
 
-![Logging](https://github.com/thatstoasty/prism/blob/main/demos/tapes/logging.gif)
+![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
 
 ### Command Aliases
 
@@ -46,7 +46,7 @@ var tool_command = Arc(Command(
     ))
 ```
 
-![Aliases](https://github.com/thatstoasty/prism/blob/main/demos/tapes/aliases.gif)
+![Aliases](https://github.com/thatstoasty/prism/blob/main/doc/tapes/aliases.gif)
 
 ### Pre and Post Run Hooks
 
@@ -73,7 +73,7 @@ fn init() -> None:
     ))
 ```
 
-![Printer](https://github.com/thatstoasty/prism/blob/main/demos/tapes/printer.gif)
+![Printer](https://github.com/thatstoasty/prism/blob/main/doc/tapes/printer.gif)
 
 ### Persistent Flags and Hooks
 
@@ -93,7 +93,7 @@ fn init() -> None:
     get_command[].flags.persistent_flags.add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
 ```
 
-![Persistent](https://github.com/thatstoasty/prism/blob/main/demos/tapes/persistent.gif)
+![Persistent](https://github.com/thatstoasty/prism/blob/main/doc/tapes/persistent.gif)
 
 ### Required flags
 
@@ -164,7 +164,7 @@ In these cases:
 - a flag may appear in multiple groups
 - a group may contain any number of flags
 
-![Flag Groups](https://github.com/thatstoasty/prism/blob/main/demos/tapes/flag_groups.gif)
+![Flag Groups](https://github.com/thatstoasty/prism/blob/main/doc/tapes/flag_groups.gif)
 
 > NOTE: If you want to enforce a rule on persistent flags, then the child command must be added to the parent command **BEFORE** setting the rule.
 
@@ -202,7 +202,7 @@ fn init() -> None:
     root_command[].execute()
 ```
 
-![Flag Groups 2](https://github.com/thatstoasty/prism/blob/main/demos/tapes/flag_groups-2.gif)
+![Flag Groups 2](https://github.com/thatstoasty/prism/blob/main/doc/tapes/flag_groups-2.gif)
 
 ### Positional and Custom Arguments
 
@@ -235,7 +235,7 @@ fn test_match_all():
     testing.assert_equal(result.value()[], "Command accepts between 0 to 1 argument(s). Received: 2.")
 ```
 
-![Arg Validators](https://github.com/thatstoasty/prism/blob/main/demos/tapes/arg_validators.gif)
+![Arg Validators](https://github.com/thatstoasty/prism/blob/main/doc/tapes/arg_validators.gif)
 
 ### Help Commands
 
@@ -255,7 +255,7 @@ fn init() -> None:
     var hello_command = Arc(Command(name="chromeria", description="This is a dummy command!", run=hello, help=help_func))
 ```
 
-![Help](https://github.com/thatstoasty/prism/blob/main/demos/tapes/help.gif)
+![Help](https://github.com/thatstoasty/prism/blob/main/doc/tapes/help.gif)
 
 ## Notes
 
