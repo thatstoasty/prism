@@ -13,7 +13,7 @@ fn hello(command: Arc[Command], args: List[String]) -> None:
     print(cmd[].name, "Hello from Chromeria!")
 
 
-fn init() -> None:
+fn main() -> None:
     var root_command = Arc(
         Command(
             name="hello",
@@ -57,7 +57,3 @@ fn init() -> None:
     root_command[].add_command(exact_args_command)
     root_command[].add_command(range_args_command)
     root_command[].execute()
-
-
-fn main() -> None:
-    init()

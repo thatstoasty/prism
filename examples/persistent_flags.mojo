@@ -79,7 +79,7 @@ fn post_hook(command: Arc[Command], args: List[String]) -> None:
     print("Post-hook executed!")
 
 
-fn init() -> None:
+fn main() -> None:
     var root_command = Arc(Command(name="nested", description="Base command.", run=base))
 
     var get_command = Arc(
@@ -114,7 +114,3 @@ fn init() -> None:
     get_command[].add_command(dog_command)
     root_command[].add_command(get_command)
     root_command[].execute()
-
-
-fn main() -> None:
-    init()

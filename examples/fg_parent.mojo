@@ -10,7 +10,7 @@ fn tool_func(command: Arc[Command], args: List[String]) -> None:
     print("My tool!")
 
 
-fn init() -> None:
+fn main() -> None:
     var root_command = Arc(
         Command(
             name="my",
@@ -27,7 +27,3 @@ fn init() -> None:
     root_command[].mark_flag_required("required")
 
     root_command[].execute()
-
-
-fn main() -> None:
-    init()

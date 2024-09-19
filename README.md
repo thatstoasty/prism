@@ -1,13 +1,13 @@
 # Prism
 
-![Mojo 24.5](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.5-purple)
-
 A Budding CLI Library!
 
 Inspired by: `Cobra`!
 
-> [!NOTE]
-> This library will often have breaking changes and it should not be used for anything in production.
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.5-orange)
+![Build Status](https://github.com/thatstoasty/prism/actions/workflows/build.yml/badge.svg)
+![Test Status](https://github.com/thatstoasty/prism/actions/workflows/test.yml/badge.svg)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Installation
 
@@ -19,7 +19,33 @@ Inspired by: `Cobra`!
 
 Here's an example of a basic command and subcommand!
 
-![Basic Example](https://github.com/thatstoasty/prism/blob/main/doc/images/chromeria.png)
+```mojo
+from memory import Arc
+from prism import Command
+
+
+fn test(command: Arc[Command], args: List[String]) -> None:
+    print("Pass chromeria as a subcommand!")
+
+
+fn hello(command: Arc[Command], args: List[String]) -> None:
+    print("Hello from Chromeria!")
+
+
+fn main() -> None:
+    var root_command = Arc(
+        Command(
+            name="hello",
+            description="This is a dummy command!",
+            run=test,
+        )
+    )
+
+    var hello_command = Arc(Command(name="chromeria", description="This is a dummy command!", run=hello))
+
+    root_command[].add_command(hello_command)
+    root_command[].execute()
+```
 
 ![Chromeria](https://github.com/thatstoasty/prism/blob/main/doc/tapes/hello-chromeria.gif)
 
@@ -261,13 +287,8 @@ fn init() -> None:
 
 - Flags can have values passed by using the `=` operator. Like `--count=5` OR like `--count 5`.
 - This library leans towards Errors as values over raising Exceptions.
-- `Optional[Error]` would be much cleaner for Command `erroring_run` functions. For now return `Error()` if there's no `Error` to return.
 
 ## TODO
-
-### Repository
-
-- [ ] Add a description
 
 ### Documentation
 

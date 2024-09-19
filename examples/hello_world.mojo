@@ -81,7 +81,7 @@ fn test(command: Arc[Command], args: List[String]) -> None:
     return None
 
 
-fn init() -> None:
+fn main() -> None:
     var root_command = Arc(
         Command(
             name="tones",
@@ -102,7 +102,3 @@ fn init() -> None:
     root_command[].add_command(printer_command)
 
     root_command[].execute()
-
-
-fn main() -> None:
-    init()
