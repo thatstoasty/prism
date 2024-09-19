@@ -10,7 +10,7 @@ fn tool_func(command: Arc[Command], args: List[String]) -> None:
     print("My tool!")
 
 
-fn init() -> None:
+fn main() -> None:
     var root_command = Arc(
         Command(
             name="my",
@@ -35,7 +35,3 @@ fn init() -> None:
     tool_command[].mark_flags_mutually_exclusive("host", "uri")
 
     root_command[].execute()
-
-
-fn main() -> None:
-    init()

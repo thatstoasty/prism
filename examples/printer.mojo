@@ -47,7 +47,7 @@ fn post_hook(command: Arc[Command], args: List[String]) -> None:
     return None
 
 
-fn init() -> None:
+fn main() -> None:
     var root_command = Arc(
         Command(
             name="printer",
@@ -63,7 +63,3 @@ fn init() -> None:
     root_command[].flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
 
     root_command[].execute()
-
-
-fn main() -> None:
-    init()

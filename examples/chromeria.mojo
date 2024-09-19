@@ -10,7 +10,7 @@ fn hello(command: Arc[Command], args: List[String]) -> None:
     print("Hello from Chromeria!")
 
 
-fn init() -> None:
+fn main() -> None:
     var root_command = Arc(
         Command(
             name="hello",
@@ -23,7 +23,3 @@ fn init() -> None:
 
     root_command[].add_command(hello_command)
     root_command[].execute()
-
-
-fn main() -> None:
-    init()

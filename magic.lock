@@ -13,6 +13,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ca-certificates-2024.8.30-hbcca054_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.1.7-unix_pyh707e725_0.conda
       - conda: https://repo.prefix.dev/mojo-community/linux-64/gojo-0.1.9-hb0f4dca_0.conda
+      - conda: https://repo.prefix.dev/mojo-community/linux-64/hue-0.1.6-hb0f4dca_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/importlib-metadata-8.5.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/importlib_metadata-8.5.0-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyter_client-8.6.2-pyhd8ed1ab_0.conda
@@ -45,6 +46,8 @@ environments:
       - conda: https://conda.modular.com/max/linux-64/max-core-24.5.0-release.conda
       - conda: https://conda.modular.com/max/linux-64/max-python-24.5.0-3.12release.conda
       - conda: https://conda.modular.com/max/noarch/mblack-24.5.0-release.conda
+      - conda: https://repo.prefix.dev/mojo-community/linux-64/mist-0.1.6-hb0f4dca_0.conda
+      - conda: https://repo.prefix.dev/mojo-community/linux-64/mog-0.1.6-hb0f4dca_0.conda
       - conda: https://conda.modular.com/max/noarch/mojo-jupyter-24.5.0-release.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mypy_extensions-1.0.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ncurses-6.5-he02047a_1.conda
@@ -63,6 +66,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/tornado-6.4.1-py312h66e93f0_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024a-h8827d51_1.conda
+      - conda: https://repo.prefix.dev/mojo-community/linux-64/weave-0.1.1-hb0f4dca_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/xz-5.2.6-h166bdaf_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zeromq-4.3.5-ha4adb4c_5.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.20.2-pyhd8ed1ab_0.conda
@@ -71,6 +75,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ca-certificates-2024.8.30-hf0a4a13_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/click-8.1.7-unix_pyh707e725_0.conda
       - conda: https://repo.prefix.dev/mojo-community/osx-arm64/gojo-0.1.9-h60d57d3_0.conda
+      - conda: https://repo.prefix.dev/mojo-community/osx-arm64/hue-0.1.6-h60d57d3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/importlib-metadata-8.5.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/importlib_metadata-8.5.0-hd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/jupyter_client-8.6.2-pyhd8ed1ab_0.conda
@@ -94,6 +99,8 @@ environments:
       - conda: https://conda.modular.com/max/osx-arm64/max-core-24.5.0-release.conda
       - conda: https://conda.modular.com/max/osx-arm64/max-python-24.5.0-3.12release.conda
       - conda: https://conda.modular.com/max/noarch/mblack-24.5.0-release.conda
+      - conda: https://repo.prefix.dev/mojo-community/osx-arm64/mist-0.1.6-h60d57d3_0.conda
+      - conda: https://repo.prefix.dev/mojo-community/osx-arm64/mog-0.1.6-h60d57d3_0.conda
       - conda: https://conda.modular.com/max/noarch/mojo-jupyter-24.5.0-release.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/mypy_extensions-1.0.0-pyha770c72_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ncurses-6.5-h7bae524_1.conda
@@ -112,6 +119,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/tornado-6.4.1-py312h024a12e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/traitlets-5.14.3-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/tzdata-2024a-h8827d51_1.conda
+      - conda: https://repo.prefix.dev/mojo-community/osx-arm64/weave-0.1.1-h60d57d3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/xz-5.2.6-h57fd34a_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/zeromq-4.3.5-h64debc3_5.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/zipp-3.20.2-pyhd8ed1ab_0.conda
@@ -242,6 +250,34 @@ packages:
   license: MIT
   size: 1011206
   timestamp: 1726268249824
+- kind: conda
+  name: hue
+  version: 0.1.6
+  build: h60d57d3_0
+  subdir: osx-arm64
+  url: https://repo.prefix.dev/mojo-community/osx-arm64/hue-0.1.6-h60d57d3_0.conda
+  sha256: 51c94dd89dd859f705be4da9c825b63dd953898ab61d7089a1160fadaf2b1dff
+  depends:
+  - max >=24.5.0,<25
+  arch: arm64
+  platform: osx
+  license: MIT
+  size: 486980
+  timestamp: 1726620535591
+- kind: conda
+  name: hue
+  version: 0.1.6
+  build: hb0f4dca_0
+  subdir: linux-64
+  url: https://repo.prefix.dev/mojo-community/linux-64/hue-0.1.6-hb0f4dca_0.conda
+  sha256: 25b1a8573d431c2f1077b6322ef77eeeec1f1a0c9d868829a3734f3072a384f8
+  depends:
+  - max >=24.5.0,<25
+  arch: x86_64
+  platform: linux
+  license: MIT
+  size: 486916
+  timestamp: 1726620530331
 - kind: conda
   name: importlib-metadata
   version: 8.5.0
@@ -1065,6 +1101,72 @@ packages:
   size: 130435
   timestamp: 1726172475910
 - kind: conda
+  name: mist
+  version: 0.1.6
+  build: h60d57d3_0
+  subdir: osx-arm64
+  url: https://repo.prefix.dev/mojo-community/osx-arm64/mist-0.1.6-h60d57d3_0.conda
+  sha256: 3ce8cf79d55a00ce3fb7b8a1c0bdda7280e06b629d5555d2710ec53991ce8ef7
+  depends:
+  - gojo >=0.1.9,<0.2
+  - hue >=0.1.6,<0.2
+  - max >=24.5.0,<25
+  arch: arm64
+  platform: osx
+  license: MIT
+  size: 478960
+  timestamp: 1726620652346
+- kind: conda
+  name: mist
+  version: 0.1.6
+  build: hb0f4dca_0
+  subdir: linux-64
+  url: https://repo.prefix.dev/mojo-community/linux-64/mist-0.1.6-hb0f4dca_0.conda
+  sha256: eeb66e2f078ae97e0eb4b877846c874495b9257b82ea65d3a0365d91d8b247fc
+  depends:
+  - gojo >=0.1.9,<0.2
+  - hue >=0.1.6,<0.2
+  - max >=24.5.0,<25
+  arch: x86_64
+  platform: linux
+  license: MIT
+  size: 479251
+  timestamp: 1726620649559
+- kind: conda
+  name: mog
+  version: 0.1.6
+  build: h60d57d3_0
+  subdir: osx-arm64
+  url: https://repo.prefix.dev/mojo-community/osx-arm64/mog-0.1.6-h60d57d3_0.conda
+  sha256: af42eb9c2b8bb709a32b00ddf0b310908e9f8ca2b484505559c3850acc2866ac
+  depends:
+  - gojo >=0.1.9,<0.2
+  - max >=24.5.0,<25
+  - weave >=0.1.1,<0.2
+  - mist >=0.1.5,<0.2
+  arch: arm64
+  platform: osx
+  license: MIT
+  size: 920181
+  timestamp: 1726686903590
+- kind: conda
+  name: mog
+  version: 0.1.6
+  build: hb0f4dca_0
+  subdir: linux-64
+  url: https://repo.prefix.dev/mojo-community/linux-64/mog-0.1.6-hb0f4dca_0.conda
+  sha256: 3b11cee959dfa869112de03da606cbdfcbd4ed265746c74c6ed089216aa20d7d
+  depends:
+  - gojo >=0.1.9,<0.2
+  - max >=24.5.0,<25
+  - weave >=0.1.1,<0.2
+  - mist >=0.1.5,<0.2
+  arch: x86_64
+  platform: linux
+  license: MIT
+  size: 920604
+  timestamp: 1726686906280
+- kind: conda
   name: mojo-jupyter
   version: 24.5.0
   build: release
@@ -1530,6 +1632,36 @@ packages:
   license: LicenseRef-Public-Domain
   size: 124164
   timestamp: 1724736371498
+- kind: conda
+  name: weave
+  version: 0.1.1
+  build: h60d57d3_0
+  subdir: osx-arm64
+  url: https://repo.prefix.dev/mojo-community/osx-arm64/weave-0.1.1-h60d57d3_0.conda
+  sha256: b7cb567a292d6bdb8a41ca8dc917595c825798ab2fb02e9c69fac8e2c0f77e3d
+  depends:
+  - max >=24.5.0,<25
+  - gojo >=0.1.8,<0.2
+  arch: arm64
+  platform: osx
+  license: MIT
+  size: 423224
+  timestamp: 1726266849700
+- kind: conda
+  name: weave
+  version: 0.1.1
+  build: hb0f4dca_0
+  subdir: linux-64
+  url: https://repo.prefix.dev/mojo-community/linux-64/weave-0.1.1-hb0f4dca_0.conda
+  sha256: b7cac210c54f44f43f70a594e2931fb6f092ee1698a6b64b2836e435183068ea
+  depends:
+  - max >=24.5.0,<25
+  - gojo >=0.1.8,<0.2
+  arch: x86_64
+  platform: linux
+  license: MIT
+  size: 423401
+  timestamp: 1726266848390
 - kind: conda
   name: xz
   version: 5.2.6

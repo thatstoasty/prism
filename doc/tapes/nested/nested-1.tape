@@ -1,4 +1,4 @@
-Output demos/tapes/nested-1.gif
+Output doc/tapes/nested-1.gif
 
 Set Shell "zsh"
 Set FontSize 32

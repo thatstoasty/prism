@@ -55,7 +55,7 @@
 #   Hide                            Hide the subsequent commands from the output
 #   Show                            Show the subsequent commands in the output
 
-Output demos/tapes/nested-2.gif
+Output doc/tapes/nested-2.gif
 
 Set Shell "zsh"
 Set FontSize 30

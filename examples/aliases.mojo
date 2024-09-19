@@ -10,7 +10,7 @@ fn tool_func(command: Arc[Command], args: List[String]) -> None:
     print("My tool!")
 
 
-fn init() -> None:
+fn main() -> None:
     var root_command = Arc(
         Command(
             name="my",
@@ -27,7 +27,3 @@ fn init() -> None:
 
     root_command[].add_command(tool_command)
     root_command[].execute()
-
-
-fn main() -> None:
-    init()

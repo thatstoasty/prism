@@ -1,6 +1,7 @@
 from sys import argv
 from collections import Optional, Dict
 from memory.arc import Arc
+import mog
 import gojo.fmt
 from gojo.strings import StringBuilder
 from .util import panic
@@ -42,38 +43,58 @@ fn get_args_as_list() -> List[String]:
     return args_list
 
 
+alias NEWLINE = ord("\n")
+
+
 fn default_help(command: Arc[Command]) -> String:
+    """Prints the help information for the command.
+    TODO: Add padding for commands, options, and aliases.
+    """
+    var description_style = mog.Style().border(mog.HIDDEN_BORDER)
+    var border_style = mog.Style().border(mog.ROUNDED_BORDER).border_foreground(mog.Color(0x383838)).padding(0, 1)
+    var option_style = mog.Style().foreground(mog.Color(0x81C8BE))
+    var bold_style = mog.Style().bold()
+
     var cmd = command
-    """Prints the help information for the command."""
     var builder = StringBuilder()
-    _ = builder.write_string(cmd[].description)
+    _ = builder.write_string(mog.Style().bold().foreground(mog.Color(0xE5C890)).render("Usage: "))
+    _ = builder.write_string(bold_style.render(cmd[]._full_command()))
+
+    if len(cmd[].flags) > 0:
+        _ = builder.write_string(" [OPTIONS]")
+    if len(cmd[].children) > 0:
+        _ = builder.write_string(" COMMAND")
+    _ = builder.write_string(" [ARGS]...")
+
+    var description = description_style.render(mog.join_vertical(mog.left, str(builder), "\n", cmd[].description))
+
+    builder = StringBuilder()
+    if cmd[].flags.flags:
+        _ = builder.write_string(bold_style.render("Options"))
+        for flag in cmd[].flags.flags:
+            _ = builder.write_string(option_style.render(fmt.sprintf("\n-%s, --%s", flag[].shorthand, flag[].name)))
+            _ = builder.write_string(fmt.sprintf("    %s", flag[].usage))
+    var options = border_style.render(str(builder))
+
+    builder = StringBuilder()
+    if cmd[].children:
+        _ = builder.write_string(bold_style.render("Commands"))
+        for i in range(len(cmd[].children)):
+            _ = builder.write_string(
+                fmt.sprintf(
+                    "\n%s    %s", option_style.render(cmd[].children[i][].name), cmd[].children[i][].description
+                )
+            )
+
+            if i == len(cmd[].children) - 1:
+                _ = builder.write_byte(NEWLINE)
 
     if cmd[].aliases:
-        _ = builder.write_string("\n\nAliases:")
-        _ = builder.write_string(fmt.sprintf("\n  %s", cmd[].aliases.__str__()))
+        _ = builder.write_string(bold_style.render("Aliases"))
+        _ = builder.write_string(fmt.sprintf("\n%s", option_style.render(cmd[].aliases.__str__())))
 
-    # Build usage statement arguments depending on the command's children and flags.
-    var full_command = cmd[]._full_command()
-    _ = builder.write_string(fmt.sprintf("\n\nUsage:\n  %s%s", full_command, String(" [args]")))
-    if len(cmd[].children) > 0:
-        _ = builder.write_string(" [command]")
-    if len(cmd[].flags) > 0:
-        _ = builder.write_string(" [flags]")
-
-    if cmd[].children:
-        _ = builder.write_string("\n\nAvailable commands:")
-        for child in cmd[].children:
-            _ = builder.write_string(fmt.sprintf("\n  %s", str(child[][])))
-
-    if cmd[].flags.flags:
-        _ = builder.write_string("\n\nAvailable flags:")
-        for flag in cmd[].flags.flags:
-            _ = builder.write_string(fmt.sprintf("\n  -%s, --%s    %s", flag[].shorthand, flag[].name, flag[].usage))
-
-    _ = builder.write_string(
-        fmt.sprintf('\n\nUse "%s [command] --help" for more information about a command.', full_command)
-    )
-    return str(builder)
+    var commands = border_style.render(str(builder))
+    return mog.join_vertical(mog.left, description, options, commands)
 
 
 alias CommandArc = Arc[Command]
