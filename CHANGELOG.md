@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.1.3] - 2024-09-19
+
+- Introduce `mog` dependency for help function formatting.
+
 ## [0.1.2] - 2024-09-13
 
 - First release with a changelog! Added rattler build and conda publish.
