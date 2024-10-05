@@ -4,21 +4,10 @@ from memory.arc import Arc
 import mog
 import gojo.fmt
 from gojo.strings import StringBuilder
-from .util import panic
+from .util import panic, to_string
 from .flag import Flag, get_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from .flag_set import FlagSet, process_flag_for_group_annotation, validate_flag_groups
 from .args import arbitrary_args, get_args
-
-
-fn to_string[T: StringableCollectionElement](vector: List[Arc[T]]) -> String:
-    var result = String("[")
-    for i in range(vector.size):
-        var flag = vector[i]
-        result += str(flag[])
-        if i < vector.size - 1:
-            result += String(", ")
-    result += String("]")
-    return result
 
 
 fn get_flag_names(flag_names: VariadicListMem[String, _]) -> String:
@@ -366,37 +355,6 @@ struct Command(CollectionElement):
         self.persistent_flags = FlagSet()
         self._inherited_flags = FlagSet()
         self.flags.add_bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
-
-    # fn __copyinit__(inout self, existing: Self):
-    #     self.name = existing.name
-    #     self.description = existing.description
-    #     self.aliases = existing.aliases
-
-    #     self.help = existing.help
-    #     self.group_id = existing.group_id
-
-    #     self.pre_run = existing.pre_run
-    #     self.run = existing.run
-    #     self.post_run = existing.post_run
-
-    #     self.erroring_pre_run = existing.erroring_pre_run
-    #     self.erroring_run = existing.erroring_run
-    #     self.erroring_post_run = existing.erroring_post_run
-
-    #     self.persistent_pre_run = existing.persistent_pre_run
-    #     self.persistent_post_run = existing.persistent_post_run
-    #     self.persistent_erroring_pre_run = existing.persistent_erroring_pre_run
-    #     self.persistent_erroring_post_run = existing.persistent_erroring_post_run
-
-    #     self.arg_validator = existing.arg_validator
-    #     self.valid_args = existing.valid_args
-    #     self.flags = existing.flags
-    #     self.local_flags = existing.local_flags
-    #     self.persistent_flags = existing.persistent_flags
-    #     self._inherited_flags = existing._inherited_flags
-
-    #     self.children = existing.children
-    #     self.parent = existing.parent
 
     fn __moveinit__(inout self, owned existing: Self):
         self.name = existing.name^

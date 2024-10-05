@@ -72,6 +72,7 @@ fn build_goodbye_command() -> Arc[Command]:
 
 fn test(command: Arc[Command], args: List[String]) -> None:
     var cmd = command
+    print(cmd[].flags.get_as_string("env").value())
     for item in cmd[].flags.flags:
         if item[].value:
             print(item[].name, item[].value.value())
