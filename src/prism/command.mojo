@@ -163,8 +163,6 @@ struct Command(CollectionElement):
     """Aliases that can be used instead of the first word in name."""
     var help: HelpFunction
     """Generates help text."""
-    var group_id: String
-    """The group id under which this subcommand is grouped in the 'help' output of its parent."""
 
     var pre_run: Optional[CommandFunction]
     """A function to run before the run function is executed."""
@@ -256,7 +254,6 @@ struct Command(CollectionElement):
         self.aliases = aliases
 
         self.help = help
-        self.group_id = ""
 
         self.pre_run = pre_run
         self.run = run
@@ -330,7 +327,6 @@ struct Command(CollectionElement):
         self.aliases = aliases
 
         self.help = help
-        self.group_id = ""
 
         self.pre_run = pre_run
         self.run = run
@@ -362,7 +358,6 @@ struct Command(CollectionElement):
         self.aliases = existing.aliases^
 
         self.help = existing.help
-        self.group_id = existing.group_id^
 
         self.pre_run = existing.pre_run^
         self.run = existing.run^
@@ -388,26 +383,41 @@ struct Command(CollectionElement):
         self.parent = existing.parent^
 
     fn __str__(self) -> String:
-        return fmt.sprintf("(Name: %s, Description: %s)", self.name, self.description)
+        var output = String()
+        var writer = output._unsafe_to_formatter()
+        self.format_to(writer)
+        return output
 
-    fn __repr__(inout self) -> String:
-        var parent_name: String = ""
-        if self.has_parent():
-            parent_name = self.parent[].value().name
-        return (
-            "Name: "
-            + self.name
-            + "\nDescription: "
-            + self.description
-            + "\nArgs: "
-            + self.valid_args.__str__()
-            + "\nFlags: "
-            + str(self.flags)
-            + "\nCommands: "
-            + to_string(self.children)
-            + "\nParent: "
-            + parent_name
-        )
+    fn format_to(self, inout writer: Formatter):
+        """Write Flag string representation to a `Formatter`.
+
+        Args:
+            writer: The formatter to write to.
+        """
+
+        @parameter
+        fn write_optional(opt: Optional[String]):
+            if opt:
+                writer.write(repr(opt.value()))
+            else:
+                writer.write(repr(None))
+
+        writer.write("Command(Name: ")
+        writer.write(self.name)
+        writer.write(", Description: ")
+        writer.write(self.description)
+
+        if self.aliases:
+            writer.write(", Aliases: ")
+            writer.write(self.aliases.__str__())
+
+        if self.valid_args:
+            writer.write(", Valid Args: ")
+            writer.write(self.valid_args.__str__())
+        if self.flags:
+            writer.write(", Flags: ")
+            writer.write(self.flags)
+        writer.write(")")
 
     fn _full_command(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
