@@ -5,8 +5,9 @@ import mog
 import gojo.fmt
 from gojo.strings import StringBuilder
 from .util import panic, to_string
-from .flag import Flag, get_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
-from .flag_set import FlagSet, process_flag_for_group_annotation, validate_flag_groups
+from .flag import Flag, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
+from .flag_set import FlagSet, process_flag_for_group_annotation
+from .validate import validate_flag_groups
 from .args import arbitrary_args, get_args
 
 
@@ -89,11 +90,11 @@ fn default_help(command: Arc[Command]) -> String:
 alias CommandArc = Arc[Command]
 alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> None
 """The function for a command to run."""
-alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) -> Error
+alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) raises -> None
 """The function for a command to run that can error."""
 alias HelpFunction = fn (Arc[Command]) -> String
 """The function for a help function."""
-alias ArgValidator = fn (command: Arc[Command], args: List[String]) escaping -> Optional[String]
+alias ArgValidator = fn (command: Arc[Command], args: List[String]) raises -> None
 """The function for an argument validator."""
 alias ParentVisitorFn = fn (parent: Command) capturing -> None
 """The function for visiting parents of a command."""
@@ -372,7 +373,7 @@ struct Command(CollectionElement):
         self.persistent_erroring_pre_run = existing.persistent_erroring_pre_run^
         self.persistent_erroring_post_run = existing.persistent_erroring_post_run^
 
-        self.arg_validator = existing.arg_validator^
+        self.arg_validator = existing.arg_validator
         self.valid_args = existing.valid_args^
         self.flags = existing.flags^
         self.local_flags = existing.local_flags^
@@ -434,29 +435,81 @@ struct Command(CollectionElement):
 
         return self
 
-    fn validate_flag_groups(self):
+    fn validate_flag_groups(self) raises -> None:
         var group_status = Dict[String, Dict[String, Bool]]()
         var one_required_group_status = Dict[String, Dict[String, Bool]]()
         var mutually_exclusive_group_status = Dict[String, Dict[String, Bool]]()
 
-        @always_inline
-        fn flag_checker(flag: Flag) capturing:
-            var err = process_flag_for_group_annotation(self.flags, flag, REQUIRED_AS_GROUP, group_status)
-            if err:
-                panic("Failed to process flag for REQUIRED_AS_GROUP annotation: " + str(err))
-            err = process_flag_for_group_annotation(self.flags, flag, ONE_REQUIRED, one_required_group_status)
-            if err:
-                panic("Failed to process flag for ONE_REQUIRED annotation: " + str(err))
-            err = process_flag_for_group_annotation(
-                self.flags, flag, MUTUALLY_EXCLUSIVE, mutually_exclusive_group_status
-            )
-            if err:
-                panic("Failed to process flag for MUTUALLY_EXCLUSIVE annotation: " + str(err))
+        @parameter
+        fn flag_checker(flag: Flag) raises -> None:
+            process_flag_for_group_annotation(self.flags, flag, REQUIRED_AS_GROUP, group_status)
+            process_flag_for_group_annotation(self.flags, flag, ONE_REQUIRED, one_required_group_status)
+            process_flag_for_group_annotation(self.flags, flag, MUTUALLY_EXCLUSIVE, mutually_exclusive_group_status)
 
         self.flags.visit_all[flag_checker]()
 
         # Validate required flag groups
         validate_flag_groups(group_status, one_required_group_status, mutually_exclusive_group_status)
+
+    fn _execute_pre_run_hooks(
+        self, inout command: Arc[Command], parents: List[Command], args: List[String]
+    ) raises -> None:
+        """Runs the pre-run hooks for the command."""
+        try:
+            # Run the persistent pre-run hooks.
+            for parent in parents:
+                if parent[].persistent_erroring_pre_run:
+                    parent[].persistent_erroring_pre_run.value()(command, args)
+
+                    @parameter
+                    if not ENABLE_TRAVERSE_RUN_HOOKS:
+                        break
+                else:
+                    if parent[].persistent_pre_run:
+                        parent[].persistent_pre_run.value()(command, args)
+
+                        @parameter
+                        if not ENABLE_TRAVERSE_RUN_HOOKS:
+                            break
+
+            # Run the pre-run hooks.
+            if command[].pre_run:
+                command[].pre_run.value()(command, args)
+            elif command[].erroring_pre_run:
+                command[].erroring_pre_run.value()(command, args)
+        except e:
+            print("Failed to run pre-run hooks for command: " + command[].name)
+            raise e
+
+    fn _execute_post_run_hooks(
+        self, inout command: Arc[Command], parents: List[Command], args: List[String]
+    ) raises -> None:
+        """Runs the pre-run hooks for the command."""
+        try:
+            # Run the persistent post-run hooks.
+            for parent in parents:
+                if parent[].persistent_erroring_post_run:
+                    parent[].persistent_erroring_post_run.value()(command, args)
+
+                    @parameter
+                    if not ENABLE_TRAVERSE_RUN_HOOKS:
+                        break
+                else:
+                    if parent[].persistent_post_run:
+                        parent[].persistent_post_run.value()(command, args)
+
+                        @parameter
+                        if not ENABLE_TRAVERSE_RUN_HOOKS:
+                            break
+
+            # Run the post-run hooks.
+            if command[].post_run:
+                command[].post_run.value()(command, args)
+            elif command[].erroring_post_run:
+                command[].erroring_post_run.value()(command, args)
+        except e:
+            print("Failed to run post-run hooks for command: " + command[].name, file=2)
+            raise e
 
     fn execute(inout self) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch."""
@@ -494,89 +547,34 @@ struct Command(CollectionElement):
 
         # Get the flags for the command to be executed.
         # store flags as a mutable ref
-        var err: Error
-        remaining_args, err = get_flags(command_ref[].flags, remaining_args)
-        if err:
-            panic(err)
+        try:
+            remaining_args = command_ref[].flags.from_args(remaining_args)
+        except e:
+            panic(e)
 
         # Check if the help flag was passed
         var help_passed = command_ref[].flags.get_as_bool("help")
         if help_passed.value() == True:
-            print(command.help(command_ref))
+            print(command_ref[].help(command_ref))
             return None
 
-        # Validate individual required flags (eg: flag is required)
-        err = command_ref[].validate_required_flags()
-        if err:
-            panic(err)
+        try:
+            # Validate individual required flags (eg: flag is required)
+            command_ref[].validate_required_flags()
+            # Validate flag groups (eg: one of required, mutually exclusive, required together)
+            command_ref[].validate_flag_groups()
+            # Validate the remaining arguments
+            command_ref[].arg_validator(command_ref, remaining_args)
 
-        # Validate flag groups (eg: one of required, mutually exclusive, required together)
-        command_ref[].validate_flag_groups()
-
-        # Validate the remaining arguments
-        var error_message = command_ref[].arg_validator(command_ref, remaining_args)
-        if error_message:
-            panic(error_message.value())
-
-        # Run the persistent pre-run hooks.
-        for parent in parents:
-            if parent[].persistent_erroring_pre_run:
-                err = parent[].persistent_erroring_pre_run.value()(command_ref, remaining_args)
-                if err:
-                    panic(err)
-
-                @parameter
-                if not ENABLE_TRAVERSE_RUN_HOOKS:
-                    break
+            # Run the function's commands.
+            self._execute_pre_run_hooks(command_ref, parents, remaining_args)
+            if command_ref[].run:
+                command_ref[].run.value()(command_ref, remaining_args)
             else:
-                if parent[].persistent_pre_run:
-                    parent[].persistent_pre_run.value()(command_ref, remaining_args)
-
-                    @parameter
-                    if not ENABLE_TRAVERSE_RUN_HOOKS:
-                        break
-
-        # Run the pre-run hooks.
-        if command_ref[].pre_run:
-            command.pre_run.value()(command_ref, remaining_args)
-        elif command_ref[].erroring_pre_run:
-            err = command.erroring_pre_run.value()(command_ref, remaining_args)
-            if err:
-                panic(err)
-
-        # Run the function's commands.
-        if command_ref[].run:
-            command_ref[].run.value()(command_ref, remaining_args)
-        else:
-            err = command_ref[].erroring_run.value()(command_ref, remaining_args)
-            if err:
-                panic(err)
-
-        # Run the persistent post-run hooks.
-        for parent in parents:
-            if parent[].persistent_erroring_post_run:
-                err = parent[].persistent_erroring_post_run.value()(command_ref, remaining_args)
-                if err:
-                    panic(err)
-
-                @parameter
-                if not ENABLE_TRAVERSE_RUN_HOOKS:
-                    break
-            else:
-                if parent[].persistent_post_run:
-                    parent[].persistent_post_run.value()(command_ref, remaining_args)
-
-                    @parameter
-                    if not ENABLE_TRAVERSE_RUN_HOOKS:
-                        break
-
-        # Run the post-run hooks.
-        if command_ref[].post_run:
-            command.post_run.value()(command_ref, remaining_args)
-        elif command_ref[].erroring_post_run:
-            err = command.erroring_post_run.value()(command_ref, remaining_args)
-            if err:
-                panic(err)
+                command_ref[].erroring_run.value()(command_ref, remaining_args)
+            self._execute_post_run_hooks(command_ref, parents, remaining_args)
+        except e:
+            panic(e)
 
     fn inherited_flags(self) -> FlagSet:
         """Returns the flags for the command and inherited flags from its parent.
@@ -608,9 +606,8 @@ struct Command(CollectionElement):
         Args:
             command: The command to add as a child of self.
         """
-        var cmd = command
         self.children.append(command)
-        cmd[].parent = self
+        command[].parent = self
 
     fn mark_flag_required(inout self, flag_name: String) -> None:
         """Marks the given flag with annotations so that Prism errors
@@ -723,7 +720,7 @@ struct Command(CollectionElement):
             func(self.parent[].value())
             self.parent[].value().visit_parents[func]()
 
-    fn validate_required_flags(self) -> Error:
+    fn validate_required_flags(self) raises -> None:
         """Validates all required flags are present and returns an error otherwise."""
         var missing_flag_names = List[String]()
 
@@ -736,5 +733,4 @@ struct Command(CollectionElement):
         self.flags.visit_all[check_required_flag]()
 
         if len(missing_flag_names) > 0:
-            return Error("required flag(s) " + missing_flag_names.__str__() + " not set")
-        return Error()
+            raise Error("required flag(s) " + missing_flag_names.__str__() + " not set")

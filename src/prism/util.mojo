@@ -3,15 +3,22 @@ from collections import InlineList
 from memory import Arc
 
 
-fn panic[T: Stringable](message: T, code: Int = 1):
+fn panic[T: Formattable](message: T, code: Int = 1):
     """Panics the program with the given message and exit code.
 
     Args:
         message: The message to panic with.
         code: The exit code to panic with.
     """
-    print("panic:", str(message))
+    print(message, file=2)
     exit(code)
+
+
+fn split(text: String, sep: String, max_split: Int = -1) -> List[String]:
+    try:
+        return text.split(sep, max_split)
+    except:
+        return List[String](text)
 
 
 fn string_to_bool(value: String) -> Bool:

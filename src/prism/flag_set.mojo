@@ -1,7 +1,8 @@
 from collections import Optional, Dict, InlineList
 import gojo.fmt
 from .flag import Flag
-from .util import panic, string_to_bool, string_to_float
+from .util import panic, string_to_bool, string_to_float, split
+from .flag_parser import FlagParser
 from .transform import (
     get_as_string,
     get_as_bool,
@@ -21,6 +22,8 @@ from .transform import (
 
 alias FlagVisitorFn = fn (Flag) capturing -> None
 """Function perform some action while visiting all flags."""
+alias FlagVisitorRaisingFn = fn (Flag) capturing raises -> None
+"""Function perform some action while visiting all flags. Can raise."""
 
 
 @value
@@ -40,12 +43,6 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         return output
 
     fn format_to(self, inout writer: Formatter):
-        """Write FlagSet string representation to a `Formatter`.
-
-        Args:
-            writer: The formatter to write to.
-        """
-
         writer.write("Flags: [")
         for i in range(self.flags.size):
             self.flags[i].format_to(writer)
@@ -90,9 +87,6 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         """Returns an mutable or immutable reference to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
-        Args:
-            name: The name of the flag to return.
-
         Returns:
             Optional Reference to the Flag.
         """
@@ -108,8 +102,6 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         """Returns an mutable or immutable reference to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
-        Args:
-            name: The name of the flag to return.
             type: The type of the flag to return.
 
         Returns:
@@ -130,114 +122,59 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         """Returns the value of a flag as a String.
         If it isn't set, then return the default value.
         If there isn't a flag of the type specified, then return None.
-
-        Args:
-            name: The name of the flag to return.
         """
         return self.get_as[R=String, transform=get_as_string](name)
 
     fn get_as_bool(self, name: String) -> Optional[Bool]:
-        """Returns the value of a flag as a Bool. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a Bool. If it isn't set, then return the default value."""
         return self.get_as[R=Bool, transform=get_as_bool](name)
 
     fn get_as_int(self, name: String) -> Optional[Int]:
-        """Returns the value of a flag as an Int. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as an Int. If it isn't set, then return the default value."""
         return self.get_as[R=Int, transform=get_as_int](name)
 
     fn get_as_int8(self, name: String) -> Optional[Int8]:
-        """Returns the value of a flag as a Int8. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a Int8. If it isn't set, then return the default value."""
         return self.get_as[R=Int8, transform=get_as_int8](name)
 
     fn get_as_int16(self, name: String) -> Optional[Int16]:
-        """Returns the value of a flag as a Int16. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a Int16. If it isn't set, then return the default value."""
         return self.get_as[R=Int16, transform=get_as_int16](name)
 
     fn get_as_int32(self, name: String) -> Optional[Int32]:
-        """Returns the value of a flag as a Int32. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a Int32. If it isn't set, then return the default value."""
         return self.get_as[R=Int32, transform=get_as_int32](name)
 
     fn get_as_int64(self, name: String) -> Optional[Int64]:
-        """Returns the value of a flag as a Int64. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a Int64. If it isn't set, then return the default value."""
         return self.get_as[R=Int64, transform=get_as_int64](name)
 
     fn get_as_uint8(self, name: String) -> Optional[UInt8]:
-        """Returns the value of a flag as a UInt8. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a UInt8. If it isn't set, then return the default value."""
         return self.get_as[R=UInt8, transform=get_as_uint8](name)
 
     fn get_as_uint16(self, name: String) -> Optional[UInt16]:
-        """Returns the value of a flag as a UInt16. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a UInt16. If it isn't set, then return the default value."""
         return self.get_as[R=UInt16, transform=get_as_uint16](name)
 
     fn get_as_uint32(self, name: String) -> Optional[UInt32]:
-        """Returns the value of a flag as a UInt32. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a UInt32. If it isn't set, then return the default value."""
         return self.get_as[R=UInt32, transform=get_as_uint32](name)
 
     fn get_as_uint64(self, name: String) -> Optional[UInt64]:
-        """Returns the value of a flag as a UInt64. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a UInt64. If it isn't set, then return the default value."""
         return self.get_as[R=UInt64, transform=get_as_uint64](name)
 
     fn get_as_float16(self, name: String) -> Optional[Float16]:
-        """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
         return self.get_as[R=Float16, transform=get_as_float16](name)
 
     fn get_as_float32(self, name: String) -> Optional[Float32]:
-        """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
         return self.get_as[R=Float32, transform=get_as_float32](name)
 
     fn get_as_float64(self, name: String) -> Optional[Float64]:
-        """Returns the value of a flag as a Float64. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag to return.
-        """
+        """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
         return self.get_as[R=Float64, transform=get_as_float64](name)
 
     fn names(self) -> List[String]:
@@ -375,6 +312,15 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         for flag in self.flags:
             visitor(flag[])
 
+    fn visit_all[visitor: FlagVisitorRaisingFn](self) raises -> None:
+        """Visits all flags in the flag set.
+
+        Params:
+            visitor: The visitor function to call for each flag.
+        """
+        for flag in self.flags:
+            visitor(flag[])
+
     fn merge(inout self, new_set: Self) -> None:
         """Adds flags from another FlagSet. If a flag is already present, the flag from the new set is ignored.
 
@@ -389,23 +335,32 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
 
         new_set.visit_all[add_flag]()
 
+    # TODO: This parsing is dirty atm, will come back around and clean it up.
+    fn from_args(inout self, arguments: List[String]) raises -> List[String]:
+        """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
+
+        Args:
+            arguments: The arguments passed via the command line.
+
+        Returns:
+            The remaining arguments after parsing out flags.
+        """
+        var parser = FlagParser()
+        return parser.parse(self, arguments)
+
 
 fn process_flag_for_group_annotation(
     flags: FlagSet,
-    flag: Reference[Flag],
+    flag: Flag,
     annotation: String,
     inout group_status: Dict[String, Dict[String, Bool]],
-) -> Error:
-    var group_info = flag[].annotations.get(annotation, List[String]())
+) raises -> None:
+    var group_info = flag.annotations.get(annotation, List[String]())
     if group_info:
         for group in group_info:
             var group_name = group[]
             if len(group_status.get(group_name, Dict[String, Bool]())) == 0:
-                var flag_names = List[String]()
-                try:
-                    flag_names = group_name.split(sep=" ")
-                except e:
-                    return Error("process_flag_for_group_annotation: Failed to split group names: " + str(e))
+                var flag_names = group_name.split(sep=" ")
 
                 # Only consider this flag group at all if all the flags are defined.
                 if not has_all_flags(flags, flag_names):
@@ -418,11 +373,13 @@ fn process_flag_for_group_annotation(
 
             # If flag.changed = True, then it had a value set on it.
             try:
-                group_status[group[]][flag[].name] = flag[].changed
+                group_status[group[]][flag.name] = flag.changed
             except e:
-                return Error("process_flag_for_group_annotation: Failed to set group status: " + str(e))
-
-    return Error()
+                raise Error(
+                    String(
+                        "process_flag_for_group_annotation: Failed to set group status for annotation {}: {}"
+                    ).format(annotation, str(e))
+                )
 
 
 fn has_all_flags(flags: FlagSet, flag_names: List[String]) -> Bool:
@@ -430,113 +387,3 @@ fn has_all_flags(flags: FlagSet, flag_names: List[String]) -> Bool:
         if not flags.lookup(name[]):
             return False
     return True
-
-
-fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
-    """Validates that all flags in a group are set if any are set.
-    This is for flags that are marked as required via `Command().mark_flags_required_together()`.
-
-    Args:
-        data: The dictionary of flag groups to validate.
-    """
-    # Within each group, is a Dict of flag name and if they're set.
-    # If it's unset then add to a list to check the condition of all required flags being set.
-    for pair in data.items():
-        var unset = List[String]()
-        for flag in pair[].value.items():
-            if not flag[].value:
-                unset.append(flag[].key)
-
-        if len(unset) == len(pair[].value) or len(unset) == 0:
-            continue
-
-        # Sort values, so they can be tested/scripted against consistently.
-        # unset.sort()
-        var keys = List[String]()
-        for key in pair[].value.keys():
-            keys.append(key[])
-
-        panic(
-            fmt.sprintf(
-                "if any flags in the group, %s, are set they must all be set; missing %s",
-                keys.__str__(),
-                unset.__str__(),
-            )
-        )
-
-
-fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
-    """Validates that at least one flag in a group is set.
-    This is for flags that are marked as required via `Command().mark_flag_required()`.
-
-    Args:
-        data: The dictionary of flag groups to validate.
-    """
-    # Check if at least one key is set.
-    for pair in data.items():
-        var set = List[String]()
-        for flag in pair[].value.items():
-            if flag[].value:
-                set.append(flag[].key)
-
-        if len(set) >= 1:
-            continue
-
-        # Sort values, so they can be tested/scripted against consistently.
-        # unset.sort()
-        var keys = List[String]()
-        for key in pair[].value.keys():
-            keys.append(key[])
-
-        panic(fmt.sprintf("at least one of the flags in the group %s is required", keys.__str__()))
-
-
-fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
-    """Validates that only one flag in a group is set.
-    This is for flags that are marked as required via `Command().mark_flags_mutually_exclusive()`.
-
-    Args:
-        data: The dictionary of flag groups to validate.
-    """
-    # Check if more than one mutually exclusive flag is set.
-    for pair in data.items():
-        var set = List[String]()
-        for flag in pair[].value.items():
-            if flag[].value:
-                set.append(flag[].key)
-
-        if len(set) == 0 or len(set) == 1:
-            continue
-
-        # Sort values, so they can be tested/scripted against consistently.
-        # unset.sort()
-        var keys = List[String]()
-        for key in pair[].value.keys():
-            keys.append(key[])
-
-        panic(
-            fmt.sprintf(
-                "if any flags in the group %s are set none of the others can be; %s were all set",
-                keys.__str__(),
-                set.__str__(),
-            )
-        )
-
-
-fn validate_flag_groups(
-    group_status: Dict[String, Dict[String, Bool]],
-    one_required_group_status: Dict[String, Dict[String, Bool]],
-    mutually_exclusive_group_status: Dict[String, Dict[String, Bool]],
-) -> None:
-    """Validates the status of flag groups.
-    Checks for flag groups that are required together, at least one required, and mutually exclusive.
-    Status is a map of maps containing the flag name and if it's been set.
-
-    Args:
-        group_status: The status of flag groups that are required together.
-        one_required_group_status: The status of flag groups that require at least one flag to be set.
-        mutually_exclusive_group_status: The status of flag groups that are mutually exclusive.
-    """
-    validate_required_flag_group(group_status)
-    validate_one_required_flag_group(one_required_group_status)
-    validate_mutually_exclusive_flag_group(mutually_exclusive_group_status)
