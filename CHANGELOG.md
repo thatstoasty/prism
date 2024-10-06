@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.1.4] - 2024-10-05
+
+- Refactor code to split out functionality into separate files and classes.
+- Reduced copying of structs.
+
 ## [0.1.3] - 2024-09-19
 
 - Introduce `mog` dependency for help function formatting.
