@@ -11,12 +11,10 @@ fn tool_func(context: Context) -> None:
 
 
 fn main() -> None:
-    var root = Arc(
-        Command(
-            name="my",
-            description="This is a dummy command!",
-            run=test,
-        )
+    var root = Command(
+        name="my",
+        description="This is a dummy command!",
+        run=test,
     )
 
     var print_tool = Arc(
@@ -25,5 +23,5 @@ fn main() -> None:
         )
     )
 
-    root[].add_subcommand(print_tool)
-    root[].execute()
+    root.add_subcommand(print_tool)
+    root.execute()

@@ -82,14 +82,12 @@ fn test(context: Context) -> None:
 
 
 fn main() -> None:
-    var root = Arc(
-        Command(
-            name="tones",
-            description="This is a dummy command!",
-            run=test,
-        )
+    var root = Command(
+        name="tones",
+        description="This is a dummy command!",
+        run=test,
     )
-    root[].flags.add_string_flag(name="env", shorthand="e", usage="Environment.")
+    root.flags.add_string_flag(name="env", shorthand="e", usage="Environment.")
 
     var say_command = build_say_command()
     var hello_command = build_hello_command()
@@ -98,7 +96,7 @@ fn main() -> None:
 
     say_command[].add_subcommand(goodbye_command)
     say_command[].add_subcommand(hello_command)
-    root[].add_subcommand(say_command)
-    root[].add_subcommand(printer_command)
+    root.add_subcommand(say_command)
+    root.add_subcommand(printer_command)
 
-    root[].execute()
+    root.execute()

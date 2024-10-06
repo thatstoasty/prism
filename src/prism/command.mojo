@@ -1,5 +1,5 @@
 from sys import argv
-from collections import Optional, Dict
+from collections import Optional, Dict, InlineList
 from memory.arc import Arc
 import mog
 import gojo.fmt
@@ -89,7 +89,6 @@ fn default_help(inout command: Arc[Command]) -> String:
     return mog.join_vertical(mog.left, description, options, commands)
 
 
-alias CommandArc = Arc[Command]
 alias CommandFunction = fn (context: Context) -> None
 """The function for a command to run."""
 alias CommandFunctionErr = fn (context: Context) raises -> None
@@ -130,7 +129,6 @@ fn parse_command_from_args(start: Command) -> (Command, List[String]):
     return command, remaining_args
 
 
-# TODO: For parent Arc[Optional[Self]] works but Optional[Arc[Self]] causes compiler issues.
 @value
 struct Command(CollectionElement):
     """A struct representing a command that can be executed from the command line.
@@ -210,7 +208,8 @@ struct Command(CollectionElement):
 
     var children: List[Arc[Self]]
     """Child commands."""
-    var parent: Arc[Optional[Self]]
+    # TODO: An optional pointer would be great, but it breaks the compiler. So a list of 0-1 pointers is used.
+    var parent: List[Arc[Self]]
     """Parent command."""
 
     fn __init__(
@@ -274,7 +273,7 @@ struct Command(CollectionElement):
         self.valid_args = valid_args
 
         self.children = List[Arc[Self]]()
-        self.parent = Arc[Optional[Command]](None)
+        self.parent = List[Arc[Self]]()
 
         # These need to be mutable so we can add flags to them.
         self.flags = FlagSet()
@@ -353,7 +352,7 @@ struct Command(CollectionElement):
     fn _full_command(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
         if self.has_parent():
-            var ancestor: String = self.parent[].value()._full_command()
+            var ancestor: String = self.parent[0][]._full_command()
             return ancestor + " " + self.name
         else:
             return self.name
@@ -361,7 +360,7 @@ struct Command(CollectionElement):
     fn _root(self) -> Arc[Command]:
         """Returns the root command of the command tree."""
         if self.has_parent():
-            return self.parent[].value()._root()
+            return self.parent[0][]._root()
 
         return self
 
@@ -594,7 +593,7 @@ struct Command(CollectionElement):
 
     fn has_parent(self) -> Bool:
         """Returns True if the command has a parent, False otherwise."""
-        return self.parent[].__bool__()
+        return self.parent.__bool__()
 
     fn visit_parents[func: ParentVisitorFn](self) -> None:
         """Visits all parents of the command and invokes func on each parent.
@@ -603,5 +602,5 @@ struct Command(CollectionElement):
             func: The function to invoke on each parent.
         """
         if self.has_parent():
-            func(self.parent[].value())
-            self.parent[].value().visit_parents[func]()
+            func(self.parent[0][])
+            self.parent[0][].visit_parents[func]()

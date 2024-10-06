@@ -47,18 +47,16 @@ fn post_hook(context: Context) -> None:
 
 
 fn main() -> None:
-    var root = Arc(
-        Command(
-            name="printer",
-            description="Base command.",
-            run=printer,
-            pre_run=pre_hook,
-            post_run=post_hook,
-        )
+    var root = Command(
+        name="printer",
+        description="Base command.",
+        run=printer,
+        pre_run=pre_hook,
+        post_run=post_hook,
     )
-    root[].arg_validator = exact_args[1]()
+    root.arg_validator = exact_args[1]()
 
-    root[].flags.add_uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464EB)
-    root[].flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    root.flags.add_uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464EB)
+    root.flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
 
-    root[].execute()
+    root.execute()

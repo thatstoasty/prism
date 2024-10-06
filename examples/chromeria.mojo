@@ -11,15 +11,13 @@ fn hello(context: Context) -> None:
 
 
 fn main() -> None:
-    var root = Arc(
-        Command(
-            name="hello",
-            description="This is a dummy command!",
-            run=test,
-        )
+    var root = Command(
+        name="hello",
+        description="This is a dummy command!",
+        run=test,
     )
 
     var hello_command = Arc(Command(name="chromeria", description="This is a dummy command!", run=hello))
 
-    root[].add_subcommand(hello_command)
-    root[].execute()
+    root.add_subcommand(hello_command)
+    root.execute()

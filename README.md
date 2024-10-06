@@ -33,31 +33,35 @@ fn hello(inout command: Arc[Command], args: List[String]) -> None:
 
 
 fn main() -> None:
-    var root = Arc(
-        Command(
-            name="hello",
-            description="This is a dummy command!",
-            run=test,
-        )
+    var root = Command(
+        name="hello",
+        description="This is a dummy command!",
+        run=test,
     )
 
     var hello_command = Arc(Command(name="chromeria", description="This is a dummy command!", run=hello))
 
-    root[].add_subcommand(hello_command)
-    root[].execute()
+    root.add_subcommand(hello_command)
+    root.execute()
 ```
 
 ![Chromeria](https://github.com/thatstoasty/prism/blob/main/doc/tapes/hello-chromeria.gif)
+
+### Why are subcommands wrapped with `Arc`?
+
+Due to the nature of self-referential structs, we need to use a smart pointer to reference the subcommand. The child command is owned by the `Arc` pointer, and that pointer is then shared across the program execution.
+
+This will be changed to `Box` in the upcoming release.
 
 ### Command Flags
 
 Commands can have typed flags added to them to enable different behaviors.
 
 ```mojo
-    var root = Arc(Command(
+    var root = Command(
         name="logger", description="Base command.", run=handler
-    ))
-    root[].flags.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
+    )
+    root.flags.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
 ```
 
 ![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
@@ -89,14 +93,14 @@ fn post_hook(inout command: Arc[Command], args: List[String]) -> None:
     return None
 
 
-fn init() -> None:
-    var root = Arc(Command(
+fn main() -> None:
+    var root = Command(
         name="printer",
         description="Base command.",
         run=printer,
         pre_run=pre_hook,
         post_run=post_hook,
-    ))
+    )
 ```
 
 ![Printer](https://github.com/thatstoasty/prism/blob/main/doc/tapes/printer.gif)
@@ -106,8 +110,8 @@ fn init() -> None:
 Flags and hooks can also be inherited by children commands! This can be useful for setting global flags or hooks that should be applied to all child commands.
 
 ```mojo
-fn init() -> None:
-    var root = Arc(Command(name="nested", description="Base command.", run=base))
+fn main() -> None:
+    var root = Command(name="nested", description="Base command.", run=base)
 
     var get_command = Arc(Command(
         name="get",
@@ -138,13 +142,13 @@ var print_tool = Arc(Command(
 Same for persistent flags:
 
 ```mojo
-    var root = Arc(Command(
+    var root = Command(
         name="my",
         description="This is a dummy command!",
         run=test,
-    ))
-    root[].persistent_flags.add_bool_flag(name="free", shorthand="f", usage="Always required.")
-    root[].mark_persistent_flag_required("free")
+    )
+    root.persistent_flags.add_bool_flag(name="free", shorthand="f", usage="Always required.")
+    root.mark_persistent_flag_required("free")
 ```
 
 ### Flag Groups
@@ -185,10 +189,10 @@ If you want to require at least one flag from a group to be present, you can use
 
 In these cases:
 
-- both local and persistent flags can be used
-  - NOTE: the group is only enforced on commands where every flag is defined
-- a flag may appear in multiple groups
-- a group may contain any number of flags
+- Both local and persistent flags can be used.
+  - NOTE: the group is only enforced on commands where every flag is defined.
+- A flag may appear in multiple groups.
+- A group may contain any number of flags.
 
 ![Flag Groups](https://github.com/thatstoasty/prism/blob/main/doc/tapes/flag_groups.gif)
 
@@ -197,17 +201,17 @@ In these cases:
 See `examples/flag_groups/child.mojo` for an example.
 
 ```mojo
-fn init() -> None:
-    var root = Arc(Command(
+fn main() -> None:
+    var root = Command(
         name="my",
         description="This is a dummy command!",
         run=test,
-    ))
+    )
     # Persistent flags are defined on the parent command.
-    root[].persistent_flags.add_bool_flag(name="required", shorthand="r", usage="Always required.")
-    root[].persistent_flags.add_string_flag(name="host", shorthand="h", usage="Host")
-    root[].persistent_flags.add_string_flag(name="port", shorthand="p", usage="Port")
-    root[].mark_persistent_flag_required("required")
+    root.persistent_flags.add_bool_flag(name="required", shorthand="r", usage="Always required.")
+    root.persistent_flags.add_string_flag(name="host", shorthand="h", usage="Host")
+    root.persistent_flags.add_string_flag(name="port", shorthand="p", usage="Port")
+    root.mark_persistent_flag_required("required")
 
     var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func
@@ -216,7 +220,7 @@ fn init() -> None:
     print_tool[].flags.add_string_flag(name="uri", shorthand="u", usage="URI")
 
     # Child commands are added to the parent command.
-    root[].add_subcommand(print_tool)
+    root.add_subcommand(print_tool)
 
     # Rules are set on the child command, which can include persistent flags inherited from the parent command.
     # When executing `mark_flags_required_together()` or `mark_flags_mutually_exclusive()`,
@@ -225,7 +229,7 @@ fn init() -> None:
     print_tool[].mark_flags_required_together("host", "port")
     print_tool[].mark_flags_mutually_exclusive("host", "uri")
 
-    root[].execute()
+    root.execute()
 ```
 
 ![Flag Groups 2](https://github.com/thatstoasty/prism/blob/main/doc/tapes/flag_groups-2.gif)
@@ -255,7 +259,7 @@ fn test_match_all():
     var result = match_all[
         List[ArgValidator](
             range_args[0, 1](),
-            valid_args[List[String]("Pineapple")]()
+            valid_args()
         )
     ]()(List[String]("abc", "123"))
     testing.assert_equal(result.value()[], "Command accepts between 0 to 1 argument(s). Received: 2.")
@@ -271,12 +275,12 @@ Commands are configured to accept a `--help` flag by default. This will print th
 fn help_func(inout command: Arc[Command]) -> String:
     return ""
 
-fn init() -> None:
-    var root = Arc(Command(
+fn main() -> None:
+    var root = Command(
         name="hello",
         description="This is a dummy command!",
         run=test,
-    ))
+    )
 
     var hello_command = Arc(Command(name="chromeria", description="This is a dummy command!", run=hello, help=help_func))
 ```
@@ -301,7 +305,6 @@ fn init() -> None:
 ### Improvements
 
 - Tree traversal improvements.
-- Once we have `Result[T]`, I will refactor raising functions to return results instead.
 - Arc[Command] being passed to validators and command functions is marked as inout because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
 - For now, help functions and arg validators will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
 

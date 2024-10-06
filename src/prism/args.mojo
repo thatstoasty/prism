@@ -1,7 +1,7 @@
 from memory.arc import Arc
 from collections.optional import Optional
 import gojo.fmt
-from .command import CommandArc, ArgValidator
+from .command import ArgValidator
 from .context import Context
 
 

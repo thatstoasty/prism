@@ -22,12 +22,10 @@ fn hello(context: Context) -> None:
 
 
 fn main() -> None:
-    var root = Arc(
-        Command(
-            name="hello",
-            description="This is a dummy command!",
-            run=test,
-        )
+    var root = Command(
+        name="hello",
+        description="This is a dummy command!",
+        run=test,
     )
 
     var no_args_command = Arc(Command(name="no_args", description="This is a dummy command!", run=hello))
@@ -52,12 +50,12 @@ fn main() -> None:
     exact_args_command[].arg_validator = exact_args[1]()
 
     var range_args_command = Arc(Command(name="range_args", description="This is a dummy command!", run=hello))
-    exact_args_command[].arg_validator = range_args[0, 1]()
+    range_args_command[].arg_validator = range_args[0, 1]()
 
-    root[].add_subcommand(no_args_command)
-    root[].add_subcommand(valid_args_command)
-    root[].add_subcommand(minimum_n_args_command)
-    root[].add_subcommand(maximum_n_args_command)
-    root[].add_subcommand(exact_args_command)
-    root[].add_subcommand(range_args_command)
-    root[].execute()
+    root.add_subcommand(no_args_command)
+    root.add_subcommand(valid_args_command)
+    root.add_subcommand(minimum_n_args_command)
+    root.add_subcommand(maximum_n_args_command)
+    root.add_subcommand(exact_args_command)
+    root.add_subcommand(range_args_command)
+    root.execute()

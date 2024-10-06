@@ -69,7 +69,7 @@ fn post_hook(context: Context) -> None:
 
 
 fn main() -> None:
-    var root = Arc(Command(name="nested", description="Base command.", run=base))
+    var root = Command(name="nested", description="Base command.", run=base)
 
     var get_command = Arc(
         Command(
@@ -101,5 +101,5 @@ fn main() -> None:
 
     get_command[].add_subcommand(cat_command)
     get_command[].add_subcommand(dog_command)
-    root[].add_subcommand(get_command)
-    root[].execute()
+    root.add_subcommand(get_command)
+    root.execute()

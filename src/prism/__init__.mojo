@@ -1,6 +1,5 @@
 from .command import (
     Command,
-    CommandArc,
     CommandFunction,
     ArgValidator,
 )
