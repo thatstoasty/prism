@@ -3,7 +3,7 @@ authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
 channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://conda.modular.com/max"]
 description = "Add a short description here"
 name = "requests"
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
