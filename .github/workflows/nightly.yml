@@ -3,7 +3,7 @@ name: Build all packages
 on:
   push:
     branches:
-      - main
+      - nightly
     paths:
         - src/**
 
@@ -46,5 +46,5 @@ jobs:
           chmod +x rattler-build
 
           # Build and push
-          magic run build
-          magic run publish
+          magic run -e nightly build -m nightly
+          magic run -e nightly publish -c mojo-community-nightly
