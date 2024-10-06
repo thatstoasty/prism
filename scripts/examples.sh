@@ -9,20 +9,26 @@ magic run mojo package src/$PACKAGE_NAME -o $TEMP_DIR/$PACKAGE_NAME.mojopkg
 cp -a examples/. $TEMP_DIR
 magic run mojo build $TEMP_DIR/aliases.mojo -o $TEMP_DIR/aliases
 magic run mojo build $TEMP_DIR/hello_world.mojo -o $TEMP_DIR/hello_world
-# magic run mojo build $TEMP_DIR/nested.mojo -o $TEMP_DIR/nested
-# magic run mojo build $TEMP_DIR/printer.mojo -o $TEMP_DIR/printer
-# magic run mojo build $TEMP_DIR/persistent_flags.mojo -o $TEMP_DIR/persistent
 magic run mojo build $TEMP_DIR/fg_parent.mojo -o $TEMP_DIR/parent
 magic run mojo build $TEMP_DIR/fg_child.mojo -o $TEMP_DIR/child
 magic run mojo build $TEMP_DIR/arg_validators.mojo -o $TEMP_DIR/validators
 
 echo "[INFO] Running examples..."
+# Need to run these first examples as part of a mojo project as they have external dependencies.
+# printer is a portable binary, but nested and persistent_flags are not because they depend on a python library.
+cd examples/printer
+magic run mojo build printer.mojo
+./printer "sample-text" --formatting=underline
+
+cd ../requests
+magic run mojo build nested.mojo
+magic run nested get cat --count 3 -l
+magic run mojo build persistent_flags.mojo -o persistent
+magic run persistent get cat --count 2 --lover
+magic run persistent get dog
+
 $TEMP_DIR/aliases my thing
 $TEMP_DIR/hello_world say hello
-# $TEMP_DIR/nested get cat --count 5 -l
-# $TEMP_DIR/printer "sample-text" --formatting=underline
-# $TEMP_DIR/persistent get cat --count 2 --lover
-# $TEMP_DIR/persistent get dog -l
 $TEMP_DIR/parent --required --host=www.example.com --port 8080
 $TEMP_DIR/parent --required --host www.example.com
 $TEMP_DIR/parent --required --host www.example.com --uri abcdef --port 8080
