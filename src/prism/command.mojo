@@ -4,29 +4,20 @@ from memory.arc import Arc
 import mog
 import gojo.fmt
 from gojo.strings import StringBuilder
-from .util import panic
-from .flag import Flag, get_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
-from .flag_set import FlagSet, process_flag_for_group_annotation, validate_flag_groups
+from .util import panic, to_string, to_list
+from .flag import Flag
+from .flag_set import FlagSet, validate_required_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
+from .flag_group import validate_flag_groups
 from .args import arbitrary_args, get_args
 
 
-fn to_string[T: StringableCollectionElement](vector: List[Arc[T]]) -> String:
-    var result = String("[")
-    for i in range(vector.size):
-        var flag = vector[i]
-        result += str(flag[])
-        if i < vector.size - 1:
-            result += String(", ")
-    result += String("]")
-    return result
-
-
-fn get_flag_names(flag_names: VariadicListMem[String, _]) -> String:
-    var result: String = ""
+fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
+    var result = String()
+    var writer = result._unsafe_to_formatter()
     for i in range(len(flag_names)):
-        result += flag_names[i]
+        writer.write(flag_names[i])
         if i != len(flag_names) - 1:
-            result += " "
+            writer.write(" ")
 
     return result
 
@@ -34,19 +25,17 @@ fn get_flag_names(flag_names: VariadicListMem[String, _]) -> String:
 fn get_args_as_list() -> List[String]:
     """Returns the arguments passed to the executable as a list of strings."""
     var args = argv()
-    var args_list = List[String]()
-    var i = 1
-    while i < len(args):
-        args_list.append(args[i])
-        i += 1
+    var result = List[String](capacity=len(args))
+    for arg in args:
+        result.append(arg)
 
-    return args_list
+    return result
 
 
 alias NEWLINE = ord("\n")
 
 
-fn default_help(command: Arc[Command]) -> String:
+fn default_help(inout command: Arc[Command]) -> String:
     """Prints the help information for the command.
     TODO: Add padding for commands, options, and aliases.
     """
@@ -98,13 +87,13 @@ fn default_help(command: Arc[Command]) -> String:
 
 
 alias CommandArc = Arc[Command]
-alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> None
+alias CommandFunction = fn (inout command: Arc[Command], args: List[String]) -> None
 """The function for a command to run."""
-alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) -> Error
+alias CommandFunctionErr = fn (inout command: Arc[Command], args: List[String]) raises -> None
 """The function for a command to run that can error."""
-alias HelpFunction = fn (Arc[Command]) -> String
+alias HelpFunction = fn (inout command: Arc[Command]) -> String
 """The function for a help function."""
-alias ArgValidator = fn (command: Arc[Command], args: List[String]) escaping -> Optional[String]
+alias ArgValidator = fn (inout command: Arc[Command], args: List[String]) raises -> None
 """The function for an argument validator."""
 alias ParentVisitorFn = fn (parent: Command) capturing -> None
 """The function for visiting parents of a command."""
@@ -147,7 +136,7 @@ struct Command(CollectionElement):
     from memory import Arc
     from prism import Command
 
-    fn test(command: Arc[Command], args: List[String]) -> None:
+    fn test(inout command: Arc[Command], args: List[String]) -> None:
         print("Hello from Chromeria!")
 
     fn main():
@@ -174,8 +163,6 @@ struct Command(CollectionElement):
     """Aliases that can be used instead of the first word in name."""
     var help: HelpFunction
     """Generates help text."""
-    var group_id: String
-    """The group id under which this subcommand is grouped in the 'help' output of its parent."""
 
     var pre_run: Optional[CommandFunction]
     """A function to run before the run function is executed."""
@@ -267,7 +254,6 @@ struct Command(CollectionElement):
         self.aliases = aliases
 
         self.help = help
-        self.group_id = ""
 
         self.pre_run = pre_run
         self.run = run
@@ -341,7 +327,6 @@ struct Command(CollectionElement):
         self.aliases = aliases
 
         self.help = help
-        self.group_id = ""
 
         self.pre_run = pre_run
         self.run = run
@@ -367,44 +352,12 @@ struct Command(CollectionElement):
         self._inherited_flags = FlagSet()
         self.flags.add_bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
 
-    # fn __copyinit__(inout self, existing: Self):
-    #     self.name = existing.name
-    #     self.description = existing.description
-    #     self.aliases = existing.aliases
-
-    #     self.help = existing.help
-    #     self.group_id = existing.group_id
-
-    #     self.pre_run = existing.pre_run
-    #     self.run = existing.run
-    #     self.post_run = existing.post_run
-
-    #     self.erroring_pre_run = existing.erroring_pre_run
-    #     self.erroring_run = existing.erroring_run
-    #     self.erroring_post_run = existing.erroring_post_run
-
-    #     self.persistent_pre_run = existing.persistent_pre_run
-    #     self.persistent_post_run = existing.persistent_post_run
-    #     self.persistent_erroring_pre_run = existing.persistent_erroring_pre_run
-    #     self.persistent_erroring_post_run = existing.persistent_erroring_post_run
-
-    #     self.arg_validator = existing.arg_validator
-    #     self.valid_args = existing.valid_args
-    #     self.flags = existing.flags
-    #     self.local_flags = existing.local_flags
-    #     self.persistent_flags = existing.persistent_flags
-    #     self._inherited_flags = existing._inherited_flags
-
-    #     self.children = existing.children
-    #     self.parent = existing.parent
-
     fn __moveinit__(inout self, owned existing: Self):
         self.name = existing.name^
         self.description = existing.description^
         self.aliases = existing.aliases^
 
         self.help = existing.help
-        self.group_id = existing.group_id^
 
         self.pre_run = existing.pre_run^
         self.run = existing.run^
@@ -419,7 +372,7 @@ struct Command(CollectionElement):
         self.persistent_erroring_pre_run = existing.persistent_erroring_pre_run^
         self.persistent_erroring_post_run = existing.persistent_erroring_post_run^
 
-        self.arg_validator = existing.arg_validator^
+        self.arg_validator = existing.arg_validator
         self.valid_args = existing.valid_args^
         self.flags = existing.flags^
         self.local_flags = existing.local_flags^
@@ -430,26 +383,41 @@ struct Command(CollectionElement):
         self.parent = existing.parent^
 
     fn __str__(self) -> String:
-        return fmt.sprintf("(Name: %s, Description: %s)", self.name, self.description)
+        var output = String()
+        var writer = output._unsafe_to_formatter()
+        self.format_to(writer)
+        return output
 
-    fn __repr__(inout self) -> String:
-        var parent_name: String = ""
-        if self.has_parent():
-            parent_name = self.parent[].value().name
-        return (
-            "Name: "
-            + self.name
-            + "\nDescription: "
-            + self.description
-            + "\nArgs: "
-            + self.valid_args.__str__()
-            + "\nFlags: "
-            + str(self.flags)
-            + "\nCommands: "
-            + to_string(self.children)
-            + "\nParent: "
-            + parent_name
-        )
+    fn format_to(self, inout writer: Formatter):
+        """Write Flag string representation to a `Formatter`.
+
+        Args:
+            writer: The formatter to write to.
+        """
+
+        @parameter
+        fn write_optional(opt: Optional[String]):
+            if opt:
+                writer.write(repr(opt.value()))
+            else:
+                writer.write(repr(None))
+
+        writer.write("Command(Name: ")
+        writer.write(self.name)
+        writer.write(", Description: ")
+        writer.write(self.description)
+
+        if self.aliases:
+            writer.write(", Aliases: ")
+            writer.write(self.aliases.__str__())
+
+        if self.valid_args:
+            writer.write(", Valid Args: ")
+            writer.write(self.valid_args.__str__())
+        if self.flags:
+            writer.write(", Flags: ")
+            writer.write(self.flags)
+        writer.write(")")
 
     fn _full_command(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
@@ -466,29 +434,65 @@ struct Command(CollectionElement):
 
         return self
 
-    fn validate_flag_groups(self):
-        var group_status = Dict[String, Dict[String, Bool]]()
-        var one_required_group_status = Dict[String, Dict[String, Bool]]()
-        var mutually_exclusive_group_status = Dict[String, Dict[String, Bool]]()
+    fn _execute_pre_run_hooks(
+        self, inout command: Arc[Command], parents: List[Command], args: List[String]
+    ) raises -> None:
+        """Runs the pre-run hooks for the command."""
+        try:
+            # Run the persistent pre-run hooks.
+            for parent in parents:
+                if parent[].persistent_erroring_pre_run:
+                    parent[].persistent_erroring_pre_run.value()(command, args)
 
-        @always_inline
-        fn flag_checker(flag: Flag) capturing:
-            var err = process_flag_for_group_annotation(self.flags, flag, REQUIRED_AS_GROUP, group_status)
-            if err:
-                panic("Failed to process flag for REQUIRED_AS_GROUP annotation: " + str(err))
-            err = process_flag_for_group_annotation(self.flags, flag, ONE_REQUIRED, one_required_group_status)
-            if err:
-                panic("Failed to process flag for ONE_REQUIRED annotation: " + str(err))
-            err = process_flag_for_group_annotation(
-                self.flags, flag, MUTUALLY_EXCLUSIVE, mutually_exclusive_group_status
-            )
-            if err:
-                panic("Failed to process flag for MUTUALLY_EXCLUSIVE annotation: " + str(err))
+                    @parameter
+                    if not ENABLE_TRAVERSE_RUN_HOOKS:
+                        break
+                else:
+                    if parent[].persistent_pre_run:
+                        parent[].persistent_pre_run.value()(command, args)
 
-        self.flags.visit_all[flag_checker]()
+                        @parameter
+                        if not ENABLE_TRAVERSE_RUN_HOOKS:
+                            break
 
-        # Validate required flag groups
-        validate_flag_groups(group_status, one_required_group_status, mutually_exclusive_group_status)
+            # Run the pre-run hooks.
+            if command[].pre_run:
+                command[].pre_run.value()(command, args)
+            elif command[].erroring_pre_run:
+                command[].erroring_pre_run.value()(command, args)
+        except e:
+            print("Failed to run pre-run hooks for command: " + command[].name)
+            raise e
+
+    fn _execute_post_run_hooks(
+        self, inout command: Arc[Command], parents: List[Command], args: List[String]
+    ) raises -> None:
+        """Runs the pre-run hooks for the command."""
+        try:
+            # Run the persistent post-run hooks.
+            for parent in parents:
+                if parent[].persistent_erroring_post_run:
+                    parent[].persistent_erroring_post_run.value()(command, args)
+
+                    @parameter
+                    if not ENABLE_TRAVERSE_RUN_HOOKS:
+                        break
+                else:
+                    if parent[].persistent_post_run:
+                        parent[].persistent_post_run.value()(command, args)
+
+                        @parameter
+                        if not ENABLE_TRAVERSE_RUN_HOOKS:
+                            break
+
+            # Run the post-run hooks.
+            if command[].post_run:
+                command[].post_run.value()(command, args)
+            elif command[].erroring_post_run:
+                command[].erroring_post_run.value()(command, args)
+        except e:
+            print("Failed to run post-run hooks for command: " + command[].name, file=2)
+            raise e
 
     fn execute(inout self) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch."""
@@ -526,89 +530,34 @@ struct Command(CollectionElement):
 
         # Get the flags for the command to be executed.
         # store flags as a mutable ref
-        var err: Error
-        remaining_args, err = get_flags(command_ref[].flags, remaining_args)
-        if err:
-            panic(err)
+        try:
+            remaining_args = command_ref[].flags.from_args(remaining_args)
+        except e:
+            panic(e)
 
         # Check if the help flag was passed
         var help_passed = command_ref[].flags.get_as_bool("help")
         if help_passed.value() == True:
-            print(command.help(command_ref))
+            print(command_ref[].help(command_ref))
             return None
 
-        # Validate individual required flags (eg: flag is required)
-        err = command_ref[].validate_required_flags()
-        if err:
-            panic(err)
+        try:
+            # Validate individual required flags (eg: flag is required)
+            validate_required_flags(command_ref[].flags)
+            # Validate flag groups (eg: one of required, mutually exclusive, required together)
+            validate_flag_groups(command_ref[].flags)
+            # Validate the remaining arguments
+            command_ref[].arg_validator(command_ref, remaining_args)
 
-        # Validate flag groups (eg: one of required, mutually exclusive, required together)
-        command_ref[].validate_flag_groups()
-
-        # Validate the remaining arguments
-        var error_message = command_ref[].arg_validator(command_ref, remaining_args)
-        if error_message:
-            panic(error_message.value())
-
-        # Run the persistent pre-run hooks.
-        for parent in parents:
-            if parent[].persistent_erroring_pre_run:
-                err = parent[].persistent_erroring_pre_run.value()(command_ref, remaining_args)
-                if err:
-                    panic(err)
-
-                @parameter
-                if not ENABLE_TRAVERSE_RUN_HOOKS:
-                    break
+            # Run the function's commands.
+            self._execute_pre_run_hooks(command_ref, parents, remaining_args)
+            if command_ref[].run:
+                command_ref[].run.value()(command_ref, remaining_args)
             else:
-                if parent[].persistent_pre_run:
-                    parent[].persistent_pre_run.value()(command_ref, remaining_args)
-
-                    @parameter
-                    if not ENABLE_TRAVERSE_RUN_HOOKS:
-                        break
-
-        # Run the pre-run hooks.
-        if command_ref[].pre_run:
-            command.pre_run.value()(command_ref, remaining_args)
-        elif command_ref[].erroring_pre_run:
-            err = command.erroring_pre_run.value()(command_ref, remaining_args)
-            if err:
-                panic(err)
-
-        # Run the function's commands.
-        if command_ref[].run:
-            command_ref[].run.value()(command_ref, remaining_args)
-        else:
-            err = command_ref[].erroring_run.value()(command_ref, remaining_args)
-            if err:
-                panic(err)
-
-        # Run the persistent post-run hooks.
-        for parent in parents:
-            if parent[].persistent_erroring_post_run:
-                err = parent[].persistent_erroring_post_run.value()(command_ref, remaining_args)
-                if err:
-                    panic(err)
-
-                @parameter
-                if not ENABLE_TRAVERSE_RUN_HOOKS:
-                    break
-            else:
-                if parent[].persistent_post_run:
-                    parent[].persistent_post_run.value()(command_ref, remaining_args)
-
-                    @parameter
-                    if not ENABLE_TRAVERSE_RUN_HOOKS:
-                        break
-
-        # Run the post-run hooks.
-        if command_ref[].post_run:
-            command.post_run.value()(command_ref, remaining_args)
-        elif command_ref[].erroring_post_run:
-            err = command.erroring_post_run.value()(command_ref, remaining_args)
-            if err:
-                panic(err)
+                command_ref[].erroring_run.value()(command_ref, remaining_args)
+            self._execute_post_run_hooks(command_ref, parents, remaining_args)
+        except e:
+            panic(e)
 
     fn inherited_flags(self) -> FlagSet:
         """Returns the flags for the command and inherited flags from its parent.
@@ -629,20 +578,18 @@ struct Command(CollectionElement):
 
     fn _merge_flags(inout self):
         """Returns all flags for the command and inherited flags from its parent."""
-        # Set mutability of flag set by initializing it as a var.
         self.flags += self.persistent_flags
         self._inherited_flags = self.inherited_flags()
         self.flags += self._inherited_flags
 
-    fn add_command(inout self: Self, inout command: Arc[Command]):
+    fn add_subcommand(inout self: Self, inout command: Arc[Command]):
         """Adds child command and set's child's parent attribute to self.
 
         Args:
             command: The command to add as a child of self.
         """
-        var cmd = command
         self.children.append(command)
-        cmd[].parent = self
+        command[].parent = self
 
     fn mark_flag_required(inout self, flag_name: String) -> None:
         """Marks the given flag with annotations so that Prism errors
@@ -651,9 +598,10 @@ struct Command(CollectionElement):
         Args:
             flag_name: The name of the flag to mark as required.
         """
-        var err = self.flags.set_annotation(flag_name, REQUIRED, List[String]("true"))
-        if err:
-            panic(err)
+        try:
+            self.flags.set_required(flag_name)
+        except e:
+            panic(e)
 
     fn mark_flags_required_together(inout self, *flag_names: String) -> None:
         """Marks the given flags with annotations so that Prism errors
@@ -663,20 +611,13 @@ struct Command(CollectionElement):
             flag_names: The names of the flags to mark as required together.
         """
         self._merge_flags()
-        for flag_name in flag_names:
-            var maybe_flag = self.flags.lookup(flag_name[])
-            if not maybe_flag:
-                panic(fmt.sprintf("Failed to find flag %s and mark it as being required in a flag group", flag_name[]))
+        var names = concat_names(flag_names)
 
-            var flag = maybe_flag.value()
-            var result = get_flag_names(flag_names)
-
-            flag[].annotations[REQUIRED_AS_GROUP] = List[String](result)
-            var err = self.flags.set_annotation(
-                flag_name[], REQUIRED_AS_GROUP, flag[].annotations.get(REQUIRED_AS_GROUP, List[String]())
-            )
-            if err:
-                panic(err)
+        try:
+            for flag_name in flag_names:
+                self.flags.set_as[REQUIRED_AS_GROUP](flag_name[], names)
+        except e:
+            panic(e)
 
     fn mark_flags_one_required(inout self, *flag_names: String) -> None:
         """Marks the given flags with annotations so that Prism errors
@@ -686,22 +627,12 @@ struct Command(CollectionElement):
             flag_names: The names of the flags to mark as required.
         """
         self._merge_flags()
-        for flag_name in flag_names:
-            var maybe_flag = self.flags.lookup(flag_name[])
-            if not maybe_flag:
-                panic(
-                    fmt.sprintf("Failed to find flag %s and mark it as being in a one-required flag group", flag_name[])
-                )
-
-            var flag = maybe_flag.value()
-            var result = get_flag_names(flag_names)
-
-            flag[].annotations[ONE_REQUIRED] = result
-            var err = self.flags.set_annotation(
-                flag_name[], ONE_REQUIRED, flag[].annotations.get(ONE_REQUIRED, List[String]())
-            )
-            if err:
-                panic(err)
+        var names = concat_names(flag_names)
+        try:
+            for flag_name in flag_names:
+                self.flags.set_as[ONE_REQUIRED](flag_name[], names)
+        except e:
+            panic(e)
 
     fn mark_flags_mutually_exclusive(inout self, *flag_names: String) -> None:
         """Marks the given flags with annotations so that Prism errors
@@ -711,23 +642,13 @@ struct Command(CollectionElement):
             flag_names: The names of the flags to mark as mutually exclusive.
         """
         self._merge_flags()
-        for flag_name in flag_names:
-            var maybe_flag = self.flags.lookup(flag_name[])
-            if not maybe_flag:
-                panic(
-                    fmt.sprintf(
-                        "Failed to find flag %s and mark it as being in a mutually exclusive flag group", flag_name[]
-                    )
-                )
+        var names = concat_names(flag_names)
 
-            var flag = maybe_flag.value()
-            var result = get_flag_names(flag_names)
-            flag[].annotations[MUTUALLY_EXCLUSIVE] = result
-            var err = self.flags.set_annotation(
-                flag_name[], MUTUALLY_EXCLUSIVE, flag[].annotations.get(MUTUALLY_EXCLUSIVE, List[String]())
-            )
-            if err:
-                panic(err)
+        try:
+            for flag_name in flag_names:
+                self.flags.set_as[MUTUALLY_EXCLUSIVE](flag_name[], names)
+        except e:
+            panic(e)
 
     fn mark_persistent_flag_required(inout self, flag_name: String) -> None:
         """Marks the given persistent flag with annotations so that Prism errors
@@ -736,10 +657,10 @@ struct Command(CollectionElement):
         Args:
             flag_name: The name of the flag to mark as required.
         """
-        # self._merge_flags()
-        var err = self.persistent_flags.set_annotation(flag_name, REQUIRED, List[String]("true"))
-        if err:
-            panic(err)
+        try:
+            self.persistent_flags.set_required(flag_name)
+        except e:
+            panic(e)
 
     fn has_parent(self) -> Bool:
         """Returns True if the command has a parent, False otherwise."""
@@ -754,19 +675,3 @@ struct Command(CollectionElement):
         if self.has_parent():
             func(self.parent[].value())
             self.parent[].value().visit_parents[func]()
-
-    fn validate_required_flags(self) -> Error:
-        """Validates all required flags are present and returns an error otherwise."""
-        var missing_flag_names = List[String]()
-
-        fn check_required_flag(flag: Flag) capturing -> None:
-            var required_annotation = flag.annotations.get(REQUIRED, List[String]())
-            if required_annotation:
-                if required_annotation[0] == "true" and not flag.changed:
-                    missing_flag_names.append(flag.name)
-
-        self.flags.visit_all[check_required_flag]()
-
-        if len(missing_flag_names) > 0:
-            return Error("required flag(s) " + missing_flag_names.__str__() + " not set")
-        return Error()

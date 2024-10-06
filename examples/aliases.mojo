@@ -2,16 +2,16 @@ from memory import Arc
 from prism import Command, CommandArc
 
 
-fn test(command: Arc[Command], args: List[String]) -> None:
+fn test(inout command: Arc[Command], args: List[String]) -> None:
     print("Pass tool, object, or thing as a subcommand!")
 
 
-fn tool_func(command: Arc[Command], args: List[String]) -> None:
+fn tool_func(inout command: Arc[Command], args: List[String]) -> None:
     print("My tool!")
 
 
 fn main() -> None:
-    var root_command = Arc(
+    var root = Arc(
         Command(
             name="my",
             description="This is a dummy command!",
@@ -19,11 +19,11 @@ fn main() -> None:
         )
     )
 
-    var tool_command = Arc(
+    var print_tool = Arc(
         Command(
             name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
         )
     )
 
-    root_command[].add_command(tool_command)
-    root_command[].execute()
+    root[].add_subcommand(print_tool)
+    root[].execute()

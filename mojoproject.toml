@@ -4,15 +4,22 @@ channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://co
 description = "A Budding CLI Library!"
 name = "prism"
 platforms = ["osx-arm64", "linux-64"]
-version = "0.1.3"
+version = "0.1.4"
+license = "MIT"
+license-file = "LICENSE"
+homepage = "https://github.com/thatstoasty/prism"
+repository = "https://github.com/thatstoasty/prism"
 
 [tasks]
-tests = "bash scripts/tests.sh"
+tests = "python scripts/util.py run tests"
+benchmarks = "python scripts/util.py run benchmarks"
 examples = "bash scripts/examples.sh"
-build = "rattler-build build -r src -c https://repo.prefix.dev/mojo-community -c https://conda.modular.com/max -c conda-forge --skip-existing=all"
-publish = { cmd = "bash scripts/publish.sh", env = { PREFIX_API_KEY = "$PREFIX_API_KEY" } }
+template = "python scripts/util.py templater"
+build = { cmd = "python scripts/util.py build", env = {MODULAR_MOJO_IMPORT_PATH = "$CONDA_PREFIX/lib/mojo"} }
+publish = { cmd = "python scripts/util.py publish", env = { PREFIX_API_KEY = "$PREFIX_API_KEY" } }
+bp = { depends_on=["build", "publish"] }
 
 [dependencies]
 max = ">=24.5.0,<25"
-gojo = ">=0.1.9,<0.2"
+gojo = ">=0.1.12,<0.2"
 mog = ">=0.1.6,<0.2"
