@@ -1,12 +1,12 @@
 from memory import Arc
-from prism import Command
+from prism import Command, Context
 
 
-fn test(inout command: Arc[Command], args: List[String]) -> None:
+fn test(context: Context) -> None:
     print("Pass tool, object, or thing as a subcommand!")
 
 
-fn tool_func(inout command: Arc[Command], args: List[String]) -> None:
+fn tool_func(context: Context) -> None:
     print("My tool!")
 
 

@@ -1,12 +1,12 @@
 from memory import Arc
-from prism import Command
+from prism import Command, Context
 
 
-fn test(inout command: Arc[Command], args: List[String]) -> None:
+fn test(context: Context) -> None:
     print("Pass chromeria as a subcommand!")
 
 
-fn hello(inout command: Arc[Command], args: List[String]) -> None:
+fn hello(context: Context) -> None:
     print("Hello from Chromeria!")
 
 

@@ -1,16 +1,15 @@
 from memory import Arc
-from prism import Command, CommandArc, exact_args
+from prism import Command, Context, CommandArc, exact_args
 from mist import Style
 
 
-fn printer(inout command: Arc[Command], args: List[String]) -> None:
-    var cmd = command
-    if len(args) <= 0:
+fn printer(context: Context) -> None:
+    if len(context.args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    var color = command[].flags.get_as_uint32("color")
-    var formatting = command[].flags.get_as_string("formatting")
+    var color = context.command[].flags.get_as_uint32("color")
+    var formatting = context.command[].flags.get_as_string("formatting")
     var style = Style()
 
     if not color:
@@ -23,7 +22,7 @@ fn printer(inout command: Arc[Command], args: List[String]) -> None:
 
     var formatting_value = formatting.or_else("")
     if formatting_value == "":
-        print(style.render(args[0]))
+        print(style.render(context.args[0]))
         return None
 
     if formatting.value() == "bold":
@@ -33,16 +32,16 @@ fn printer(inout command: Arc[Command], args: List[String]) -> None:
     elif formatting.value() == "italic":
         style = style.italic()
 
-    print(style.render(args[0]))
+    print(style.render(context.args[0]))
     return None
 
 
-fn pre_hook(inout command: Arc[Command], args: List[String]) -> None:
+fn pre_hook(context: Context) -> None:
     print("Pre-hook executed!")
     return None
 
 
-fn post_hook(inout command: Arc[Command], args: List[String]) -> None:
+fn post_hook(context: Context) -> None:
     print("Post-hook executed!")
     return None
 
@@ -55,9 +54,9 @@ fn main() -> None:
             run=printer,
             pre_run=pre_hook,
             post_run=post_hook,
-            arg_validator=exact_args[1](),
         )
     )
+    root[].arg_validator = exact_args[1]()
 
     root[].flags.add_uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464EB)
     root[].flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")

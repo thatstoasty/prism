@@ -303,7 +303,6 @@ fn init() -> None:
 - Tree traversal improvements.
 - Once we have `Result[T]`, I will refactor raising functions to return results instead.
 - Arc[Command] being passed to validators and command functions is marked as inout because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
+- For now, help functions and arg validators will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
 
 ### Bugs
-
-- `Command` has 2 almost indentical init functions because setting a default `arg_validator` value, breaks the compiler as of 24.2.

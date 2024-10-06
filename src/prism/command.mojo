@@ -9,6 +9,7 @@ from .flag import Flag
 from .flag_set import FlagSet, validate_required_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from .flag_group import validate_flag_groups
 from .args import arbitrary_args, get_args
+from .context import Context
 
 
 fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
@@ -89,13 +90,13 @@ fn default_help(inout command: Arc[Command]) -> String:
 
 
 alias CommandArc = Arc[Command]
-alias CommandFunction = fn (inout command: Arc[Command], args: List[String]) -> None
+alias CommandFunction = fn (context: Context) -> None
 """The function for a command to run."""
-alias CommandFunctionErr = fn (inout command: Arc[Command], args: List[String]) raises -> None
+alias CommandFunctionErr = fn (context: Context) raises -> None
 """The function for a command to run that can error."""
 alias HelpFunction = fn (inout command: Arc[Command]) -> String
 """The function for a help function."""
-alias ArgValidator = fn (inout command: Arc[Command], args: List[String]) raises -> None
+alias ArgValidator = fn (context: Context) raises -> None
 """The function for an argument validator."""
 alias ParentVisitorFn = fn (parent: Command) capturing -> None
 """The function for visiting parents of a command."""
@@ -136,9 +137,9 @@ struct Command(CollectionElement):
 
     ```mojo
     from memory import Arc
-    from prism import Command
+    from prism import Command, Context
 
-    fn test(inout command: Arc[Command], args: List[String]) -> None:
+    fn test(context: Context) -> None:
         print("Hello from Chromeria!")
 
     fn main():
@@ -228,7 +229,6 @@ struct Command(CollectionElement):
         persistent_post_run: Optional[CommandFunction] = None,
         persistent_erroring_pre_run: Optional[CommandFunctionErr] = None,
         persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
-        help: HelpFunction = default_help,
     ):
         """
         Args:
@@ -255,7 +255,7 @@ struct Command(CollectionElement):
         self.description = description
         self.aliases = aliases
 
-        self.help = help
+        self.help = default_help
 
         self.pre_run = pre_run
         self.run = run
@@ -277,77 +277,6 @@ struct Command(CollectionElement):
         self.parent = Arc[Optional[Command]](None)
 
         # These need to be mutable so we can add flags to them.
-        self.flags = FlagSet()
-        self.local_flags = FlagSet()
-        self.persistent_flags = FlagSet()
-        self._inherited_flags = FlagSet()
-        self.flags.add_bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
-
-    # TODO: Why do we have 2 almost indentical init functions? Setting a default arg_validator value, breaks the compiler as of 24.2.
-    fn __init__(
-        inout self,
-        name: String,
-        description: String,
-        arg_validator: ArgValidator,
-        aliases: List[String] = List[String](),
-        valid_args: List[String] = List[String](),
-        run: Optional[CommandFunction] = None,
-        pre_run: Optional[CommandFunction] = None,
-        post_run: Optional[CommandFunction] = None,
-        erroring_run: Optional[CommandFunctionErr] = None,
-        erroring_pre_run: Optional[CommandFunctionErr] = None,
-        erroring_post_run: Optional[CommandFunctionErr] = None,
-        persistent_pre_run: Optional[CommandFunction] = None,
-        persistent_post_run: Optional[CommandFunction] = None,
-        persistent_erroring_pre_run: Optional[CommandFunctionErr] = None,
-        persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
-        help: HelpFunction = default_help,
-    ):
-        """
-        Args:
-            name: The name of the command.
-            description: The description of the command.
-            arg_validator: The function to validate the arguments passed to the command.
-            valid_args: The valid arguments for the command.
-            run: The function to run when the command is executed.
-            pre_run: The function to run before the command is executed.
-            post_run: The function to run after the command is executed.
-            erroring_run: The function to run when the command is executed that returns an error.
-            erroring_pre_run: The function to run before the command is executed that returns an error.
-            erroring_post_run: The function to run after the command is executed that returns an error.
-            persisting_pre_run: The function to run before the command is executed. This persists to children.
-            persisting_post_run: The function to run after the command is executed. This persists to children.
-            persisting_erroring_pre_run: The function to run before the command is executed that returns an error. This persists to children.
-            persisting_erroring_post_run: The function to run after the command is executed that returns an error. This persists to children.
-            help: The function to generate help text for the command.
-        """
-        if not run and not erroring_run:
-            panic("A command must have a run or erroring_run function.")
-
-        self.name = name
-        self.description = description
-        self.aliases = aliases
-
-        self.help = help
-
-        self.pre_run = pre_run
-        self.run = run
-        self.post_run = post_run
-
-        self.erroring_pre_run = erroring_pre_run
-        self.erroring_run = erroring_run
-        self.erroring_post_run = erroring_post_run
-
-        self.persistent_pre_run = persistent_pre_run
-        self.persistent_post_run = persistent_post_run
-        self.persistent_erroring_pre_run = persistent_erroring_pre_run
-        self.persistent_erroring_post_run = persistent_erroring_post_run
-
-        self.children = List[Arc[Self]]()
-        self.parent = Arc[Optional[Command]](None)
-
-        self.arg_validator = arg_validator
-        self.valid_args = valid_args
         self.flags = FlagSet()
         self.local_flags = FlagSet()
         self.persistent_flags = FlagSet()
@@ -436,64 +365,60 @@ struct Command(CollectionElement):
 
         return self
 
-    fn _execute_pre_run_hooks(
-        self, inout command: Arc[Command], parents: List[Command], args: List[String]
-    ) raises -> None:
+    fn _execute_pre_run_hooks(self, context: Context, parents: List[Command]) raises -> None:
         """Runs the pre-run hooks for the command."""
         try:
             # Run the persistent pre-run hooks.
             for parent in parents:
                 if parent[].persistent_erroring_pre_run:
-                    parent[].persistent_erroring_pre_run.value()(command, args)
+                    parent[].persistent_erroring_pre_run.value()(context)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
                     if parent[].persistent_pre_run:
-                        parent[].persistent_pre_run.value()(command, args)
+                        parent[].persistent_pre_run.value()(context)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
             # Run the pre-run hooks.
-            if command[].pre_run:
-                command[].pre_run.value()(command, args)
-            elif command[].erroring_pre_run:
-                command[].erroring_pre_run.value()(command, args)
+            if context.command[].pre_run:
+                context.command[].pre_run.value()(context)
+            elif context.command[].erroring_pre_run:
+                context.command[].erroring_pre_run.value()(context)
         except e:
-            print("Failed to run pre-run hooks for command: " + command[].name)
+            print("Failed to run pre-run hooks for command: " + context.command[].name)
             raise e
 
-    fn _execute_post_run_hooks(
-        self, inout command: Arc[Command], parents: List[Command], args: List[String]
-    ) raises -> None:
+    fn _execute_post_run_hooks(self, context: Context, parents: List[Command]) raises -> None:
         """Runs the pre-run hooks for the command."""
         try:
             # Run the persistent post-run hooks.
             for parent in parents:
                 if parent[].persistent_erroring_post_run:
-                    parent[].persistent_erroring_post_run.value()(command, args)
+                    parent[].persistent_erroring_post_run.value()(context)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
                     if parent[].persistent_post_run:
-                        parent[].persistent_post_run.value()(command, args)
+                        parent[].persistent_post_run.value()(context)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
             # Run the post-run hooks.
-            if command[].post_run:
-                command[].post_run.value()(command, args)
-            elif command[].erroring_post_run:
-                command[].erroring_post_run.value()(command, args)
+            if context.command[].post_run:
+                context.command[].post_run.value()(context)
+            elif context.command[].erroring_post_run:
+                context.command[].erroring_post_run.value()(context)
         except e:
-            print("Failed to run post-run hooks for command: " + command[].name, file=2)
+            print("Failed to run post-run hooks for command: " + context.command[].name, file=2)
             raise e
 
     fn execute(inout self) -> None:
@@ -546,18 +471,21 @@ struct Command(CollectionElement):
         try:
             # Validate individual required flags (eg: flag is required)
             validate_required_flags(command_ref[].flags)
+
             # Validate flag groups (eg: one of required, mutually exclusive, required together)
             validate_flag_groups(command_ref[].flags)
+
             # Validate the remaining arguments
-            command_ref[].arg_validator(command_ref, remaining_args)
+            var context = Context(command_ref, remaining_args)
+            command_ref[].arg_validator(context)
 
             # Run the function's commands.
-            self._execute_pre_run_hooks(command_ref, parents, remaining_args)
+            self._execute_pre_run_hooks(context, parents)
             if command_ref[].run:
-                command_ref[].run.value()(command_ref, remaining_args)
+                command_ref[].run.value()(context)
             else:
-                command_ref[].erroring_run.value()(command_ref, remaining_args)
-            self._execute_post_run_hooks(command_ref, parents, remaining_args)
+                command_ref[].erroring_run.value()(context)
+            self._execute_post_run_hooks(context, parents)
         except e:
             panic(e)
 

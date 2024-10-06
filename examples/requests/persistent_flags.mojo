@@ -1,20 +1,20 @@
 from memory import Arc
-from prism import Command, CommandArc
-from python import Python, PythonObject
+from prism import Command, Context
+from python import Python
 
 
-fn base(inout command: Arc[Command], args: List[String]) -> None:
+fn base(context: Context) -> None:
     print("This is the base command!")
     return None
 
 
-fn print_information(inout command: Arc[Command], args: List[String]) -> None:
+fn print_information(context: Context) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
     return None
 
 
-fn get_cat_fact(inout command: Arc[Command], args: List[String]) raises -> None:
-    var flags = command[].flags
+fn get_cat_fact(context: Context) raises -> None:
+    var flags = context.command[].flags
     var lover = flags.get_as_bool("lover")
     if lover and lover.value():
         print("Hello fellow cat lover!")
@@ -40,8 +40,8 @@ fn get_cat_fact(inout command: Arc[Command], args: List[String]) raises -> None:
             raise Error("Request failed!")
 
 
-fn get_dog_breeds(inout command: Arc[Command], args: List[String]) raises -> None:
-    var flags = command[].flags
+fn get_dog_breeds(context: Context) raises -> None:
+    var flags = context.command[].flags
     var lover = flags.get_as_bool("lover")
     if lover and lover.value():
         print("Hello fellow dog lover!")
@@ -60,11 +60,11 @@ fn get_dog_breeds(inout command: Arc[Command], args: List[String]) raises -> Non
         raise Error("Request failed!")
 
 
-fn pre_hook(inout command: Arc[Command], args: List[String]) -> None:
+fn pre_hook(context: Context) -> None:
     print("Pre-hook executed!")
 
 
-fn post_hook(inout command: Arc[Command], args: List[String]) -> None:
+fn post_hook(context: Context) -> None:
     print("Post-hook executed!")
 
 
