@@ -34,4 +34,5 @@ jobs:
       - name: Run tests
         run: |
           source $HOME/.bash_profile
+          magic self-update --version 0.2.3
           magic run tests
