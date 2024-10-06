@@ -133,7 +133,7 @@ fn range_args[minimum: Int, maximum: Int]() -> ArgValidator:
     return range_n_args
 
 
-# TODO: Having some issues with varadic list of functions, so using List for now
+# TODO: Having some issues with varadic list of functions, so using List for now.
 fn match_all[arg_validators: List[ArgValidator]]() -> ArgValidator:
     """Returns an error if any of the arg_validators return an error.
 
