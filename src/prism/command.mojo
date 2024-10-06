@@ -26,8 +26,10 @@ fn get_args_as_list() -> List[String]:
     """Returns the arguments passed to the executable as a list of strings."""
     var args = argv()
     var result = List[String](capacity=len(args))
-    for arg in args:
-        result.append(arg)
+    var i = 1
+    while i < len(args):
+        result.append(args[i])
+        i += 1
 
     return result
 
