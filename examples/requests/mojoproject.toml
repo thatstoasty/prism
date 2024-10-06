@@ -1,0 +1,14 @@
+[project]
+authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
+channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://conda.modular.com/max"]
+description = "Add a short description here"
+name = "requests"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+max = ">=24.5.0,<25"
+prism = ">=0.1.3,<0.2"
+requests = ">=2.32.3,<3"
