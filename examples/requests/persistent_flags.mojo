@@ -22,21 +22,22 @@ fn get_cat_fact(inout command: Arc[Command], args: List[String]) raises -> None:
     var requests = Python.import_module("requests")
 
     # URL you want to send a GET request to
-    var url = "https://cat-fact.herokuapp.com/facts/"
+    var url = "https://catfact.ninja/fact"
 
-    # Send the GET request
-    var response = requests.get(url)
+    # Send the GET requests
+    var count = flags.get_as_int("count")
+    if not count:
+        raise Error("Count flag was not found.")
 
-    # Check if the request was successful (status code 200)
-    if response.status_code == 200:
-        var count = flags.get_as_int("count")
-        if not count:
-            raise Error("Count flag was not found.")
-        var body = response.json()
-        for i in range(count.value()):
-            print(body[i]["text"])
-    else:
-        raise Error("Request failed!")
+    for _ in range(count.value()):
+        var response = requests.get(url)
+
+        # Check if the request was successful (status code 200)
+        if response.status_code == 200:
+            print(response.json()["fact"])
+        else:
+            print(response.json())
+            raise Error("Request failed!")
 
 
 fn get_dog_breeds(inout command: Arc[Command], args: List[String]) raises -> None:
