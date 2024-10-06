@@ -1,15 +1,6 @@
 from collections import Optional, Dict
 
 
-# Individual flag annotations
-alias REQUIRED = "REQUIRED"
-
-# Flag Group annotations
-alias REQUIRED_AS_GROUP = "REQUIRED_AS_GROUP"
-alias ONE_REQUIRED = "ONE_REQUIRED"
-alias MUTUALLY_EXCLUSIVE = "MUTUALLY_EXCLUSIVE"
-
-
 @value
 struct Flag(RepresentableCollectionElement, Stringable, Formattable):
     """Represents a flag that can be passed via the command line.

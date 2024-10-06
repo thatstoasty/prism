@@ -1,6 +1,7 @@
 from collections import Dict
 from .util import panic
-from .flag import Flag, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
+from .flag import Flag
+from .flag_set import REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from gojo import fmt
 
 

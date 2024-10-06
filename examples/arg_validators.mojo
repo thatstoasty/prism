@@ -30,7 +30,7 @@ fn main() -> None:
             name="valid_args",
             description="This is a dummy command!",
             run=hello,
-            arg_validator=valid_args[List[String]("Red", "Blue")](),
+            arg_validator=valid_args(),
         )
     )
     var minimum_n_args_command = Arc(

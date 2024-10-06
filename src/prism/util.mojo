@@ -71,3 +71,11 @@ fn to_string[T: StringableCollectionElement](vector: List[Arc[T]]) -> String:
             result += String(", ")
     result += String("]")
     return result
+
+
+fn to_list(flag_names: VariadicListMem[String, _]) -> List[String]:
+    var result = List[String](capacity=len(flag_names))
+    for name in flag_names:
+        result.append(name[])
+
+    return result

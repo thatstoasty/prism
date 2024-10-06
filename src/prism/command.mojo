@@ -4,19 +4,20 @@ from memory.arc import Arc
 import mog
 import gojo.fmt
 from gojo.strings import StringBuilder
-from .util import panic, to_string
-from .flag import Flag, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
-from .flag_set import FlagSet, validate_required_flags
+from .util import panic, to_string, to_list
+from .flag import Flag
+from .flag_set import FlagSet, validate_required_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from .flag_group import validate_flag_groups
 from .args import arbitrary_args, get_args
 
 
-fn get_flag_names(flag_names: VariadicListMem[String, _]) -> String:
-    var result: String = ""
+fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
+    var result = String()
+    var writer = result._unsafe_to_formatter()
     for i in range(len(flag_names)):
-        result += flag_names[i]
+        writer.write(flag_names[i])
         if i != len(flag_names) - 1:
-            result += " "
+            writer.write(" ")
 
     return result
 
@@ -612,11 +613,11 @@ struct Command(CollectionElement):
             flag_names: The names of the flags to mark as required together.
         """
         self._merge_flags()
-        var names = get_flag_names(flag_names)
+        var names = concat_names(flag_names)
 
         try:
             for flag_name in flag_names:
-                self.flags.set_required_as_group(flag_name[], names)
+                self.flags.set_as[REQUIRED_AS_GROUP](flag_name[], names)
         except e:
             panic(e)
 
@@ -628,10 +629,10 @@ struct Command(CollectionElement):
             flag_names: The names of the flags to mark as required.
         """
         self._merge_flags()
-        var names = get_flag_names(flag_names)
+        var names = concat_names(flag_names)
         try:
             for flag_name in flag_names:
-                self.flags.set_one_required(flag_name[], names)
+                self.flags.set_as[ONE_REQUIRED](flag_name[], names)
         except e:
             panic(e)
 
@@ -643,11 +644,11 @@ struct Command(CollectionElement):
             flag_names: The names of the flags to mark as mutually exclusive.
         """
         self._merge_flags()
-        var names = get_flag_names(flag_names)
+        var names = concat_names(flag_names)
 
         try:
             for flag_name in flag_names:
-                self.flags.set_mutually_exclusive(flag_name[], names)
+                self.flags.set_as[MUTUALLY_EXCLUSIVE](flag_name[], names)
         except e:
             panic(e)
 
