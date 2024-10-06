@@ -25,7 +25,7 @@ def build_dependency_list(dependencies: dict[str, str]) -> list[str]:
                 operator = version[:2]
                 start = 2
 
-        deps.append(f"- {name} {operator} {version[start:]}")
+        deps.append(f"    - {name} {operator} {version[start:]}")
 
     return deps
 

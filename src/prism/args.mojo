@@ -4,19 +4,18 @@ import gojo.fmt
 from .command import CommandArc, ArgValidator
 
 
-fn no_args(command: CommandArc, args: List[String]) raises -> None:
+fn no_args(inout command: CommandArc, args: List[String]) raises -> None:
     """Returns an error if the command has any arguments.
 
     Args:
         command: Reference to the command being executed.
         args: The arguments to check.
     """
-    var cmd = command
     if len(args) > 0:
-        raise Error(fmt.sprintf("The command `%s` does not take any arguments.", cmd[].name))
+        raise Error(fmt.sprintf("The command `%s` does not take any arguments.", command[].name))
 
 
-fn arbitrary_args(command: CommandArc, args: List[String]) raises -> None:
+fn arbitrary_args(inout command: CommandArc, args: List[String]) raises -> None:
     """Never returns an error.
 
     Args:
@@ -36,13 +35,12 @@ fn minimum_n_args[n: Int]() -> ArgValidator:
         A function that checks the number of arguments.
     """
 
-    fn less_than_n_args(command: CommandArc, args: List[String]) raises -> None:
-        var cmd = command
+    fn less_than_n_args(inout command: CommandArc, args: List[String]) raises -> None:
         if len(args) < n:
             raise Error(
                 fmt.sprintf(
                     "The command `%s` accepts at least %d argument(s). Received: %d.",
-                    cmd[].name,
+                    command[].name,
                     n,
                     len(args),
                 )
@@ -61,11 +59,12 @@ fn maximum_n_args[n: Int]() -> ArgValidator:
         A function that checks the number of arguments.
     """
 
-    fn more_than_n_args(command: CommandArc, args: List[String]) raises -> None:
-        var cmd = command
+    fn more_than_n_args(inout command: CommandArc, args: List[String]) raises -> None:
         if len(args) > n:
             raise Error(
-                fmt.sprintf("The command `%s` accepts at most %d argument(s). Received: %d.", cmd[].name, n, len(args))
+                fmt.sprintf(
+                    "The command `%s` accepts at most %d argument(s). Received: %d.", command[].name, n, len(args)
+                )
             )
 
     return more_than_n_args
@@ -81,11 +80,12 @@ fn exact_args[n: Int]() -> ArgValidator:
         A function that checks the number of arguments.
     """
 
-    fn exactly_n_args(command: CommandArc, args: List[String]) raises -> None:
-        var cmd = command
+    fn exactly_n_args(inout command: CommandArc, args: List[String]) raises -> None:
         if len(args) != n:
             raise Error(
-                fmt.sprintf("The command `%s` accepts exactly %d argument(s). Received: %d.", cmd[].name, n, len(args))
+                fmt.sprintf(
+                    "The command `%s` accepts exactly %d argument(s). Received: %d.", command[].name, n, len(args)
+                )
             )
 
     return exactly_n_args
@@ -98,12 +98,11 @@ fn valid_args() -> ArgValidator:
         valid: The valid arguments to check against.
     """
 
-    fn only_valid_args(command: CommandArc, args: List[String]) raises -> None:
-        var cmd = command
-        if cmd[].valid_args:
+    fn only_valid_args(inout command: CommandArc, args: List[String]) raises -> None:
+        if command[].valid_args:
             for arg in args:
-                if arg[] not in cmd[].valid_args:
-                    raise Error(fmt.sprintf("Invalid argument: `%s`, for the command `%s`.", arg[], cmd[].name))
+                if arg[] not in command[].valid_args:
+                    raise Error(fmt.sprintf("Invalid argument: `%s`, for the command `%s`.", arg[], command[].name))
 
     return only_valid_args
 
@@ -119,13 +118,12 @@ fn range_args[minimum: Int, maximum: Int]() -> ArgValidator:
         A function that checks the number of arguments.
     """
 
-    fn range_n_args(command: CommandArc, args: List[String]) raises -> None:
-        var cmd = command
+    fn range_n_args(inout command: CommandArc, args: List[String]) raises -> None:
         if len(args) < minimum or len(args) > maximum:
             raise Error(
                 fmt.sprintf(
                     "The command `%s`, accepts between %d to %d argument(s). Received: %d.",
-                    cmd[].name,
+                    command[].name,
                     minimum,
                     maximum,
                     len(args),
@@ -146,7 +144,7 @@ fn match_all[arg_validators: List[ArgValidator]]() -> ArgValidator:
         A function that checks all the arguments using the arg_validators list..
     """
 
-    fn match_all_args(command: CommandArc, args: List[String]) raises -> None:
+    fn match_all_args(inout command: CommandArc, args: List[String]) raises -> None:
         for i in range(len(arg_validators)):
             arg_validators[i](command, args)
 

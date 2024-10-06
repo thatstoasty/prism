@@ -25,19 +25,17 @@ fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
 fn get_args_as_list() -> List[String]:
     """Returns the arguments passed to the executable as a list of strings."""
     var args = argv()
-    var args_list = List[String]()
-    var i = 1
-    while i < len(args):
-        args_list.append(args[i])
-        i += 1
+    var result = List[String](capacity=len(args))
+    for arg in args:
+        result.append(arg)
 
-    return args_list
+    return result
 
 
 alias NEWLINE = ord("\n")
 
 
-fn default_help(command: Arc[Command]) -> String:
+fn default_help(inout command: Arc[Command]) -> String:
     """Prints the help information for the command.
     TODO: Add padding for commands, options, and aliases.
     """
@@ -89,13 +87,13 @@ fn default_help(command: Arc[Command]) -> String:
 
 
 alias CommandArc = Arc[Command]
-alias CommandFunction = fn (command: Arc[Command], args: List[String]) -> None
+alias CommandFunction = fn (inout command: Arc[Command], args: List[String]) -> None
 """The function for a command to run."""
-alias CommandFunctionErr = fn (command: Arc[Command], args: List[String]) raises -> None
+alias CommandFunctionErr = fn (inout command: Arc[Command], args: List[String]) raises -> None
 """The function for a command to run that can error."""
-alias HelpFunction = fn (Arc[Command]) -> String
+alias HelpFunction = fn (inout command: Arc[Command]) -> String
 """The function for a help function."""
-alias ArgValidator = fn (command: Arc[Command], args: List[String]) raises -> None
+alias ArgValidator = fn (inout command: Arc[Command], args: List[String]) raises -> None
 """The function for an argument validator."""
 alias ParentVisitorFn = fn (parent: Command) capturing -> None
 """The function for visiting parents of a command."""
@@ -138,7 +136,7 @@ struct Command(CollectionElement):
     from memory import Arc
     from prism import Command
 
-    fn test(command: Arc[Command], args: List[String]) -> None:
+    fn test(inout command: Arc[Command], args: List[String]) -> None:
         print("Hello from Chromeria!")
 
     fn main():
@@ -584,7 +582,7 @@ struct Command(CollectionElement):
         self._inherited_flags = self.inherited_flags()
         self.flags += self._inherited_flags
 
-    fn add_command(inout self: Self, inout command: Arc[Command]):
+    fn add_subcommand(inout self: Self, inout command: Arc[Command]):
         """Adds child command and set's child's parent attribute to self.
 
         Args:

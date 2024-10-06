@@ -2,7 +2,7 @@ from memory import Arc
 from prism import Command
 
 
-fn printer(command: Arc[Command], args: List[String]) -> None:
+fn printer(inout command: Arc[Command], args: List[String]) -> None:
     if len(args) == 0:
         print("No args provided.")
         return
@@ -22,17 +22,17 @@ fn build_printer_command() -> Arc[Command]:
     return cmd
 
 
-fn say(command: Arc[Command], args: List[String]) -> None:
+fn say(inout command: Arc[Command], args: List[String]) -> None:
     print("Shouldn't be here!")
     return None
 
 
-fn say_hello(command: Arc[Command], args: List[String]) -> None:
+fn say_hello(inout command: Arc[Command], args: List[String]) -> None:
     print("Hello World!")
     return None
 
 
-fn say_goodbye(command: Arc[Command], args: List[String]) -> None:
+fn say_goodbye(inout command: Arc[Command], args: List[String]) -> None:
     print("Goodbye World!")
     return None
 
@@ -70,10 +70,9 @@ fn build_goodbye_command() -> Arc[Command]:
     return cmd
 
 
-fn test(command: Arc[Command], args: List[String]) -> None:
-    var cmd = command
-    print(cmd[].flags.get_as_string("env").value())
-    for item in cmd[].flags.flags:
+fn test(inout command: Arc[Command], args: List[String]) -> None:
+    print(command[].flags.get_as_string("env").value())
+    for item in command[].flags.flags:
         if item[].value:
             print(item[].name, item[].value.value())
         else:
@@ -83,23 +82,23 @@ fn test(command: Arc[Command], args: List[String]) -> None:
 
 
 fn main() -> None:
-    var root_command = Arc(
+    var root = Arc(
         Command(
             name="tones",
             description="This is a dummy command!",
             run=test,
         )
     )
-    root_command[].flags.add_string_flag(name="env", shorthand="e", usage="Environment.")
+    root[].flags.add_string_flag(name="env", shorthand="e", usage="Environment.")
 
     var say_command = build_say_command()
     var hello_command = build_hello_command()
     var goodbye_command = build_goodbye_command()
     var printer_command = build_printer_command()
 
-    say_command[].add_command(goodbye_command)
-    say_command[].add_command(hello_command)
-    root_command[].add_command(say_command)
-    root_command[].add_command(printer_command)
+    say_command[].add_subcommand(goodbye_command)
+    say_command[].add_subcommand(hello_command)
+    root[].add_subcommand(say_command)
+    root[].add_subcommand(printer_command)
 
-    root_command[].execute()
+    root[].execute()
