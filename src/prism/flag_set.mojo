@@ -1,6 +1,6 @@
 from collections import Optional, Dict, InlineList
 import gojo.fmt
-from .flag import Flag
+from .flag import Flag, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from .util import panic, string_to_bool, string_to_float, split
 from .flag_parser import FlagParser
 from .transform import (
@@ -288,7 +288,7 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         """Adds a Float64 flag to the flag set."""
         self._add_flag(name, usage, str(default), "Float64", shorthand)
 
-    fn set_annotation(inout self, name: String, key: String, values: List[String]) -> Error:
+    fn set_annotation(inout self, name: String, key: String, values: List[String]) raises -> None:
         """Sets an annotation for a flag.
 
         Args:
@@ -298,10 +298,70 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         """
         var result = self.lookup(name)
         if not result:
-            return Error("FlagSet.set_annotation: Could not find flag with name: " + name)
+            raise Error("FlagSet.set_annotation: Could not find flag with name: " + name)
 
         result.value()[].annotations[key] = values
-        return Error()
+
+    fn set_required(inout self, name: String) raises -> None:
+        """Sets a flag as required or not.
+
+        Args:
+            name: The name of the flag to set as required.
+        """
+        try:
+            self.set_annotation(name, REQUIRED, List[String]("true"))
+        except e:
+            print(String("FlagSet.set_required: Failed to set flag, {}, to required.").format(name), file=2)
+            raise e
+
+    fn set_required_as_group(inout self, name: String, names: String) raises -> None:
+        try:
+            var flag = self.lookup(name)
+            if not flag:
+                raise Error(String("Failed to find flag: {}.").format(name))
+
+            flag.value()[].annotations[REQUIRED_AS_GROUP] = List[String](names)
+            self.set_annotation(
+                name, REQUIRED_AS_GROUP, flag.value()[].annotations.get(REQUIRED_AS_GROUP, List[String]())
+            )
+        except e:
+            print(
+                String("FlagSet.set_required_as_group: Failed to set flag, {}, to required as group.").format(name),
+                file=2,
+            )
+            raise e
+
+    fn set_one_required(inout self, name: String, names: String) raises -> None:
+        try:
+            var flag = self.lookup(name)
+            if not flag:
+                raise Error(String("Failed to find flag: {}").format(name))
+
+            flag.value()[].annotations[ONE_REQUIRED] = names
+            self.set_annotation(name, ONE_REQUIRED, flag.value()[].annotations.get(ONE_REQUIRED, List[String]()))
+        except e:
+            print(
+                String("FlagSet.set_one_required: Failed to set flag, {}, to one required.").format(name),
+                file=2,
+            )
+            raise e
+
+    fn set_mutually_exclusive(inout self, name: String, names: String) raises -> None:
+        try:
+            var flag = self.lookup(name)
+            if not flag:
+                raise Error(String("Failed to find flag: {}.").format(name))
+
+            flag.value()[].annotations[MUTUALLY_EXCLUSIVE] = names
+            self.set_annotation(
+                name, MUTUALLY_EXCLUSIVE, flag.value()[].annotations.get(MUTUALLY_EXCLUSIVE, List[String]())
+            )
+        except e:
+            print(
+                String("FlagSet.set_mutually_exclusive: Failed to set flag, {}, to mutually exclusive.").format(name),
+                file=2,
+            )
+            raise e
 
     fn visit_all[visitor: FlagVisitorFn](self) -> None:
         """Visits all flags in the flag set.
@@ -349,41 +409,18 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         return parser.parse(self, arguments)
 
 
-fn process_flag_for_group_annotation(
-    flags: FlagSet,
-    flag: Flag,
-    annotation: String,
-    inout group_status: Dict[String, Dict[String, Bool]],
-) raises -> None:
-    var group_info = flag.annotations.get(annotation, List[String]())
-    if group_info:
-        for group in group_info:
-            var group_name = group[]
-            if len(group_status.get(group_name, Dict[String, Bool]())) == 0:
-                var flag_names = group_name.split(sep=" ")
+fn validate_required_flags(flags: FlagSet) raises -> None:
+    """Validates all required flags are present and returns an error otherwise."""
+    var missing_flag_names = List[String]()
 
-                # Only consider this flag group at all if all the flags are defined.
-                if not has_all_flags(flags, flag_names):
-                    continue
+    @parameter
+    fn check_required_flag(flag: Flag) -> None:
+        var required_annotation = flag.annotations.get(REQUIRED, List[String]())
+        if required_annotation:
+            if required_annotation[0] == "true" and not flag.changed:
+                missing_flag_names.append(flag.name)
 
-                for name in flag_names:
-                    var entry = Dict[String, Bool]()
-                    entry[name[]] = False
-                    group_status[group[]] = entry
+    flags.visit_all[check_required_flag]()
 
-            # If flag.changed = True, then it had a value set on it.
-            try:
-                group_status[group[]][flag.name] = flag.changed
-            except e:
-                raise Error(
-                    String(
-                        "process_flag_for_group_annotation: Failed to set group status for annotation {}: {}"
-                    ).format(annotation, str(e))
-                )
-
-
-fn has_all_flags(flags: FlagSet, flag_names: List[String]) -> Bool:
-    for name in flag_names:
-        if not flags.lookup(name[]):
-            return False
-    return True
+    if len(missing_flag_names) > 0:
+        raise Error("required flag(s) " + missing_flag_names.__str__() + " not set")

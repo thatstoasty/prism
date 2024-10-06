@@ -1,6 +1,47 @@
 from collections import Dict
 from .util import panic
+from .flag import Flag, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from gojo import fmt
+
+
+fn has_all_flags(flags: FlagSet, flag_names: List[String]) -> Bool:
+    for name in flag_names:
+        if not flags.lookup(name[]):
+            return False
+    return True
+
+
+fn process_flag_for_group_annotation(
+    flags: FlagSet,
+    flag: Flag,
+    annotation: String,
+    inout group_status: Dict[String, Dict[String, Bool]],
+) raises -> None:
+    var group_info = flag.annotations.get(annotation, List[String]())
+    if group_info:
+        for group in group_info:
+            var group_name = group[]
+            if len(group_status.get(group_name, Dict[String, Bool]())) == 0:
+                var flag_names = group_name.split(sep=" ")
+
+                # Only consider this flag group at all if all the flags are defined.
+                if not has_all_flags(flags, flag_names):
+                    continue
+
+                for name in flag_names:
+                    var entry = Dict[String, Bool]()
+                    entry[name[]] = False
+                    group_status[group[]] = entry
+
+            # If flag.changed = True, then it had a value set on it.
+            try:
+                group_status[group[]][flag.name] = flag.changed
+            except e:
+                raise Error(
+                    String(
+                        "process_flag_for_group_annotation: Failed to set group status for annotation {}: {}"
+                    ).format(annotation, str(e))
+                )
 
 
 fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
@@ -111,3 +152,20 @@ fn validate_flag_groups(
     validate_required_flag_group(group_status)
     validate_one_required_flag_group(one_required_group_status)
     validate_mutually_exclusive_flag_group(mutually_exclusive_group_status)
+
+
+fn validate_flag_groups(flags: FlagSet) raises -> None:
+    var group_status = Dict[String, Dict[String, Bool]]()
+    var one_required_group_status = Dict[String, Dict[String, Bool]]()
+    var mutually_exclusive_group_status = Dict[String, Dict[String, Bool]]()
+
+    @parameter
+    fn flag_checker(flag: Flag) raises -> None:
+        process_flag_for_group_annotation(flags, flag, REQUIRED_AS_GROUP, group_status)
+        process_flag_for_group_annotation(flags, flag, ONE_REQUIRED, one_required_group_status)
+        process_flag_for_group_annotation(flags, flag, MUTUALLY_EXCLUSIVE, mutually_exclusive_group_status)
+
+    flags.visit_all[flag_checker]()
+
+    # Validate required flag groups
+    validate_flag_groups(group_status, one_required_group_status, mutually_exclusive_group_status)
