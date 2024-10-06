@@ -38,6 +38,7 @@ jobs:
         run: |
           curl -ssL https://magic.modular.com | bash
           source $HOME/.bash_profile
+          magic self-update --version 0.2.3
 
           # Temporary method to fetch the rattler binary.
           RATTLER_BINARY="rattler-build-aarch64-apple-darwin"
