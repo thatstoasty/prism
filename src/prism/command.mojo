@@ -97,7 +97,7 @@ alias HelpFunction = fn (inout command: Arc[Command]) -> String
 """The function for a help function."""
 alias ArgValidator = fn (context: Context) raises -> None
 """The function for an argument validator."""
-alias ParentVisitorFn = fn (parent: Command) capturing -> None
+alias ParentVisitorFn = fn (parent: Arc[Command]) capturing -> None
 """The function for visiting parents of a command."""
 
 # TODO: For now it's locked to False until file scope variables.
@@ -368,20 +368,20 @@ struct Command(CollectionElement):
 
         return command, remaining_args
 
-    fn _execute_pre_run_hooks(self, context: Context, parents: List[Command]) raises -> None:
+    fn _execute_pre_run_hooks(self, context: Context, parents: List[Arc[Self]]) raises -> None:
         """Runs the pre-run hooks for the command."""
         try:
             # Run the persistent pre-run hooks.
             for parent in parents:
-                if parent[].persistent_erroring_pre_run:
-                    parent[].persistent_erroring_pre_run.value()(context)
+                if parent[][].persistent_erroring_pre_run:
+                    parent[][].persistent_erroring_pre_run.value()(context)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
-                    if parent[].persistent_pre_run:
-                        parent[].persistent_pre_run.value()(context)
+                    if parent[][].persistent_pre_run:
+                        parent[][].persistent_pre_run.value()(context)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
@@ -396,20 +396,20 @@ struct Command(CollectionElement):
             print("Failed to run pre-run hooks for command: " + context.command[].name)
             raise e
 
-    fn _execute_post_run_hooks(self, context: Context, parents: List[Command]) raises -> None:
+    fn _execute_post_run_hooks(self, context: Context, parents: List[Arc[Self]]) raises -> None:
         """Runs the pre-run hooks for the command."""
         try:
             # Run the persistent post-run hooks.
             for parent in parents:
-                if parent[].persistent_erroring_post_run:
-                    parent[].persistent_erroring_post_run.value()(context)
+                if parent[][].persistent_erroring_post_run:
+                    parent[][].persistent_erroring_post_run.value()(context)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
-                    if parent[].persistent_post_run:
-                        parent[].persistent_post_run.value()(context)
+                    if parent[][].persistent_post_run:
+                        parent[][].persistent_post_run.value()(context)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
@@ -449,10 +449,10 @@ struct Command(CollectionElement):
         command[]._merge_flags()
 
         # Add all parents to the list to check if they have persistent pre/post hooks.
-        var parents = List[Self]()
+        var parents = List[Arc[Self]]()
 
         @parameter
-        fn append_parents(parent: Self) capturing -> None:
+        fn append_parents(parent: Arc[Self]) capturing -> None:
             parents.append(parent)
 
         command[].visit_parents[append_parents]()
@@ -506,9 +506,10 @@ struct Command(CollectionElement):
         var i_flags = FlagSet()
 
         @always_inline
-        fn add_parent_persistent_flags(parent: Self) capturing -> None:
-            if parent.persistent_flags:
-                i_flags += parent.persistent_flags
+        fn add_parent_persistent_flags(parent: Arc[Self]) capturing -> None:
+            var cmd = parent
+            if cmd[].persistent_flags:
+                i_flags += cmd[].persistent_flags
 
         self.visit_parents[add_parent_persistent_flags]()
 
@@ -520,7 +521,7 @@ struct Command(CollectionElement):
         self._inherited_flags = self.inherited_flags()
         self.flags += self._inherited_flags
 
-    fn add_subcommand(inout self: Self, inout command: Arc[Command]):
+    fn add_subcommand(inout self: Self, inout command: Arc[Self]):
         """Adds child command and set's child's parent attribute to self.
 
         Args:
