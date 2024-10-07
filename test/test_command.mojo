@@ -1,11 +1,11 @@
 from memory import Arc
 import testing
-from prism.command import Command, CommandArc
+from prism.command import Command, Context
 from prism.flag_set import FlagSet
 
 
 def test_command_operations():
-    fn dummy(inout command: CommandArc, args: List[String]) -> None:
+    fn dummy(context: Context) -> None:
         return None
 
     var cmd = Arc(Command(name="root", description="Base command.", run=dummy))
@@ -18,7 +18,7 @@ def test_command_operations():
     cmd[].add_subcommand(child_cmd)
     child_cmd[].flags.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
 
-    testing.assert_equal(child_cmd[]._full_command(), "root child")
+    testing.assert_equal(child_cmd[].full_name(), "root child")
 
     # var help_test = MojoTest("Testing Command.help")
     # cmd.help()
