@@ -21,14 +21,14 @@ Here's an example of a basic command and subcommand!
 
 ```mojo
 from memory import Arc
-from prism import Command
+from prism import Command, Context
 
 
-fn test(inout command: Arc[Command], args: List[String]) -> None:
+fn test(context: Context) -> None:
     print("Pass chromeria as a subcommand!")
 
 
-fn hello(inout command: Arc[Command], args: List[String]) -> None:
+fn hello(context: Context) -> None:
     print("Hello from Chromeria!")
 
 
@@ -83,12 +83,12 @@ var print_tool = Arc(Command(
 Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
 
 ```mojo
-fn pre_hook(inout command: Arc[Command], args: List[String]) -> None:
+fn pre_hook(context: Context) -> None:
     print("Pre-hook executed!")
     return None
 
 
-fn post_hook(inout command: Arc[Command], args: List[String]) -> None:
+fn post_hook(context: Context) -> None:
     print("Post-hook executed!")
     return None
 
