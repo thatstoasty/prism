@@ -1,6 +1,6 @@
 from memory.arc import Arc
 import testing
-from prism import CommandArc, Command
+from prism import Command
 from prism.args import (
     no_args,
     valid_args,

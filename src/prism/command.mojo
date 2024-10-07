@@ -1,5 +1,5 @@
 from sys import argv
-from collections import Optional, Dict
+from collections import Optional, Dict, InlineList
 from memory.arc import Arc
 import mog
 import gojo.fmt
@@ -9,6 +9,7 @@ from .flag import Flag
 from .flag_set import FlagSet, validate_required_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from .flag_group import validate_flag_groups
 from .args import arbitrary_args, get_args
+from .context import Context
 
 
 fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
@@ -49,7 +50,7 @@ fn default_help(inout command: Arc[Command]) -> String:
     var cmd = command
     var builder = StringBuilder()
     _ = builder.write_string(mog.Style().bold().foreground(mog.Color(0xE5C890)).render("Usage: "))
-    _ = builder.write_string(bold_style.render(cmd[]._full_command()))
+    _ = builder.write_string(bold_style.render(cmd[].full_name()))
 
     if len(cmd[].flags) > 0:
         _ = builder.write_string(" [OPTIONS]")
@@ -88,16 +89,15 @@ fn default_help(inout command: Arc[Command]) -> String:
     return mog.join_vertical(mog.left, description, options, commands)
 
 
-alias CommandArc = Arc[Command]
-alias CommandFunction = fn (inout command: Arc[Command], args: List[String]) -> None
+alias CommandFunction = fn (context: Context) -> None
 """The function for a command to run."""
-alias CommandFunctionErr = fn (inout command: Arc[Command], args: List[String]) raises -> None
+alias CommandFunctionErr = fn (context: Context) raises -> None
 """The function for a command to run that can error."""
 alias HelpFunction = fn (inout command: Arc[Command]) -> String
 """The function for a help function."""
-alias ArgValidator = fn (inout command: Arc[Command], args: List[String]) raises -> None
+alias ArgValidator = fn (context: Context) raises -> None
 """The function for an argument validator."""
-alias ParentVisitorFn = fn (parent: Command) capturing -> None
+alias ParentVisitorFn = fn (parent: Arc[Command]) capturing -> None
 """The function for visiting parents of a command."""
 
 # TODO: For now it's locked to False until file scope variables.
@@ -106,39 +106,15 @@ alias ENABLE_TRAVERSE_RUN_HOOKS = False
 If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
 
 
-fn parse_command_from_args(start: Command) -> (Command, List[String]):
-    var args = get_args_as_list()
-    var number_of_args = len(args)
-    var command = start
-    var children = command.children
-    var leftover_args_start_index = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
-
-    for arg in args:
-        for command_ref in children:
-            if command_ref[][].name == arg[] or arg[] in command_ref[][].aliases:
-                command = command_ref[][]
-                children = command.children
-                leftover_args_start_index += 1
-                break
-
-    # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
-    var remaining_args = List[String]()
-    if number_of_args >= leftover_args_start_index:
-        remaining_args = args[leftover_args_start_index:number_of_args]
-
-    return command, remaining_args
-
-
-# TODO: For parent Arc[Optional[Self]] works but Optional[Arc[Self]] causes compiler issues.
 @value
 struct Command(CollectionElement):
     """A struct representing a command that can be executed from the command line.
 
     ```mojo
     from memory import Arc
-    from prism import Command
+    from prism import Command, Context
 
-    fn test(inout command: Arc[Command], args: List[String]) -> None:
+    fn test(context: Context) -> None:
         print("Hello from Chromeria!")
 
     fn main():
@@ -209,7 +185,8 @@ struct Command(CollectionElement):
 
     var children: List[Arc[Self]]
     """Child commands."""
-    var parent: Arc[Optional[Self]]
+    # TODO: An optional pointer would be great, but it breaks the compiler. So a list of 0-1 pointers is used.
+    var parent: List[Arc[Self]]
     """Parent command."""
 
     fn __init__(
@@ -228,7 +205,6 @@ struct Command(CollectionElement):
         persistent_post_run: Optional[CommandFunction] = None,
         persistent_erroring_pre_run: Optional[CommandFunctionErr] = None,
         persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
-        help: HelpFunction = default_help,
     ):
         """
         Args:
@@ -255,7 +231,7 @@ struct Command(CollectionElement):
         self.description = description
         self.aliases = aliases
 
-        self.help = help
+        self.help = default_help
 
         self.pre_run = pre_run
         self.run = run
@@ -274,80 +250,9 @@ struct Command(CollectionElement):
         self.valid_args = valid_args
 
         self.children = List[Arc[Self]]()
-        self.parent = Arc[Optional[Command]](None)
+        self.parent = List[Arc[Self]]()
 
         # These need to be mutable so we can add flags to them.
-        self.flags = FlagSet()
-        self.local_flags = FlagSet()
-        self.persistent_flags = FlagSet()
-        self._inherited_flags = FlagSet()
-        self.flags.add_bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
-
-    # TODO: Why do we have 2 almost indentical init functions? Setting a default arg_validator value, breaks the compiler as of 24.2.
-    fn __init__(
-        inout self,
-        name: String,
-        description: String,
-        arg_validator: ArgValidator,
-        aliases: List[String] = List[String](),
-        valid_args: List[String] = List[String](),
-        run: Optional[CommandFunction] = None,
-        pre_run: Optional[CommandFunction] = None,
-        post_run: Optional[CommandFunction] = None,
-        erroring_run: Optional[CommandFunctionErr] = None,
-        erroring_pre_run: Optional[CommandFunctionErr] = None,
-        erroring_post_run: Optional[CommandFunctionErr] = None,
-        persistent_pre_run: Optional[CommandFunction] = None,
-        persistent_post_run: Optional[CommandFunction] = None,
-        persistent_erroring_pre_run: Optional[CommandFunctionErr] = None,
-        persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
-        help: HelpFunction = default_help,
-    ):
-        """
-        Args:
-            name: The name of the command.
-            description: The description of the command.
-            arg_validator: The function to validate the arguments passed to the command.
-            valid_args: The valid arguments for the command.
-            run: The function to run when the command is executed.
-            pre_run: The function to run before the command is executed.
-            post_run: The function to run after the command is executed.
-            erroring_run: The function to run when the command is executed that returns an error.
-            erroring_pre_run: The function to run before the command is executed that returns an error.
-            erroring_post_run: The function to run after the command is executed that returns an error.
-            persisting_pre_run: The function to run before the command is executed. This persists to children.
-            persisting_post_run: The function to run after the command is executed. This persists to children.
-            persisting_erroring_pre_run: The function to run before the command is executed that returns an error. This persists to children.
-            persisting_erroring_post_run: The function to run after the command is executed that returns an error. This persists to children.
-            help: The function to generate help text for the command.
-        """
-        if not run and not erroring_run:
-            panic("A command must have a run or erroring_run function.")
-
-        self.name = name
-        self.description = description
-        self.aliases = aliases
-
-        self.help = help
-
-        self.pre_run = pre_run
-        self.run = run
-        self.post_run = post_run
-
-        self.erroring_pre_run = erroring_pre_run
-        self.erroring_run = erroring_run
-        self.erroring_post_run = erroring_post_run
-
-        self.persistent_pre_run = persistent_pre_run
-        self.persistent_post_run = persistent_post_run
-        self.persistent_erroring_pre_run = persistent_erroring_pre_run
-        self.persistent_erroring_post_run = persistent_erroring_post_run
-
-        self.children = List[Arc[Self]]()
-        self.parent = Arc[Optional[Command]](None)
-
-        self.arg_validator = arg_validator
-        self.valid_args = valid_args
         self.flags = FlagSet()
         self.local_flags = FlagSet()
         self.persistent_flags = FlagSet()
@@ -421,79 +326,102 @@ struct Command(CollectionElement):
             writer.write(self.flags)
         writer.write(")")
 
-    fn _full_command(self) -> String:
+    fn full_name(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
         if self.has_parent():
-            var ancestor: String = self.parent[].value()._full_command()
+            var ancestor: String = self.parent[0][].full_name()
             return ancestor + " " + self.name
         else:
             return self.name
 
-    fn _root(self) -> Arc[Command]:
+    fn root(self) -> Arc[Command]:
         """Returns the root command of the command tree."""
         if self.has_parent():
-            return self.parent[].value()._root()
+            return self.parent[0][].root()
 
         return self
+    
+    fn _parse_command_from_args(self, args: List[String]) -> (Optional[Arc[Command]], List[String]):
+        # If there's no children, then the root command is used.
+        if not self.children or not args:
+            return Optional[Arc[Command]](None), args
+        
+        var command: Optional[Arc[Command]] = None
+        var children = self.children
+        var leftover_start = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
 
-    fn _execute_pre_run_hooks(
-        self, inout command: Arc[Command], parents: List[Command], args: List[String]
-    ) raises -> None:
+        for arg in args:
+            for command_ref in children:
+                if command_ref[][].name == arg[] or arg[] in command_ref[][].aliases:
+                    command = command_ref[]
+                    children = command_ref[][].children
+                    leftover_start += 1
+                    break
+
+        if not command:
+            return command, args
+        
+        # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
+        var remaining_args = List[String]()
+        if len(args) >= leftover_start:
+            remaining_args = args[leftover_start:len(args)]
+
+        return command, remaining_args
+
+    fn _execute_pre_run_hooks(self, context: Context, parents: List[Arc[Self]]) raises -> None:
         """Runs the pre-run hooks for the command."""
         try:
             # Run the persistent pre-run hooks.
             for parent in parents:
-                if parent[].persistent_erroring_pre_run:
-                    parent[].persistent_erroring_pre_run.value()(command, args)
+                if parent[][].persistent_erroring_pre_run:
+                    parent[][].persistent_erroring_pre_run.value()(context)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
-                    if parent[].persistent_pre_run:
-                        parent[].persistent_pre_run.value()(command, args)
+                    if parent[][].persistent_pre_run:
+                        parent[][].persistent_pre_run.value()(context)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
             # Run the pre-run hooks.
-            if command[].pre_run:
-                command[].pre_run.value()(command, args)
-            elif command[].erroring_pre_run:
-                command[].erroring_pre_run.value()(command, args)
+            if context.command[].pre_run:
+                context.command[].pre_run.value()(context)
+            elif context.command[].erroring_pre_run:
+                context.command[].erroring_pre_run.value()(context)
         except e:
-            print("Failed to run pre-run hooks for command: " + command[].name)
+            print("Failed to run pre-run hooks for command: " + context.command[].name)
             raise e
 
-    fn _execute_post_run_hooks(
-        self, inout command: Arc[Command], parents: List[Command], args: List[String]
-    ) raises -> None:
+    fn _execute_post_run_hooks(self, context: Context, parents: List[Arc[Self]]) raises -> None:
         """Runs the pre-run hooks for the command."""
         try:
             # Run the persistent post-run hooks.
             for parent in parents:
-                if parent[].persistent_erroring_post_run:
-                    parent[].persistent_erroring_post_run.value()(command, args)
+                if parent[][].persistent_erroring_post_run:
+                    parent[][].persistent_erroring_post_run.value()(context)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
-                    if parent[].persistent_post_run:
-                        parent[].persistent_post_run.value()(command, args)
+                    if parent[][].persistent_post_run:
+                        parent[][].persistent_post_run.value()(context)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
             # Run the post-run hooks.
-            if command[].post_run:
-                command[].post_run.value()(command, args)
-            elif command[].erroring_post_run:
-                command[].erroring_post_run.value()(command, args)
+            if context.command[].post_run:
+                context.command[].post_run.value()(context)
+            elif context.command[].erroring_post_run:
+                context.command[].erroring_post_run.value()(context)
         except e:
-            print("Failed to run post-run hooks for command: " + command[].name, file=2)
+            print("Failed to run post-run hooks for command: " + context.command[].name, file=2)
             raise e
 
     fn execute(inout self) -> None:
@@ -504,25 +432,30 @@ struct Command(CollectionElement):
 
         # Always execute from the root command, regardless of what command was executed in main.
         if self.has_parent():
-            var root = self._root()
+            var root = self.root()
             return root[].execute()
 
         var remaining_args: List[String]
-        var command: Self
-        command, remaining_args = parse_command_from_args(self)
-        var command_ref = Arc(command)
+        var maybe_command: Optional[Arc[Self]]
+        maybe_command, remaining_args = self._parse_command_from_args(get_args_as_list())
+
+        var command: Arc[Self]
+        if not maybe_command:
+            command = Arc(self)
+        else:
+            command = maybe_command.take()
 
         # Merge local and inherited flags
-        command_ref[]._merge_flags()
+        command[]._merge_flags()
 
         # Add all parents to the list to check if they have persistent pre/post hooks.
-        var parents = List[Self]()
+        var parents = List[Arc[Self]]()
 
         @parameter
-        fn append_parents(parent: Self) capturing -> None:
+        fn append_parents(parent: Arc[Self]) capturing -> None:
             parents.append(parent)
 
-        command_ref[].visit_parents[append_parents]()
+        command[].visit_parents[append_parents]()
 
         # If ENABLE_TRAVERSE_RUN_HOOKS is True, reverse the list to start from the root command rather than
         # from the child. This is because all of the persistent hooks will be run.
@@ -533,31 +466,34 @@ struct Command(CollectionElement):
         # Get the flags for the command to be executed.
         # store flags as a mutable ref
         try:
-            remaining_args = command_ref[].flags.from_args(remaining_args)
+            remaining_args = command[].flags.from_args(remaining_args)
         except e:
             panic(e)
 
         # Check if the help flag was passed
-        var help_passed = command_ref[].flags.get_as_bool("help")
+        var help_passed = command[].flags.get_as_bool("help")
         if help_passed.value() == True:
-            print(command_ref[].help(command_ref))
+            print(command[].help(command))
             return None
 
         try:
             # Validate individual required flags (eg: flag is required)
-            validate_required_flags(command_ref[].flags)
+            validate_required_flags(command[].flags)
+
             # Validate flag groups (eg: one of required, mutually exclusive, required together)
-            validate_flag_groups(command_ref[].flags)
+            validate_flag_groups(command[].flags)
+
             # Validate the remaining arguments
-            command_ref[].arg_validator(command_ref, remaining_args)
+            var context = Context(command, remaining_args)
+            command[].arg_validator(context)
 
             # Run the function's commands.
-            self._execute_pre_run_hooks(command_ref, parents, remaining_args)
-            if command_ref[].run:
-                command_ref[].run.value()(command_ref, remaining_args)
+            self._execute_pre_run_hooks(context, parents)
+            if command[].run:
+                command[].run.value()(context)
             else:
-                command_ref[].erroring_run.value()(command_ref, remaining_args)
-            self._execute_post_run_hooks(command_ref, parents, remaining_args)
+                command[].erroring_run.value()(context)
+            self._execute_post_run_hooks(context, parents)
         except e:
             panic(e)
 
@@ -570,9 +506,10 @@ struct Command(CollectionElement):
         var i_flags = FlagSet()
 
         @always_inline
-        fn add_parent_persistent_flags(parent: Self) capturing -> None:
-            if parent.persistent_flags:
-                i_flags += parent.persistent_flags
+        fn add_parent_persistent_flags(parent: Arc[Self]) capturing -> None:
+            var cmd = parent
+            if cmd[].persistent_flags:
+                i_flags += cmd[].persistent_flags
 
         self.visit_parents[add_parent_persistent_flags]()
 
@@ -584,7 +521,7 @@ struct Command(CollectionElement):
         self._inherited_flags = self.inherited_flags()
         self.flags += self._inherited_flags
 
-    fn add_subcommand(inout self: Self, inout command: Arc[Command]):
+    fn add_subcommand(inout self: Self, inout command: Arc[Self]):
         """Adds child command and set's child's parent attribute to self.
 
         Args:
@@ -666,7 +603,7 @@ struct Command(CollectionElement):
 
     fn has_parent(self) -> Bool:
         """Returns True if the command has a parent, False otherwise."""
-        return self.parent[].__bool__()
+        return self.parent.__bool__()
 
     fn visit_parents[func: ParentVisitorFn](self) -> None:
         """Visits all parents of the command and invokes func on each parent.
@@ -675,5 +612,5 @@ struct Command(CollectionElement):
             func: The function to invoke on each parent.
         """
         if self.has_parent():
-            func(self.parent[].value())
-            self.parent[].value().visit_parents[func]()
+            func(self.parent[0][])
+            self.parent[0][].visit_parents[func]()

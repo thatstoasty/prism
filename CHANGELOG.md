@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.1.6] - 2024-10-06
+
+- Switch to using a cli context as the command argument.
+- Refactor code to reduce copies of commands instead using `Arc[Command]` generally.
+- Add example projects.
+
 ## [0.1.4] - 2024-10-05
 
 - Refactor code to split out functionality into separate files and classes.

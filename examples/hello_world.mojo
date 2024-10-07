@@ -1,13 +1,13 @@
 from memory import Arc
-from prism import Command
+from prism import Command, Context
 
 
-fn printer(inout command: Arc[Command], args: List[String]) -> None:
-    if len(args) == 0:
+fn printer(context: Context) -> None:
+    if len(context.args) == 0:
         print("No args provided.")
         return
 
-    print(args[0])
+    print(context.args[0])
     return
 
 
@@ -22,17 +22,17 @@ fn build_printer_command() -> Arc[Command]:
     return cmd
 
 
-fn say(inout command: Arc[Command], args: List[String]) -> None:
+fn say(context: Context) -> None:
     print("Shouldn't be here!")
     return None
 
 
-fn say_hello(inout command: Arc[Command], args: List[String]) -> None:
+fn say_hello(context: Context) -> None:
     print("Hello World!")
     return None
 
 
-fn say_goodbye(inout command: Arc[Command], args: List[String]) -> None:
+fn say_goodbye(context: Context) -> None:
     print("Goodbye World!")
     return None
 
@@ -70,9 +70,9 @@ fn build_goodbye_command() -> Arc[Command]:
     return cmd
 
 
-fn test(inout command: Arc[Command], args: List[String]) -> None:
-    print(command[].flags.get_as_string("env").value())
-    for item in command[].flags.flags:
+fn test(context: Context) -> None:
+    print(context.command[].flags.get_as_string("env").value())
+    for item in context.command[].flags.flags:
         if item[].value:
             print(item[].name, item[].value.value())
         else:
@@ -82,14 +82,12 @@ fn test(inout command: Arc[Command], args: List[String]) -> None:
 
 
 fn main() -> None:
-    var root = Arc(
-        Command(
-            name="tones",
-            description="This is a dummy command!",
-            run=test,
-        )
+    var root = Command(
+        name="tones",
+        description="This is a dummy command!",
+        run=test,
     )
-    root[].flags.add_string_flag(name="env", shorthand="e", usage="Environment.")
+    root.flags.add_string_flag(name="env", shorthand="e", usage="Environment.")
 
     var say_command = build_say_command()
     var hello_command = build_hello_command()
@@ -98,7 +96,7 @@ fn main() -> None:
 
     say_command[].add_subcommand(goodbye_command)
     say_command[].add_subcommand(hello_command)
-    root[].add_subcommand(say_command)
-    root[].add_subcommand(printer_command)
+    root.add_subcommand(say_command)
+    root.add_subcommand(printer_command)
 
-    root[].execute()
+    root.execute()

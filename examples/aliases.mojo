@@ -1,22 +1,20 @@
 from memory import Arc
-from prism import Command, CommandArc
+from prism import Context, Command
 
 
-fn test(inout command: Arc[Command], args: List[String]) -> None:
+fn test(context: Context) -> None:
     print("Pass tool, object, or thing as a subcommand!")
 
 
-fn tool_func(inout command: Arc[Command], args: List[String]) -> None:
+fn tool_func(context: Context) -> None:
     print("My tool!")
 
 
 fn main() -> None:
-    var root = Arc(
-        Command(
-            name="my",
-            description="This is a dummy command!",
-            run=test,
-        )
+    var root = Command(
+        name="my",
+        description="This is a dummy command!",
+        run=test,
     )
 
     var print_tool = Arc(
@@ -25,5 +23,5 @@ fn main() -> None:
         )
     )
 
-    root[].add_subcommand(print_tool)
-    root[].execute()
+    root.add_subcommand(print_tool)
+    root.execute()
