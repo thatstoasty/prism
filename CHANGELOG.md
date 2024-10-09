@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.1.7] - 2024-10-09
+
+- Fix command parsing bug.
+- Change `context` to `ctx` to reduce visual noise.
+
 ## [0.1.6] - 2024-10-06
 
 - Switch to using a cli context as the command argument.

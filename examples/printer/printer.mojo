@@ -1,15 +1,15 @@
 from memory import Arc
-from prism import Command, Context, CommandArc, exact_args
+from prism import Command, Context, exact_args
 from mist import Style
 
 
-fn printer(context: Context) -> None:
-    if len(context.args) <= 0:
+fn printer(ctx: Context) -> None:
+    if len(ctx.args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    var color = context.command[].flags.get_as_uint32("color")
-    var formatting = context.command[].flags.get_as_string("formatting")
+    var color = ctx.command[].flags.get_as_uint32("color")
+    var formatting = ctx.command[].flags.get_as_string("formatting")
     var style = Style()
 
     if not color:
@@ -22,7 +22,7 @@ fn printer(context: Context) -> None:
 
     var formatting_value = formatting.or_else("")
     if formatting_value == "":
-        print(style.render(context.args[0]))
+        print(style.render(ctx.args[0]))
         return None
 
     if formatting.value() == "bold":
@@ -32,16 +32,16 @@ fn printer(context: Context) -> None:
     elif formatting.value() == "italic":
         style = style.italic()
 
-    print(style.render(context.args[0]))
+    print(style.render(ctx.args[0]))
     return None
 
 
-fn pre_hook(context: Context) -> None:
+fn pre_hook(ctx: Context) -> None:
     print("Pre-hook executed!")
     return None
 
 
-fn post_hook(context: Context) -> None:
+fn post_hook(ctx: Context) -> None:
     print("Post-hook executed!")
     return None
 

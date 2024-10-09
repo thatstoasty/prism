@@ -5,7 +5,7 @@ from prism.flag_set import FlagSet
 
 
 def test_command_operations():
-    fn dummy(context: Context) -> None:
+    fn dummy(ctx: Context) -> None:
         return None
 
     var cmd = Arc(Command(name="root", description="Base command.", run=dummy))

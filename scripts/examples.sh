@@ -27,6 +27,8 @@ magic run mojo build persistent_flags.mojo -o persistent
 magic run persistent get cat --count 2 --lover
 magic run persistent get dog
 
+cd ../..
+
 $TEMP_DIR/aliases my thing
 $TEMP_DIR/hello_world say hello
 $TEMP_DIR/parent --required --host=www.example.com --port 8080

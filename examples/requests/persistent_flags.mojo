@@ -3,18 +3,18 @@ from prism import Command, Context
 from python import Python
 
 
-fn base(context: Context) -> None:
+fn base(ctx: Context) -> None:
     print("This is the base command!")
     return None
 
 
-fn print_information(context: Context) -> None:
+fn print_information(ctx: Context) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
     return None
 
 
-fn get_cat_fact(context: Context) raises -> None:
-    var flags = context.command[].flags
+fn get_cat_fact(ctx: Context) raises -> None:
+    var flags = ctx.command[].flags
     var lover = flags.get_as_bool("lover")
     if lover and lover.value():
         print("Hello fellow cat lover!")
@@ -40,8 +40,8 @@ fn get_cat_fact(context: Context) raises -> None:
             raise Error("Request failed!")
 
 
-fn get_dog_breeds(context: Context) raises -> None:
-    var flags = context.command[].flags
+fn get_dog_breeds(ctx: Context) raises -> None:
+    var flags = ctx.command[].flags
     var lover = flags.get_as_bool("lover")
     if lover and lover.value():
         print("Hello fellow dog lover!")
@@ -60,11 +60,11 @@ fn get_dog_breeds(context: Context) raises -> None:
         raise Error("Request failed!")
 
 
-fn pre_hook(context: Context) -> None:
+fn pre_hook(ctx: Context) -> None:
     print("Pre-hook executed!")
 
 
-fn post_hook(context: Context) -> None:
+fn post_hook(ctx: Context) -> None:
     print("Post-hook executed!")
 
 
