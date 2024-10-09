@@ -118,12 +118,12 @@ struct Command(CollectionElement):
         print("Hello from Chromeria!")
 
     fn main():
-        var command = Arc(Command(
+        var command = Command(
             name="hello",
             description="This is a dummy command!",
             run=test,
-        ))
-        command[].execute()
+        )
+        command.execute()
     ```
 
     Then execute the command by running the mojo file or binary.
@@ -341,25 +341,28 @@ struct Command(CollectionElement):
 
         return self
     
-    fn _parse_command_from_args(self, args: List[String]) -> (Optional[Arc[Command]], List[String]):
+    fn _parse_command(self, command: Self, arg: String, children: List[Arc[Self]], inout leftover_start: Int) -> (Self, List[Arc[Self]]):
+        for command_ref in children:
+            if command_ref[][].name == arg or arg in command_ref[][].aliases:
+                leftover_start += 1
+                return command_ref[][], command_ref[][].children
+        
+        return command, children
+
+    fn _parse_command_from_args(self, args: List[String]) -> (Self, List[String]):
         # If there's no children, then the root command is used.
         if not self.children or not args:
-            return Optional[Arc[Command]](None), args
+            return self, args
         
-        var command: Optional[Arc[Command]] = None
+        var command = self
         var children = self.children
         var leftover_start = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
 
         for arg in args:
-            for command_ref in children:
-                if command_ref[][].name == arg[] or arg[] in command_ref[][].aliases:
-                    command = command_ref[]
-                    children = command_ref[][].children
-                    leftover_start += 1
-                    break
-
-        if not command:
-            return command, args
+            command, children = self._parse_command(command, arg[], children, leftover_start)
+        
+        if leftover_start == 0:
+            return self, args
         
         # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
         var remaining_args = List[String]()
@@ -436,26 +439,19 @@ struct Command(CollectionElement):
             return root[].execute()
 
         var remaining_args: List[String]
-        var maybe_command: Optional[Arc[Self]]
-        maybe_command, remaining_args = self._parse_command_from_args(get_args_as_list())
-
-        var command: Arc[Self]
-        if not maybe_command:
-            command = Arc(self)
-        else:
-            command = maybe_command.take()
+        var command: Self
+        command, remaining_args = self._parse_command_from_args(get_args_as_list())
 
         # Merge local and inherited flags
-        command[]._merge_flags()
+        command._merge_flags()
 
         # Add all parents to the list to check if they have persistent pre/post hooks.
         var parents = List[Arc[Self]]()
-
         @parameter
         fn append_parents(parent: Arc[Self]) capturing -> None:
             parents.append(parent)
 
-        command[].visit_parents[append_parents]()
+        command.visit_parents[append_parents]()
 
         # If ENABLE_TRAVERSE_RUN_HOOKS is True, reverse the list to start from the root command rather than
         # from the child. This is because all of the persistent hooks will be run.
@@ -464,35 +460,35 @@ struct Command(CollectionElement):
             parents.reverse()
 
         # Get the flags for the command to be executed.
-        # store flags as a mutable ref
         try:
-            remaining_args = command[].flags.from_args(remaining_args)
+            remaining_args = command.flags.from_args(remaining_args)
         except e:
             panic(e)
 
         # Check if the help flag was passed
-        var help_passed = command[].flags.get_bool("help")
+        var command_ref = Arc(command)
+        var help_passed = command.flags.get_bool("help")
         if help_passed.value() == True:
-            print(command[].help(command))
+            print(command.help(command_ref))
             return None
 
         try:
             # Validate individual required flags (eg: flag is required)
-            validate_required_flags(command[].flags)
+            validate_required_flags(command.flags)
 
             # Validate flag groups (eg: one of required, mutually exclusive, required together)
-            validate_flag_groups(command[].flags)
+            validate_flag_groups(command.flags)
 
             # Validate the remaining arguments
             var ctx = Context(command, remaining_args)
-            command[].arg_validator(ctx)
+            command.arg_validator(ctx)
 
             # Run the function's commands.
             self._execute_pre_run_hooks(ctx, parents)
-            if command[].run:
-                command[].run.value()(ctx)
+            if command.run:
+                command.run.value()(ctx)
             else:
-                command[].erroring_run.value()(ctx)
+                command.erroring_run.value()(ctx)
             self._execute_post_run_hooks(ctx, parents)
         except e:
             panic(e)
