@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.2.0] - 2024-10-09
+
+- Refactor flag get/parsing to use ref to simplify code and enable removal of transform module.
+- Renamed some fields to make them more accurate in the Command struct.
+
 ## [0.1.7] - 2024-10-09
 
 - Fix command parsing bug.
