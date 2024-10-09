@@ -89,13 +89,13 @@ fn default_help(inout command: Arc[Command]) -> String:
     return mog.join_vertical(mog.left, description, options, commands)
 
 
-alias CommandFunction = fn (context: Context) -> None
+alias CommandFunction = fn (ctx: Context) -> None
 """The function for a command to run."""
-alias CommandFunctionErr = fn (context: Context) raises -> None
+alias CommandFunctionErr = fn (ctx: Context) raises -> None
 """The function for a command to run that can error."""
 alias HelpFunction = fn (inout command: Arc[Command]) -> String
 """The function for a help function."""
-alias ArgValidator = fn (context: Context) raises -> None
+alias ArgValidator = fn (ctx: Context) raises -> None
 """The function for an argument validator."""
 alias ParentVisitorFn = fn (parent: Arc[Command]) capturing -> None
 """The function for visiting parents of a command."""
@@ -114,7 +114,7 @@ struct Command(CollectionElement):
     from memory import Arc
     from prism import Command, Context
 
-    fn test(context: Context) -> None:
+    fn test(ctx: Context) -> None:
         print("Hello from Chromeria!")
 
     fn main():
@@ -257,7 +257,7 @@ struct Command(CollectionElement):
         self.local_flags = FlagSet()
         self.persistent_flags = FlagSet()
         self._inherited_flags = FlagSet()
-        self.flags.add_bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
+        self.flags.bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
 
     fn __moveinit__(inout self, owned existing: Self):
         self.name = existing.name^
@@ -368,60 +368,60 @@ struct Command(CollectionElement):
 
         return command, remaining_args
 
-    fn _execute_pre_run_hooks(self, context: Context, parents: List[Arc[Self]]) raises -> None:
+    fn _execute_pre_run_hooks(self, ctx: Context, parents: List[Arc[Self]]) raises -> None:
         """Runs the pre-run hooks for the command."""
         try:
             # Run the persistent pre-run hooks.
             for parent in parents:
                 if parent[][].persistent_erroring_pre_run:
-                    parent[][].persistent_erroring_pre_run.value()(context)
+                    parent[][].persistent_erroring_pre_run.value()(ctx)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
                     if parent[][].persistent_pre_run:
-                        parent[][].persistent_pre_run.value()(context)
+                        parent[][].persistent_pre_run.value()(ctx)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
             # Run the pre-run hooks.
-            if context.command[].pre_run:
-                context.command[].pre_run.value()(context)
-            elif context.command[].erroring_pre_run:
-                context.command[].erroring_pre_run.value()(context)
+            if ctx.command[].pre_run:
+                ctx.command[].pre_run.value()(ctx)
+            elif ctx.command[].erroring_pre_run:
+                ctx.command[].erroring_pre_run.value()(ctx)
         except e:
-            print("Failed to run pre-run hooks for command: " + context.command[].name)
+            print("Failed to run pre-run hooks for command: " + ctx.command[].name)
             raise e
 
-    fn _execute_post_run_hooks(self, context: Context, parents: List[Arc[Self]]) raises -> None:
+    fn _execute_post_run_hooks(self, ctx: Context, parents: List[Arc[Self]]) raises -> None:
         """Runs the pre-run hooks for the command."""
         try:
             # Run the persistent post-run hooks.
             for parent in parents:
                 if parent[][].persistent_erroring_post_run:
-                    parent[][].persistent_erroring_post_run.value()(context)
+                    parent[][].persistent_erroring_post_run.value()(ctx)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
                     if parent[][].persistent_post_run:
-                        parent[][].persistent_post_run.value()(context)
+                        parent[][].persistent_post_run.value()(ctx)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
             # Run the post-run hooks.
-            if context.command[].post_run:
-                context.command[].post_run.value()(context)
-            elif context.command[].erroring_post_run:
-                context.command[].erroring_post_run.value()(context)
+            if ctx.command[].post_run:
+                ctx.command[].post_run.value()(ctx)
+            elif ctx.command[].erroring_post_run:
+                ctx.command[].erroring_post_run.value()(ctx)
         except e:
-            print("Failed to run post-run hooks for command: " + context.command[].name, file=2)
+            print("Failed to run post-run hooks for command: " + ctx.command[].name, file=2)
             raise e
 
     fn execute(inout self) -> None:
@@ -471,7 +471,7 @@ struct Command(CollectionElement):
             panic(e)
 
         # Check if the help flag was passed
-        var help_passed = command[].flags.get_as_bool("help")
+        var help_passed = command[].flags.get_bool("help")
         if help_passed.value() == True:
             print(command[].help(command))
             return None
@@ -484,16 +484,16 @@ struct Command(CollectionElement):
             validate_flag_groups(command[].flags)
 
             # Validate the remaining arguments
-            var context = Context(command, remaining_args)
-            command[].arg_validator(context)
+            var ctx = Context(command, remaining_args)
+            command[].arg_validator(ctx)
 
             # Run the function's commands.
-            self._execute_pre_run_hooks(context, parents)
+            self._execute_pre_run_hooks(ctx, parents)
             if command[].run:
-                command[].run.value()(context)
+                command[].run.value()(ctx)
             else:
-                command[].erroring_run.value()(context)
-            self._execute_post_run_hooks(context, parents)
+                command[].erroring_run.value()(ctx)
+            self._execute_post_run_hooks(ctx, parents)
         except e:
             panic(e)
 

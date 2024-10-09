@@ -5,7 +5,7 @@ from prism.flag_set import FlagSet
 
 
 def test_command_operations():
-    fn dummy(context: Context) -> None:
+    fn dummy(ctx: Context) -> None:
         return None
 
     var cmd = Arc(Command(name="root", description="Base command.", run=dummy))
@@ -16,7 +16,7 @@ def test_command_operations():
 
     var child_cmd = Arc(Command(name="child", description="Child command.", run=dummy))
     cmd[].add_subcommand(child_cmd)
-    child_cmd[].flags.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    child_cmd[].flags.string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
 
     testing.assert_equal(child_cmd[].full_name(), "root child")
 

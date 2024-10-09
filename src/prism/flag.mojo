@@ -1,6 +1,8 @@
 from collections import Optional, Dict
 
 
+# TODO: When we have trait objects, switch to using actual flag structs per type instead of
+# needing to cast values to and from string.
 @value
 struct Flag(RepresentableCollectionElement, Stringable, Formattable):
     """Represents a flag that can be passed via the command line.

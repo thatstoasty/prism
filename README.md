@@ -61,7 +61,7 @@ Commands can have typed flags added to them to enable different behaviors.
     var root = Command(
         name="logger", description="Base command.", run=handler
     )
-    root.flags.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
+    root.flags.string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
 ```
 
 ![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
@@ -120,7 +120,7 @@ fn main() -> None:
         persistent_pre_run=pre_hook,
         persistent_post_run=post_hook,
     ))
-    get_command[].flags.persistent_flags.add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
+    get_command[].flags.persistent_flags.bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
 ```
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/main/doc/tapes/persistent.gif)
@@ -135,7 +135,7 @@ By default flags are considered optional. If you want your command to report an 
 var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
-    print_tool[].flags.add_bool_flag(name="required", shorthand="r", usage="Always required.")
+    print_tool[].flags.bool_flag(name="required", shorthand="r", usage="Always required.")
     print_tool[].mark_flag_required("required")
 ```
 
@@ -147,7 +147,7 @@ Same for persistent flags:
         description="This is a dummy command!",
         run=test,
     )
-    root.persistent_flags.add_bool_flag(name="free", shorthand="f", usage="Always required.")
+    root.persistent_flags.bool_flag(name="free", shorthand="f", usage="Always required.")
     root.mark_persistent_flag_required("free")
 ```
 
@@ -159,8 +159,8 @@ If you have different flags that must be provided together (e.g. if they provide
     var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
-    print_tool[].flags.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    print_tool[].flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    print_tool[].flags.string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    print_tool[].flags.string_flag(name="formatting", shorthand="f", usage="Text formatting")
     print_tool[].mark_flags_required_together("color", "formatting")
 ```
 
@@ -170,8 +170,8 @@ You can also prevent different flags from being provided together if they repres
    var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
-    print_tool[].add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    print_tool[].add_string_flag(name="hue", shorthand="x", usage="Text color", default="#3464eb")
+    print_tool[].string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    print_tool[].string_flag(name="hue", shorthand="x", usage="Text color", default="#3464eb")
     print_tool[].mark_flags_mutually_exclusive("color", "hue")
 ```
 
@@ -181,8 +181,8 @@ If you want to require at least one flag from a group to be present, you can use
    var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
-    print_tool[].flags.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    print_tool[].flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    print_tool[].flags.string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    print_tool[].flags.string_flag(name="formatting", shorthand="f", usage="Text formatting")
     print_tool[].mark_flags_one_required("color", "formatting")
     print_tool[].mark_flags_mutually_exclusive("color", "formatting")
 ```
@@ -208,16 +208,16 @@ fn main() -> None:
         run=test,
     )
     # Persistent flags are defined on the parent command.
-    root.persistent_flags.add_bool_flag(name="required", shorthand="r", usage="Always required.")
-    root.persistent_flags.add_string_flag(name="host", shorthand="h", usage="Host")
-    root.persistent_flags.add_string_flag(name="port", shorthand="p", usage="Port")
+    root.persistent_flags.bool_flag(name="required", shorthand="r", usage="Always required.")
+    root.persistent_flags.string_flag(name="host", shorthand="h", usage="Host")
+    root.persistent_flags.string_flag(name="port", shorthand="p", usage="Port")
     root.mark_persistent_flag_required("required")
 
     var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func
     ))
-    print_tool[].flags.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
-    print_tool[].flags.add_string_flag(name="uri", shorthand="u", usage="URI")
+    print_tool[].flags.bool_flag(name="also", shorthand="a", usage="Also always required.")
+    print_tool[].flags.string_flag(name="uri", shorthand="u", usage="URI")
 
     # Child commands are added to the parent command.
     root.add_subcommand(print_tool)

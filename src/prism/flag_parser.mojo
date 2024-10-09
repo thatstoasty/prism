@@ -37,7 +37,7 @@ struct FlagParser:
             raise Error("Command does not accept the flag supplied: " + name)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-        if flags.get_as_bool(name):
+        if flags.get_bool(name):
             return name, String("True"), 1
 
         if self.index + 1 >= len(arguments):
@@ -82,7 +82,7 @@ struct FlagParser:
         var name = result.value()
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-        if flags.get_as_bool(name):
+        if flags.get_bool(name):
             return name, String("True"), 1
 
         if self.index + 1 >= len(arguments):

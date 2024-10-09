@@ -2,12 +2,12 @@ from memory import Arc
 from prism import Command, Context
 
 
-fn printer(context: Context) -> None:
-    if len(context.args) == 0:
+fn printer(ctx: Context) -> None:
+    if len(ctx.args) == 0:
         print("No args provided.")
         return
 
-    print(context.args[0])
+    print(ctx.args[0])
     return
 
 
@@ -22,17 +22,17 @@ fn build_printer_command() -> Arc[Command]:
     return cmd
 
 
-fn say(context: Context) -> None:
+fn say(ctx: Context) -> None:
     print("Shouldn't be here!")
     return None
 
 
-fn say_hello(context: Context) -> None:
+fn say_hello(ctx: Context) -> None:
     print("Hello World!")
     return None
 
 
-fn say_goodbye(context: Context) -> None:
+fn say_goodbye(ctx: Context) -> None:
     print("Goodbye World!")
     return None
 
@@ -70,9 +70,9 @@ fn build_goodbye_command() -> Arc[Command]:
     return cmd
 
 
-fn test(context: Context) -> None:
-    print(context.command[].flags.get_as_string("env").value())
-    for item in context.command[].flags.flags:
+fn test(ctx: Context) -> None:
+    print(ctx.command[].flags.get_string("env").value())
+    for item in ctx.command[].flags.flags:
         if item[].value:
             print(item[].name, item[].value.value())
         else:
@@ -87,7 +87,7 @@ fn main() -> None:
         description="This is a dummy command!",
         run=test,
     )
-    root.flags.add_string_flag(name="env", shorthand="e", usage="Environment.")
+    root.flags.string_flag(name="env", shorthand="e", usage="Environment.", default="")
 
     var say_command = build_say_command()
     var hello_command = build_hello_command()

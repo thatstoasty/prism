@@ -3,19 +3,19 @@ from prism import Command, Context
 from python import Python
 
 
-fn base(context: Context) -> None:
+fn base(ctx: Context) -> None:
     print("This is the base command!")
     return None
 
 
-fn print_information(context: Context) -> None:
+fn print_information(ctx: Context) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
     return None
 
 
-fn get_cat_fact(context: Context) raises -> None:
-    var flags = context.command[].flags
-    var lover = flags.get_as_bool("lover")
+fn get_cat_fact(ctx: Context) raises -> None:
+    var flags = ctx.command[].flags
+    var lover = flags.get_bool("lover")
     if lover and lover.value():
         print("Hello fellow cat lover!")
 
@@ -25,7 +25,7 @@ fn get_cat_fact(context: Context) raises -> None:
     var url = "https://catfact.ninja/fact"
 
     # Send the GET requests
-    var count = flags.get_as_int("count")
+    var count = flags.get_int("count")
     if not count:
         raise Error("Count flag was not found.")
 
@@ -40,7 +40,7 @@ fn get_cat_fact(context: Context) raises -> None:
             raise Error("Request failed!")
 
 
-fn get_dog_breeds(context: Context) raises -> None:
+fn get_dog_breeds(ctx: Context) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = "https://dog.ceo/api/breeds/list/all"
@@ -74,8 +74,8 @@ fn main() -> None:
             erroring_run=get_cat_fact,
         )
     )
-    cat_command[].flags.add_int_flag(name="count", shorthand="c", usage="Number of facts to get.", default=1)
-    cat_command[].flags.add_bool_flag(name="lover", shorthand="l", usage="Are you a cat lover?")
+    cat_command[].flags.int_flag(name="count", shorthand="c", usage="Number of facts to get.", default=1)
+    cat_command[].flags.bool_flag(name="lover", shorthand="l", usage="Are you a cat lover?")
 
     var dog_command = Arc(
         Command(
