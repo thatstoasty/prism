@@ -20,19 +20,19 @@ def test_string_to_float():
 
 def test_get_flags():
     var flag_set = FlagSet()
-    flag_set.add_string_flag("key", "description", "default")
-    flag_set.add_bool_flag("flag", "description", "False")
+    flag_set.string_flag("key", "usage", "default")
+    flag_set.bool_flag("flag", "usage", "False")
     var flags = List[String]("--key=value", "positional", "--flag")
 
     _ = flag_set.from_args(flags)
-    testing.assert_equal(flag_set.get_as_string("key").value(), "value")
-    testing.assert_equal(flag_set.get_as_bool("flag").value(), True)
+    testing.assert_equal(flag_set.get_string("key"), "value")
+    testing.assert_equal(flag_set.get_bool("flag"), True)
 
 
 def test_parse_flag():
     var flag_set = FlagSet()
-    flag_set.add_string_flag(name="key", usage="description", default="default")
-    flag_set.add_bool_flag(name="flag", usage="description", default=False)
+    flag_set.string_flag(name="key", usage="usage", default="default")
+    flag_set.bool_flag(name="flag", usage="usage", default=False)
 
     var parser = FlagParser()
     var name: String
@@ -51,19 +51,19 @@ def test_parse_flag():
 
 def test_parse_shorthand_flag():
     var flag_set = FlagSet()
-    flag_set.add_string_flag(name="key", usage="description", default="default", shorthand="k")
-    flag_set.add_bool_flag(name="flag", usage="description", default=False, shorthand="f")
+    flag_set.string_flag(name="key", usage="usage", default="default", shorthand="k")
+    flag_set.bool_flag(name="flag", usage="usage", default=False, shorthand="f")
 
     var parser = FlagParser()
     var name: String
     var value: String
     var increment_by: Int
-    name, value, increment_by = parser.parse_shorthand_flag(String("-k"), List[String]("-k", "value"), flag_set)
+    name, value, increment_by = parser.parse_shorthand_flag("-k", List[String]("-k", "value"), flag_set)
     testing.assert_equal(name, "key")
     testing.assert_equal(value, "value")
     testing.assert_equal(increment_by, 2)
 
-    name, value, increment_by = parser.parse_shorthand_flag(String("-k=value"), List[String]("-k=value"), flag_set)
+    name, value, increment_by = parser.parse_shorthand_flag("-k=value", List[String]("-k=value"), flag_set)
     testing.assert_equal(name, "key")
     testing.assert_equal(value, "value")
     testing.assert_equal(increment_by, 1)

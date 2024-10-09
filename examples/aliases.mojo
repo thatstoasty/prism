@@ -13,13 +13,13 @@ fn tool_func(ctx: Context) -> None:
 fn main() -> None:
     var root = Command(
         name="my",
-        description="This is a dummy command!",
+        usage="This is a dummy command!",
         run=test,
     )
 
     var print_tool = Arc(
         Command(
-            name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+            name="tool", usage="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
         )
     )
 

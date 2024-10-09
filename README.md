@@ -61,7 +61,7 @@ Commands can have typed flags added to them to enable different behaviors.
     var root = Command(
         name="logger", description="Base command.", run=handler
     )
-    root.flags.add_string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
+    root.flags.string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
 ```
 
 ![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
@@ -120,7 +120,7 @@ fn main() -> None:
         persistent_pre_run=pre_hook,
         persistent_post_run=post_hook,
     ))
-    get_command[].flags.persistent_flags.add_bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
+    get_command[].flags.persistent_flags.bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
 ```
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/main/doc/tapes/persistent.gif)
@@ -135,7 +135,7 @@ By default flags are considered optional. If you want your command to report an 
 var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
-    print_tool[].flags.add_bool_flag(name="required", shorthand="r", usage="Always required.")
+    print_tool[].flags.bool_flag(name="required", shorthand="r", usage="Always required.")
     print_tool[].mark_flag_required("required")
 ```
 
@@ -147,7 +147,7 @@ Same for persistent flags:
         description="This is a dummy command!",
         run=test,
     )
-    root.persistent_flags.add_bool_flag(name="free", shorthand="f", usage="Always required.")
+    root.persistent_flags.bool_flag(name="free", shorthand="f", usage="Always required.")
     root.mark_persistent_flag_required("free")
 ```
 
@@ -159,8 +159,8 @@ If you have different flags that must be provided together (e.g. if they provide
     var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
-    print_tool[].flags.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    print_tool[].flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    print_tool[].flags.uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464eb)
+    print_tool[].flags.string_flag(name="formatting", shorthand="f", usage="Text formatting")
     print_tool[].mark_flags_required_together("color", "formatting")
 ```
 
@@ -170,8 +170,8 @@ You can also prevent different flags from being provided together if they repres
    var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
-    print_tool[].add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    print_tool[].add_string_flag(name="hue", shorthand="x", usage="Text color", default="#3464eb")
+    print_tool[].string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    print_tool[].string_flag(name="hue", shorthand="x", usage="Text color", default="#3464eb")
     print_tool[].mark_flags_mutually_exclusive("color", "hue")
 ```
 
@@ -181,8 +181,8 @@ If you want to require at least one flag from a group to be present, you can use
    var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
-    print_tool[].flags.add_string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    print_tool[].flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    print_tool[].flags.string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
+    print_tool[].flags.string_flag(name="formatting", shorthand="f", usage="Text formatting")
     print_tool[].mark_flags_one_required("color", "formatting")
     print_tool[].mark_flags_mutually_exclusive("color", "formatting")
 ```
@@ -208,16 +208,16 @@ fn main() -> None:
         run=test,
     )
     # Persistent flags are defined on the parent command.
-    root.persistent_flags.add_bool_flag(name="required", shorthand="r", usage="Always required.")
-    root.persistent_flags.add_string_flag(name="host", shorthand="h", usage="Host")
-    root.persistent_flags.add_string_flag(name="port", shorthand="p", usage="Port")
+    root.persistent_flags.bool_flag(name="required", shorthand="r", usage="Always required.")
+    root.persistent_flags.string_flag(name="host", shorthand="h", usage="Host")
+    root.persistent_flags.string_flag(name="port", shorthand="p", usage="Port")
     root.mark_persistent_flag_required("required")
 
     var print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func
     ))
-    print_tool[].flags.add_bool_flag(name="also", shorthand="a", usage="Also always required.")
-    print_tool[].flags.add_string_flag(name="uri", shorthand="u", usage="URI")
+    print_tool[].flags.bool_flag(name="also", shorthand="a", usage="Also always required.")
+    print_tool[].flags.string_flag(name="uri", shorthand="u", usage="URI")
 
     # Child commands are added to the parent command.
     root.add_subcommand(print_tool)
@@ -246,13 +246,13 @@ Validation of positional arguments can be specified using the `arg_validator` fi
   - `exact_args[Int]` - report an error if there are not exactly N positional args.
   - `range_args[min, max]` - report an error if the number of args is not between min and max.
 - Content of the arguments:
-  - `only_valid_args` - report an error if there are any positional args not specified in the `valid_args` field of `Command`, which can optionally be set to a list of valid values for positional args.
+  - `valid_args` - report an error if there are any positional args not specified in the `valid_args` field of `Command`, which can optionally be set to a list of valid values for positional args.
 
 If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 
 > NOTE: `match_all` is unstable at the moment. I will work on ironing it out in the near future. This most likely does not work.
 
-Moreover, `match_all[arg_validators: List[ArgValidator]]` enables combining existing checks with arbitrary other checks. For instance, if you want to report an error if there are not exactly N positional args OR if there are any positional args that are not in the ValidArgs field of Command, you can call `match_all` on `exact_args` and `only_valid_args`, as shown below:
+Moreover, `match_all[arg_validators: List[ArgValidator]]` enables combining existing checks with arbitrary other checks. For instance, if you want to report an error if there are not exactly N positional args OR if there are any positional args that are not in the ValidArgs field of Command, you can call `match_all` on `exact_args` and `valid_args`, as shown below:
 
 ```mojo
 fn test_match_all():
@@ -273,16 +273,15 @@ Commands are configured to accept a `--help` flag by default. This will print th
 
 ```mojo
 fn help_func(inout command: Arc[Command]) -> String:
-    return ""
+    return "My help function."
 
 fn main() -> None:
     var root = Command(
         name="hello",
         description="This is a dummy command!",
         run=test,
+        help=help_func
     )
-
-    var hello_command = Arc(Command(name="chromeria", description="This is a dummy command!", run=hello, help=help_func))
 ```
 
 ![Help](https://github.com/thatstoasty/prism/blob/main/doc/tapes/help.gif)
@@ -293,11 +292,10 @@ fn main() -> None:
 
 ## TODO
 
-### Documentation
-
 ### Features
 
-- Add find suggestion logic to `Command` struct.
+- Add suggestion logic to `Command` struct.
+- Autocomplete generation.
 - Enable usage function to return the results of a usage function upon calling wrong functions or commands.
 - Replace print usage with writers to enable stdout/stderr/file writing.
 - Update default help command to improve available commands and flags section.
@@ -305,7 +303,7 @@ fn main() -> None:
 ### Improvements
 
 - Tree traversal improvements.
-- Arc[Command] being passed to validators and command functions is marked as inout because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
+- `Arc[Command]` being passed to validators and command functions is marked as inout because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
 - For now, help functions and arg validators will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
 
 ### Bugs

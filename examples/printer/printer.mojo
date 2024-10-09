@@ -1,35 +1,25 @@
 from memory import Arc
 from prism import Command, Context, exact_args
-from mist import Style
+import mist
 
-
-fn printer(ctx: Context) -> None:
+fn printer(ctx: Context) raises -> None:
     if len(ctx.args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    var color = ctx.command[].flags.get_as_uint32("color")
-    var formatting = ctx.command[].flags.get_as_string("formatting")
-    var style = Style()
+    var color = ctx.command[].flags.get_uint32("color")
+    var formatting = ctx.command[].flags.get_string("formatting")
+    var style = mist.Style().foreground(color)
 
-    if not color:
-        color = 0xFFFFFF
-    if not formatting:
-        formatting = String("")
-
-    if color:
-        style = style.foreground(color.value())
-
-    var formatting_value = formatting.or_else("")
-    if formatting_value == "":
+    if formatting == "":
         print(style.render(ctx.args[0]))
         return None
 
-    if formatting.value() == "bold":
+    if formatting == "bold":
         style = style.bold()
-    elif formatting.value() == "underline":
+    elif formatting == "underline":
         style = style.underline()
-    elif formatting.value() == "italic":
+    elif formatting == "italic":
         style = style.italic()
 
     print(style.render(ctx.args[0]))
@@ -49,14 +39,14 @@ fn post_hook(ctx: Context) -> None:
 fn main() -> None:
     var root = Command(
         name="printer",
-        description="Base command.",
-        run=printer,
+        usage="Base command.",
+        raising_run=printer,
         pre_run=pre_hook,
         post_run=post_hook,
     )
     root.arg_validator = exact_args[1]()
 
-    root.flags.add_uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464EB)
-    root.flags.add_string_flag(name="formatting", shorthand="f", usage="Text formatting")
+    root.flags.uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464EB)
+    root.flags.string_flag(name="formatting", shorthand="f", usage="Text formatting")
 
     root.execute()

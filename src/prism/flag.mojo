@@ -1,6 +1,8 @@
 from collections import Optional, Dict
 
 
+# TODO: When we have trait objects, switch to using actual flag structs per type instead of
+# needing to cast values to and from string.
 @value
 struct Flag(RepresentableCollectionElement, Stringable, Formattable):
     """Represents a flag that can be passed via the command line.
@@ -118,7 +120,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
         self.value = value
         self.changed = True
 
-    fn get_with_transform[T: CollectionElement, //, transform: fn (value: String) -> T](self) -> Optional[T]:
+    fn get_with_transform[T: CollectionElement, //, transform: fn (value: String) -> T](self) -> T:
         """Returns the value of the flag with a transformation applied to it.
 
         Params:
@@ -130,3 +132,11 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
         if self.value:
             return transform(self.value.value())
         return transform(self.default)
+
+    fn value_or_default(self) -> String:
+        """Returns the value of the flag or the default value if it isn't set.
+
+        Returns:
+            The value of the flag or the default value.
+        """
+        return self.value.or_else(self.default)

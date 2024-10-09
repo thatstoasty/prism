@@ -37,8 +37,11 @@ struct FlagParser:
             raise Error("Command does not accept the flag supplied: " + name)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-        if flags.get_as_bool(name):
+        try:
+            _ = flags.lookup(name, "Bool")
             return name, String("True"), 1
+        except:
+            pass
 
         if self.index + 1 >= len(arguments):
             raise Error("Flag `" + name + "` requires a value to be set but reached the end of arguments.")
@@ -67,8 +70,7 @@ struct FlagParser:
             var flag = split(argument, "=")
             var shorthand = flag[0][1:]
             var value = flag[1]
-            var name = flags.lookup_name(shorthand).value()
-
+            var name = flags.lookup_name(shorthand)
             if name not in flags.names():
                 raise Error("Command does not accept the shorthand flag supplied: " + name)
 
@@ -76,15 +78,17 @@ struct FlagParser:
 
         # Flag with value set like "-f <value>"
         var shorthand = argument[1:]
-        var result = flags.lookup_name(shorthand)
-        if not result:
+        var name = flags.lookup_name(shorthand)
+        if name not in flags.names():
             raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
-        var name = result.value()
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-        if flags.get_as_bool(name):
+        try:
+            _ = flags.lookup(name, "Bool")
             return name, String("True"), 1
-
+        except:
+            pass
+            
         if self.index + 1 >= len(arguments):
             raise Error("Flag `" + name + "` requires a value to be set but reached the end of arguments.")
 
@@ -126,11 +130,7 @@ struct FlagParser:
                 raise Error("Expected a flag but found: " + argument)
 
             # Set the value of the flag.
-            var flag = flags.lookup(name)
-            if not flag:
-                raise Error("No flag found with the name: " + name)
-
-            flag.value()[].set(value)
+            flags.lookup(name).set(value)
             self.index += increment_by
 
         return remaining_args
