@@ -83,9 +83,12 @@ struct FlagParser:
             raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-        if flags.get_bool(name):
+        try:
+            _ = flags.lookup(name, "Bool")
             return name, String("True"), 1
-
+        except:
+            pass
+            
         if self.index + 1 >= len(arguments):
             raise Error("Flag `" + name + "` requires a value to be set but reached the end of arguments.")
 
