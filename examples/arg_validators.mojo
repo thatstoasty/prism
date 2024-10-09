@@ -2,7 +2,6 @@ from memory import Arc
 from prism import (
     Command,
     Context,
-    CommandArc,
     no_args,
     valid_args,
     minimum_n_args,
@@ -12,13 +11,13 @@ from prism import (
 )
 
 
-fn test(context: Context) -> None:
-    for arg in context.args:
+fn test(ctx: Context) -> None:
+    for arg in ctx.args:
         print("Received", arg[])
 
 
-fn hello(context: Context) -> None:
-    print(context.command[].name, "Hello from Chromeria!")
+fn hello(ctx: Context) -> None:
+    print(ctx.command[].name, "Hello from Chromeria!")
 
 
 fn main() -> None:

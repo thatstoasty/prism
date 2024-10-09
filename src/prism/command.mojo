@@ -89,13 +89,13 @@ fn default_help(inout command: Arc[Command]) -> String:
     return mog.join_vertical(mog.left, description, options, commands)
 
 
-alias CommandFunction = fn (context: Context) -> None
+alias CommandFunction = fn (ctx: Context) -> None
 """The function for a command to run."""
-alias CommandFunctionErr = fn (context: Context) raises -> None
+alias CommandFunctionErr = fn (ctx: Context) raises -> None
 """The function for a command to run that can error."""
 alias HelpFunction = fn (inout command: Arc[Command]) -> String
 """The function for a help function."""
-alias ArgValidator = fn (context: Context) raises -> None
+alias ArgValidator = fn (ctx: Context) raises -> None
 """The function for an argument validator."""
 alias ParentVisitorFn = fn (parent: Arc[Command]) capturing -> None
 """The function for visiting parents of a command."""
@@ -114,16 +114,16 @@ struct Command(CollectionElement):
     from memory import Arc
     from prism import Command, Context
 
-    fn test(context: Context) -> None:
+    fn test(ctx: Context) -> None:
         print("Hello from Chromeria!")
 
     fn main():
-        var command = Arc(Command(
+        var command = Command(
             name="hello",
             description="This is a dummy command!",
             run=test,
-        ))
-        command[].execute()
+        )
+        command.execute()
     ```
 
     Then execute the command by running the mojo file or binary.
@@ -341,25 +341,28 @@ struct Command(CollectionElement):
 
         return self
     
-    fn _parse_command_from_args(self, args: List[String]) -> (Optional[Arc[Command]], List[String]):
+    fn _parse_command(self, command: Self, arg: String, children: List[Arc[Self]], inout leftover_start: Int) -> (Self, List[Arc[Self]]):
+        for command_ref in children:
+            if command_ref[][].name == arg or arg in command_ref[][].aliases:
+                leftover_start += 1
+                return command_ref[][], command_ref[][].children
+        
+        return command, children
+
+    fn _parse_command_from_args(self, args: List[String]) -> (Self, List[String]):
         # If there's no children, then the root command is used.
         if not self.children or not args:
-            return Optional[Arc[Command]](None), args
+            return self, args
         
-        var command: Optional[Arc[Command]] = None
+        var command = self
         var children = self.children
         var leftover_start = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
 
         for arg in args:
-            for command_ref in children:
-                if command_ref[][].name == arg[] or arg[] in command_ref[][].aliases:
-                    command = command_ref[]
-                    children = command_ref[][].children
-                    leftover_start += 1
-                    break
-
-        if not command:
-            return command, args
+            command, children = self._parse_command(command, arg[], children, leftover_start)
+        
+        if leftover_start == 0:
+            return self, args
         
         # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
         var remaining_args = List[String]()
@@ -368,60 +371,60 @@ struct Command(CollectionElement):
 
         return command, remaining_args
 
-    fn _execute_pre_run_hooks(self, context: Context, parents: List[Arc[Self]]) raises -> None:
+    fn _execute_pre_run_hooks(self, ctx: Context, parents: List[Arc[Self]]) raises -> None:
         """Runs the pre-run hooks for the command."""
         try:
             # Run the persistent pre-run hooks.
             for parent in parents:
                 if parent[][].persistent_erroring_pre_run:
-                    parent[][].persistent_erroring_pre_run.value()(context)
+                    parent[][].persistent_erroring_pre_run.value()(ctx)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
                     if parent[][].persistent_pre_run:
-                        parent[][].persistent_pre_run.value()(context)
+                        parent[][].persistent_pre_run.value()(ctx)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
             # Run the pre-run hooks.
-            if context.command[].pre_run:
-                context.command[].pre_run.value()(context)
-            elif context.command[].erroring_pre_run:
-                context.command[].erroring_pre_run.value()(context)
+            if ctx.command[].pre_run:
+                ctx.command[].pre_run.value()(ctx)
+            elif ctx.command[].erroring_pre_run:
+                ctx.command[].erroring_pre_run.value()(ctx)
         except e:
-            print("Failed to run pre-run hooks for command: " + context.command[].name)
+            print("Failed to run pre-run hooks for command: " + ctx.command[].name)
             raise e
 
-    fn _execute_post_run_hooks(self, context: Context, parents: List[Arc[Self]]) raises -> None:
+    fn _execute_post_run_hooks(self, ctx: Context, parents: List[Arc[Self]]) raises -> None:
         """Runs the pre-run hooks for the command."""
         try:
             # Run the persistent post-run hooks.
             for parent in parents:
                 if parent[][].persistent_erroring_post_run:
-                    parent[][].persistent_erroring_post_run.value()(context)
+                    parent[][].persistent_erroring_post_run.value()(ctx)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
                         break
                 else:
                     if parent[][].persistent_post_run:
-                        parent[][].persistent_post_run.value()(context)
+                        parent[][].persistent_post_run.value()(ctx)
 
                         @parameter
                         if not ENABLE_TRAVERSE_RUN_HOOKS:
                             break
 
             # Run the post-run hooks.
-            if context.command[].post_run:
-                context.command[].post_run.value()(context)
-            elif context.command[].erroring_post_run:
-                context.command[].erroring_post_run.value()(context)
+            if ctx.command[].post_run:
+                ctx.command[].post_run.value()(ctx)
+            elif ctx.command[].erroring_post_run:
+                ctx.command[].erroring_post_run.value()(ctx)
         except e:
-            print("Failed to run post-run hooks for command: " + context.command[].name, file=2)
+            print("Failed to run post-run hooks for command: " + ctx.command[].name, file=2)
             raise e
 
     fn execute(inout self) -> None:
@@ -436,26 +439,19 @@ struct Command(CollectionElement):
             return root[].execute()
 
         var remaining_args: List[String]
-        var maybe_command: Optional[Arc[Self]]
-        maybe_command, remaining_args = self._parse_command_from_args(get_args_as_list())
-
-        var command: Arc[Self]
-        if not maybe_command:
-            command = Arc(self)
-        else:
-            command = maybe_command.take()
+        var command: Self
+        command, remaining_args = self._parse_command_from_args(get_args_as_list())
 
         # Merge local and inherited flags
-        command[]._merge_flags()
+        command._merge_flags()
 
         # Add all parents to the list to check if they have persistent pre/post hooks.
         var parents = List[Arc[Self]]()
-
         @parameter
         fn append_parents(parent: Arc[Self]) capturing -> None:
             parents.append(parent)
 
-        command[].visit_parents[append_parents]()
+        command.visit_parents[append_parents]()
 
         # If ENABLE_TRAVERSE_RUN_HOOKS is True, reverse the list to start from the root command rather than
         # from the child. This is because all of the persistent hooks will be run.
@@ -464,36 +460,36 @@ struct Command(CollectionElement):
             parents.reverse()
 
         # Get the flags for the command to be executed.
-        # store flags as a mutable ref
         try:
-            remaining_args = command[].flags.from_args(remaining_args)
+            remaining_args = command.flags.from_args(remaining_args)
         except e:
             panic(e)
 
         # Check if the help flag was passed
-        var help_passed = command[].flags.get_as_bool("help")
+        var command_ref = Arc(command)
+        var help_passed = command.flags.get_as_bool("help")
         if help_passed.value() == True:
-            print(command[].help(command))
+            print(command.help(command_ref))
             return None
 
         try:
             # Validate individual required flags (eg: flag is required)
-            validate_required_flags(command[].flags)
+            validate_required_flags(command.flags)
 
             # Validate flag groups (eg: one of required, mutually exclusive, required together)
-            validate_flag_groups(command[].flags)
+            validate_flag_groups(command.flags)
 
             # Validate the remaining arguments
-            var context = Context(command, remaining_args)
-            command[].arg_validator(context)
+            var ctx = Context(command, remaining_args)
+            command.arg_validator(ctx)
 
             # Run the function's commands.
-            self._execute_pre_run_hooks(context, parents)
-            if command[].run:
-                command[].run.value()(context)
+            self._execute_pre_run_hooks(ctx, parents)
+            if command.run:
+                command.run.value()(ctx)
             else:
-                command[].erroring_run.value()(context)
-            self._execute_post_run_hooks(context, parents)
+                command.erroring_run.value()(ctx)
+            self._execute_post_run_hooks(ctx, parents)
         except e:
             panic(e)
 

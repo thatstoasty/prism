@@ -3,18 +3,18 @@ from prism import Command, Context
 from python import Python
 
 
-fn base(context: Context) -> None:
+fn base(ctx: Context) -> None:
     print("This is the base command!")
     return None
 
 
-fn print_information(context: Context) -> None:
+fn print_information(ctx: Context) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
     return None
 
 
-fn get_cat_fact(context: Context) raises -> None:
-    var flags = context.command[].flags
+fn get_cat_fact(ctx: Context) raises -> None:
+    var flags = ctx.command[].flags
     var lover = flags.get_as_bool("lover")
     if lover and lover.value():
         print("Hello fellow cat lover!")
@@ -40,7 +40,7 @@ fn get_cat_fact(context: Context) raises -> None:
             raise Error("Request failed!")
 
 
-fn get_dog_breeds(context: Context) raises -> None:
+fn get_dog_breeds(ctx: Context) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = "https://dog.ceo/api/breeds/list/all"

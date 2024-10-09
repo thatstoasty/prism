@@ -2,11 +2,11 @@ from memory import Arc
 from prism import Command, Context
 
 
-fn test(context: Context) -> None:
+fn test(ctx: Context) -> None:
     print("Pass chromeria as a subcommand!")
 
 
-fn hello(context: Context) -> None:
+fn hello(ctx: Context) -> None:
     print("Hello from Chromeria!")
 
 

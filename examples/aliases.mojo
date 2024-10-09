@@ -2,11 +2,11 @@ from memory import Arc
 from prism import Context, Command
 
 
-fn test(context: Context) -> None:
+fn test(ctx: Context) -> None:
     print("Pass tool, object, or thing as a subcommand!")
 
 
-fn tool_func(context: Context) -> None:
+fn tool_func(ctx: Context) -> None:
     print("My tool!")
 
 

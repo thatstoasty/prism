@@ -5,21 +5,21 @@ from .command import ArgValidator
 from .context import Context
 
 
-fn no_args(context: Context) raises -> None:
+fn no_args(ctx: Context) raises -> None:
     """Returns an error if the command has any arguments.
 
     Args:
-        context: The context of the command being executed.
+        ctx: The context of the command being executed.
     """
-    if len(context.args) > 0:
-        raise Error(fmt.sprintf("The command `%s` does not take any arguments.", context.command[].name))
+    if len(ctx.args) > 0:
+        raise Error(fmt.sprintf("The command `%s` does not take any arguments.", ctx.command[].name))
 
 
-fn arbitrary_args(context: Context) raises -> None:
+fn arbitrary_args(ctx: Context) raises -> None:
     """Never returns an error.
 
     Args:
-        context: The context of the command being executed.
+        ctx: The context of the command being executed.
     """
     return None
 
@@ -34,14 +34,14 @@ fn minimum_n_args[n: Int]() -> ArgValidator:
         A function that checks the number of arguments.
     """
 
-    fn less_than_n_args(context: Context) raises -> None:
-        if len(context.args) < n:
+    fn less_than_n_args(ctx: Context) raises -> None:
+        if len(ctx.args) < n:
             raise Error(
                 fmt.sprintf(
                     "The command `%s` accepts at least %d argument(s). Received: %d.",
-                    context.command[].name,
+                    ctx.command[].name,
                     n,
-                    len(context.args),
+                    len(ctx.args),
                 )
             )
 
@@ -58,14 +58,14 @@ fn maximum_n_args[n: Int]() -> ArgValidator:
         A function that checks the number of arguments.
     """
 
-    fn more_than_n_args(context: Context) raises -> None:
-        if len(context.args) > n:
+    fn more_than_n_args(ctx: Context) raises -> None:
+        if len(ctx.args) > n:
             raise Error(
                 fmt.sprintf(
                     "The command `%s` accepts at most %d argument(s). Received: %d.",
-                    context.command[].name,
+                    ctx.command[].name,
                     n,
-                    len(context.args),
+                    len(ctx.args),
                 )
             )
 
@@ -82,30 +82,30 @@ fn exact_args[n: Int]() -> ArgValidator:
         A function that checks the number of arguments.
     """
 
-    fn exactly_n_args(context: Context) raises -> None:
-        if len(context.args) != n:
+    fn exactly_n_args(ctx: Context) raises -> None:
+        if len(ctx.args) != n:
             raise Error(
                 fmt.sprintf(
                     "The command `%s` accepts exactly %d argument(s). Received: %d.",
-                    context.command[].name,
+                    ctx.command[].name,
                     n,
-                    len(context.args),
+                    len(ctx.args),
                 )
             )
 
     return exactly_n_args
 
 
-fn valid_args(context: Context) raises -> None:
+fn valid_args(ctx: Context) raises -> None:
     """Returns an error if threre are any positional args that are not in the command's `valid_args`.
 
     Args:
-        context: The context of the command being executed.
+        ctx: The context of the command being executed.
     """
-    if context.command[].valid_args:
-        for arg in context.args:
-            if arg[] not in context.command[].valid_args:
-                raise Error(fmt.sprintf("Invalid argument: `%s`, for the command `%s`.", arg[], context.command[].name))
+    if ctx.command[].valid_args:
+        for arg in ctx.args:
+            if arg[] not in ctx.command[].valid_args:
+                raise Error(fmt.sprintf("Invalid argument: `%s`, for the command `%s`.", arg[], ctx.command[].name))
 
 
 fn range_args[minimum: Int, maximum: Int]() -> ArgValidator:
@@ -119,15 +119,15 @@ fn range_args[minimum: Int, maximum: Int]() -> ArgValidator:
         A function that checks the number of arguments.
     """
 
-    fn range_n_args(context: Context) raises -> None:
-        if len(context.args) < minimum or len(context.args) > maximum:
+    fn range_n_args(ctx: Context) raises -> None:
+        if len(ctx.args) < minimum or len(ctx.args) > maximum:
             raise Error(
                 fmt.sprintf(
                     "The command `%s`, accepts between %d to %d argument(s). Received: %d.",
-                    context.command[].name,
+                    ctx.command[].name,
                     minimum,
                     maximum,
-                    len(context.args),
+                    len(ctx.args),
                 )
             )
 
@@ -145,9 +145,9 @@ fn match_all[arg_validators: List[ArgValidator]]() -> ArgValidator:
         A function that checks all the arguments using the arg_validators list..
     """
 
-    fn match_all_args(context: Context) raises -> None:
+    fn match_all_args(ctx: Context) raises -> None:
         for i in range(len(arg_validators)):
-            arg_validators[i](context)
+            arg_validators[i](ctx)
 
     return match_all_args
 
