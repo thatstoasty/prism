@@ -42,7 +42,7 @@ fn default_help(inout command: Arc[Command]) -> String:
     """Prints the help information for the command.
     TODO: Add padding for commands, options, and aliases.
     """
-    var description_style = mog.Style().border(mog.HIDDEN_BORDER)
+    var usage_style = mog.Style().border(mog.HIDDEN_BORDER)
     var border_style = mog.Style().border(mog.ROUNDED_BORDER).border_foreground(mog.Color(0x383838)).padding(0, 1)
     var option_style = mog.Style().foreground(mog.Color(0x81C8BE))
     var bold_style = mog.Style().bold()
@@ -58,7 +58,7 @@ fn default_help(inout command: Arc[Command]) -> String:
         _ = builder.write_string(" COMMAND")
     _ = builder.write_string(" [ARGS]...")
 
-    var description = description_style.render(mog.join_vertical(mog.left, str(builder), "\n", cmd[].description))
+    var usage = usage_style.render(mog.join_vertical(mog.left, str(builder), "\n", cmd[].usage))
 
     builder = StringBuilder()
     if cmd[].flags.flags:
@@ -73,9 +73,7 @@ fn default_help(inout command: Arc[Command]) -> String:
         _ = builder.write_string(bold_style.render("Commands"))
         for i in range(len(cmd[].children)):
             _ = builder.write_string(
-                fmt.sprintf(
-                    "\n%s    %s", option_style.render(cmd[].children[i][].name), cmd[].children[i][].description
-                )
+                fmt.sprintf("\n%s    %s", option_style.render(cmd[].children[i][].name), cmd[].children[i][].usage)
             )
 
             if i == len(cmd[].children) - 1:
@@ -86,16 +84,16 @@ fn default_help(inout command: Arc[Command]) -> String:
         _ = builder.write_string(fmt.sprintf("\n%s", option_style.render(cmd[].aliases.__str__())))
 
     var commands = border_style.render(str(builder))
-    return mog.join_vertical(mog.left, description, options, commands)
+    return mog.join_vertical(mog.left, usage, options, commands)
 
 
-alias CommandFunction = fn (ctx: Context) -> None
+alias CmdFn = fn (ctx: Context) -> None
 """The function for a command to run."""
-alias CommandFunctionErr = fn (ctx: Context) raises -> None
+alias RaisingCmdFn = fn (ctx: Context) raises -> None
 """The function for a command to run that can error."""
-alias HelpFunction = fn (inout command: Arc[Command]) -> String
-"""The function for a help function."""
-alias ArgValidator = fn (ctx: Context) raises -> None
+alias HelpFn = fn (inout command: Arc[Command]) -> String
+"""The function to generate help output."""
+alias ArgValidatorFn = fn (ctx: Context) raises -> None
 """The function for an argument validator."""
 alias ParentVisitorFn = fn (parent: Arc[Command]) capturing -> None
 """The function for visiting parents of a command."""
@@ -120,7 +118,7 @@ struct Command(CollectionElement):
     fn main():
         var command = Command(
             name="hello",
-            description="This is a dummy command!",
+            usage="This is a dummy command!",
             run=test,
         )
         command.execute()
@@ -135,38 +133,38 @@ struct Command(CollectionElement):
 
     var name: String
     """The name of the command."""
-    var description: String
+    var usage: String
     """Description of the command."""
     var aliases: List[String]
     """Aliases that can be used instead of the first word in name."""
-    var help: HelpFunction
+    var help: HelpFn
     """Generates help text."""
 
-    var pre_run: Optional[CommandFunction]
+    var pre_run: Optional[CmdFn]
     """A function to run before the run function is executed."""
-    var run: Optional[CommandFunction]
+    var run: Optional[CmdFn]
     """A function to run when the command is executed."""
-    var post_run: Optional[CommandFunction]
+    var post_run: Optional[CmdFn]
     """A function to run after the run function is executed."""
 
-    var erroring_pre_run: Optional[CommandFunctionErr]
+    var raising_pre_run: Optional[RaisingCmdFn]
     """A raising function to run before the run function is executed."""
-    var erroring_run: Optional[CommandFunctionErr]
+    var raising_run: Optional[RaisingCmdFn]
     """A raising function to run when the command is executed."""
-    var erroring_post_run: Optional[CommandFunctionErr]
+    var raising_post_run: Optional[RaisingCmdFn]
     """A raising function to run after the run function is executed."""
 
-    var persistent_pre_run: Optional[CommandFunction]
+    var persistent_pre_run: Optional[CmdFn]
     """A function to run before the run function is executed. This persists to children."""
-    var persistent_post_run: Optional[CommandFunction]
+    var persistent_post_run: Optional[CmdFn]
     """A function to run after the run function is executed. This persists to children."""
 
-    var persistent_erroring_pre_run: Optional[CommandFunctionErr]
+    var persistent_raising_pre_run: Optional[RaisingCmdFn]
     """A raising function to run before the run function is executed. This persists to children."""
-    var persistent_erroring_post_run: Optional[CommandFunctionErr]
+    var persistent_raising_post_run: Optional[RaisingCmdFn]
     """A raising function to run after the run function is executed. This persists to children."""
 
-    var arg_validator: ArgValidator
+    var arg_validator: ArgValidatorFn
     """Function to validate arguments passed to the command."""
     var valid_args: List[String]
     """Valid arguments for the command."""
@@ -192,43 +190,43 @@ struct Command(CollectionElement):
     fn __init__(
         inout self,
         name: String,
-        description: String,
+        usage: String,
         aliases: List[String] = List[String](),
         valid_args: List[String] = List[String](),
-        run: Optional[CommandFunction] = None,
-        pre_run: Optional[CommandFunction] = None,
-        post_run: Optional[CommandFunction] = None,
-        erroring_run: Optional[CommandFunctionErr] = None,
-        erroring_pre_run: Optional[CommandFunctionErr] = None,
-        erroring_post_run: Optional[CommandFunctionErr] = None,
-        persistent_pre_run: Optional[CommandFunction] = None,
-        persistent_post_run: Optional[CommandFunction] = None,
-        persistent_erroring_pre_run: Optional[CommandFunctionErr] = None,
-        persistent_erroring_post_run: Optional[CommandFunctionErr] = None,
+        run: Optional[CmdFn] = None,
+        pre_run: Optional[CmdFn] = None,
+        post_run: Optional[CmdFn] = None,
+        raising_run: Optional[RaisingCmdFn] = None,
+        raising_pre_run: Optional[RaisingCmdFn] = None,
+        raising_post_run: Optional[RaisingCmdFn] = None,
+        persistent_pre_run: Optional[CmdFn] = None,
+        persistent_post_run: Optional[CmdFn] = None,
+        persistent_raising_pre_run: Optional[RaisingCmdFn] = None,
+        persistent_raising_post_run: Optional[RaisingCmdFn] = None,
     ):
         """
         Args:
             name: The name of the command.
-            description: The description of the command.
+            usage: The usage of the command.
             arg_validator: The function to validate the arguments passed to the command.
             valid_args: The valid arguments for the command.
             run: The function to run when the command is executed.
             pre_run: The function to run before the command is executed.
             post_run: The function to run after the command is executed.
-            erroring_run: The function to run when the command is executed that returns an error.
-            erroring_pre_run: The function to run before the command is executed that returns an error.
-            erroring_post_run: The function to run after the command is executed that returns an error.
+            raising_run: The function to run when the command is executed that returns an error.
+            raising_pre_run: The function to run before the command is executed that returns an error.
+            raising_post_run: The function to run after the command is executed that returns an error.
             persisting_pre_run: The function to run before the command is executed. This persists to children.
             persisting_post_run: The function to run after the command is executed. This persists to children.
-            persisting_erroring_pre_run: The function to run before the command is executed that returns an error. This persists to children.
-            persisting_erroring_post_run: The function to run after the command is executed that returns an error. This persists to children.
+            persisting_raising_pre_run: The function to run before the command is executed that returns an error. This persists to children.
+            persisting_raising_post_run: The function to run after the command is executed that returns an error. This persists to children.
             help: The function to generate help text for the command.
         """
-        if not run and not erroring_run:
-            panic("A command must have a run or erroring_run function.")
+        if not run and not raising_run:
+            panic("A command must have a run or raising_run function.")
 
         self.name = name
-        self.description = description
+        self.usage = usage
         self.aliases = aliases
 
         self.help = default_help
@@ -237,14 +235,14 @@ struct Command(CollectionElement):
         self.run = run
         self.post_run = post_run
 
-        self.erroring_pre_run = erroring_pre_run
-        self.erroring_run = erroring_run
-        self.erroring_post_run = erroring_post_run
+        self.raising_pre_run = raising_pre_run
+        self.raising_run = raising_run
+        self.raising_post_run = raising_post_run
 
         self.persistent_pre_run = persistent_pre_run
         self.persistent_post_run = persistent_post_run
-        self.persistent_erroring_pre_run = persistent_erroring_pre_run
-        self.persistent_erroring_post_run = persistent_erroring_post_run
+        self.persistent_raising_pre_run = persistent_raising_pre_run
+        self.persistent_raising_post_run = persistent_raising_post_run
 
         self.arg_validator = arbitrary_args
         self.valid_args = valid_args
@@ -261,7 +259,7 @@ struct Command(CollectionElement):
 
     fn __moveinit__(inout self, owned existing: Self):
         self.name = existing.name^
-        self.description = existing.description^
+        self.usage = existing.usage^
         self.aliases = existing.aliases^
 
         self.help = existing.help
@@ -270,14 +268,14 @@ struct Command(CollectionElement):
         self.run = existing.run^
         self.post_run = existing.post_run^
 
-        self.erroring_pre_run = existing.erroring_pre_run^
-        self.erroring_run = existing.erroring_run^
-        self.erroring_post_run = existing.erroring_post_run^
+        self.raising_pre_run = existing.raising_pre_run^
+        self.raising_run = existing.raising_run^
+        self.raising_post_run = existing.raising_post_run^
 
         self.persistent_pre_run = existing.persistent_pre_run^
         self.persistent_post_run = existing.persistent_post_run^
-        self.persistent_erroring_pre_run = existing.persistent_erroring_pre_run^
-        self.persistent_erroring_post_run = existing.persistent_erroring_post_run^
+        self.persistent_raising_pre_run = existing.persistent_raising_pre_run^
+        self.persistent_raising_post_run = existing.persistent_raising_post_run^
 
         self.arg_validator = existing.arg_validator
         self.valid_args = existing.valid_args^
@@ -311,8 +309,8 @@ struct Command(CollectionElement):
 
         writer.write("Command(Name: ")
         writer.write(self.name)
-        writer.write(", Description: ")
-        writer.write(self.description)
+        writer.write(", usage: ")
+        writer.write(self.usage)
 
         if self.aliases:
             writer.write(", Aliases: ")
@@ -340,34 +338,36 @@ struct Command(CollectionElement):
             return self.parent[0][].root()
 
         return self
-    
-    fn _parse_command(self, command: Self, arg: String, children: List[Arc[Self]], inout leftover_start: Int) -> (Self, List[Arc[Self]]):
+
+    fn _parse_command(
+        self, command: Self, arg: String, children: List[Arc[Self]], inout leftover_start: Int
+    ) -> (Self, List[Arc[Self]]):
         for command_ref in children:
             if command_ref[][].name == arg or arg in command_ref[][].aliases:
                 leftover_start += 1
                 return command_ref[][], command_ref[][].children
-        
+
         return command, children
 
     fn _parse_command_from_args(self, args: List[String]) -> (Self, List[String]):
         # If there's no children, then the root command is used.
         if not self.children or not args:
             return self, args
-        
+
         var command = self
         var children = self.children
         var leftover_start = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
 
         for arg in args:
             command, children = self._parse_command(command, arg[], children, leftover_start)
-        
+
         if leftover_start == 0:
             return self, args
-        
+
         # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
         var remaining_args = List[String]()
         if len(args) >= leftover_start:
-            remaining_args = args[leftover_start:len(args)]
+            remaining_args = args[leftover_start : len(args)]
 
         return command, remaining_args
 
@@ -376,8 +376,8 @@ struct Command(CollectionElement):
         try:
             # Run the persistent pre-run hooks.
             for parent in parents:
-                if parent[][].persistent_erroring_pre_run:
-                    parent[][].persistent_erroring_pre_run.value()(ctx)
+                if parent[][].persistent_raising_pre_run:
+                    parent[][].persistent_raising_pre_run.value()(ctx)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
@@ -393,8 +393,8 @@ struct Command(CollectionElement):
             # Run the pre-run hooks.
             if ctx.command[].pre_run:
                 ctx.command[].pre_run.value()(ctx)
-            elif ctx.command[].erroring_pre_run:
-                ctx.command[].erroring_pre_run.value()(ctx)
+            elif ctx.command[].raising_pre_run:
+                ctx.command[].raising_pre_run.value()(ctx)
         except e:
             print("Failed to run pre-run hooks for command: " + ctx.command[].name)
             raise e
@@ -404,8 +404,8 @@ struct Command(CollectionElement):
         try:
             # Run the persistent post-run hooks.
             for parent in parents:
-                if parent[][].persistent_erroring_post_run:
-                    parent[][].persistent_erroring_post_run.value()(ctx)
+                if parent[][].persistent_raising_post_run:
+                    parent[][].persistent_raising_post_run.value()(ctx)
 
                     @parameter
                     if not ENABLE_TRAVERSE_RUN_HOOKS:
@@ -421,8 +421,8 @@ struct Command(CollectionElement):
             # Run the post-run hooks.
             if ctx.command[].post_run:
                 ctx.command[].post_run.value()(ctx)
-            elif ctx.command[].erroring_post_run:
-                ctx.command[].erroring_post_run.value()(ctx)
+            elif ctx.command[].raising_post_run:
+                ctx.command[].raising_post_run.value()(ctx)
         except e:
             print("Failed to run post-run hooks for command: " + ctx.command[].name, file=2)
             raise e
@@ -447,6 +447,7 @@ struct Command(CollectionElement):
 
         # Add all parents to the list to check if they have persistent pre/post hooks.
         var parents = List[Arc[Self]]()
+
         @parameter
         fn append_parents(parent: Arc[Self]) capturing -> None:
             parents.append(parent)
@@ -459,20 +460,17 @@ struct Command(CollectionElement):
         if ENABLE_TRAVERSE_RUN_HOOKS:
             parents.reverse()
 
-        # Get the flags for the command to be executed.
         try:
+            # Get the flags for the command to be executed.
             remaining_args = command.flags.from_args(remaining_args)
-        except e:
-            panic(e)
 
-        # Check if the help flag was passed
-        var command_ref = Arc(command)
-        var help_passed = command.flags.get_bool("help")
-        if help_passed.value() == True:
-            print(command.help(command_ref))
-            return None
+            # Check if the help flag was passed
+            var help_passed = command.flags.get_bool("help")
+            var command_ref = Arc(command)
+            if help_passed == True:
+                print(command.help(command_ref))
+                return None
 
-        try:
             # Validate individual required flags (eg: flag is required)
             validate_required_flags(command.flags)
 
@@ -488,7 +486,7 @@ struct Command(CollectionElement):
             if command.run:
                 command.run.value()(ctx)
             else:
-                command.erroring_run.value()(ctx)
+                command.raising_run.value()(ctx)
             self._execute_post_run_hooks(ctx, parents)
         except e:
             panic(e)

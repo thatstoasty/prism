@@ -2,15 +2,15 @@ from memory import Arc
 from prism import Command, Context
 
 
-fn test(ctx: Context) -> None:
+fn test(ctx: Context) raises -> None:
     var host = ctx.command[].flags.get_string("host")
     var port = ctx.command[].flags.get_string("port")
     var uri = ctx.command[].flags.get_string("uri")
 
-    if uri:
-        print("URI: ", uri.value())
+    if uri != "":
+        print("URI:", uri)
     else:
-        print(host.value(), ":", port.value())
+        print(host + ":" + port)
 
 
 fn tool_func(ctx: Context) -> None:
@@ -20,8 +20,8 @@ fn tool_func(ctx: Context) -> None:
 fn main() -> None:
     var root = Command(
         name="my",
-        description="This is a dummy command!",
-        run=test,
+        usage="This is a dummy command!",
+        raising_run=test,
     )
     root.persistent_flags.bool_flag(name="required", shorthand="r", usage="Always required.")
     root.persistent_flags.string_flag(name="host", shorthand="h", usage="Host")

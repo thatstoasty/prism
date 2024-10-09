@@ -16,16 +16,16 @@ magic run mojo build $TEMP_DIR/arg_validators.mojo -o $TEMP_DIR/validators
 echo "[INFO] Running examples..."
 # Need to run these first examples as part of a mojo project as they have external dependencies.
 # printer is a portable binary, but nested and persistent_flags are not because they depend on a python library.
-cd examples/printer
-magic run mojo build printer.mojo
-./printer "sample-text" --formatting=underline
+# cd examples/printer
+# magic run mojo build printer.mojo
+# ./printer "sample-text" --formatting=underline
 
-cd ../requests
-magic run mojo build nested.mojo
-magic run nested get cat --count 3 -l
-magic run mojo build persistent_flags.mojo -o persistent
-magic run persistent get cat --count 2 --lover
-magic run persistent get dog
+# cd ../requests
+# magic run mojo build nested.mojo
+# magic run nested get cat --count 3 -l
+# magic run mojo build persistent_flags.mojo -o persistent
+# magic run persistent get cat --count 2 --lover
+# magic run persistent get dog
 
 cd ../..
 

@@ -1,7 +1,7 @@
 from memory.arc import Arc
 from collections.optional import Optional
 import gojo.fmt
-from .command import ArgValidator
+from .command import ArgValidatorFn
 from .context import Context
 
 
@@ -24,7 +24,7 @@ fn arbitrary_args(ctx: Context) raises -> None:
     return None
 
 
-fn minimum_n_args[n: Int]() -> ArgValidator:
+fn minimum_n_args[n: Int]() -> ArgValidatorFn:
     """Returns an error if there is not at least n arguments.
 
     Params:
@@ -48,7 +48,7 @@ fn minimum_n_args[n: Int]() -> ArgValidator:
     return less_than_n_args
 
 
-fn maximum_n_args[n: Int]() -> ArgValidator:
+fn maximum_n_args[n: Int]() -> ArgValidatorFn:
     """Returns an error if there are more than n arguments.
 
     Params:
@@ -72,7 +72,7 @@ fn maximum_n_args[n: Int]() -> ArgValidator:
     return more_than_n_args
 
 
-fn exact_args[n: Int]() -> ArgValidator:
+fn exact_args[n: Int]() -> ArgValidatorFn:
     """Returns an error if there are not exactly n arguments.
 
     Params:
@@ -108,7 +108,7 @@ fn valid_args(ctx: Context) raises -> None:
                 raise Error(fmt.sprintf("Invalid argument: `%s`, for the command `%s`.", arg[], ctx.command[].name))
 
 
-fn range_args[minimum: Int, maximum: Int]() -> ArgValidator:
+fn range_args[minimum: Int, maximum: Int]() -> ArgValidatorFn:
     """Returns an error if there are not exactly n arguments.
 
     Params:
@@ -135,11 +135,11 @@ fn range_args[minimum: Int, maximum: Int]() -> ArgValidator:
 
 
 # TODO: Having some issues with varadic list of functions, so using List for now.
-fn match_all[arg_validators: List[ArgValidator]]() -> ArgValidator:
+fn match_all[arg_validators: List[ArgValidatorFn]]() -> ArgValidatorFn:
     """Returns an error if any of the arg_validators return an error.
 
     Params:
-        arg_validators: A list of ArgValidator functions that check the arguments.
+        arg_validators: A list of ArgValidatorFn functions that check the arguments.
 
     Returns:
         A function that checks all the arguments using the arg_validators list..

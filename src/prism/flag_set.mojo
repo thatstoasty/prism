@@ -4,22 +4,7 @@ import gojo.fmt
 from .flag import Flag
 from .util import panic, string_to_bool, string_to_float, split
 from .flag_parser import FlagParser
-from .transform import (
-    get_string,
-    get_bool,
-    get_int,
-    get_int8,
-    get_int16,
-    get_int32,
-    get_int64,
-    get_uint8,
-    get_uint16,
-    get_uint32,
-    get_uint64,
-    as_float16,
-    as_float32,
-    as_float64,
-)
+
 
 alias FlagVisitorFn = fn (Flag) capturing -> None
 """Function perform some action while visiting all flags."""
@@ -34,7 +19,23 @@ alias REQUIRED_AS_GROUP = "REQUIRED_AS_GROUP"
 alias ONE_REQUIRED = "ONE_REQUIRED"
 alias MUTUALLY_EXCLUSIVE = "MUTUALLY_EXCLUSIVE"
 
-alias FLAG_TYPES = ["String", "Bool", "Int", "Int8", "Int16", "Int32", "Int64", "UInt8", "UInt16", "UInt32", "UInt64", "Float16", "Float32", "Float64"]
+alias FLAG_TYPES = [
+    "String",
+    "Bool",
+    "Int",
+    "Int8",
+    "Int16",
+    "Int32",
+    "Int64",
+    "UInt8",
+    "UInt16",
+    "UInt32",
+    "UInt64",
+    "Float16",
+    "Float32",
+    "Float64",
+]
+
 
 @value
 struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparable):
@@ -84,9 +85,7 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
     fn __iadd__(inout self, other: Self):
         self.merge(other)
 
-    fn lookup(
-        ref [_] self, name: String, type: String = ""
-    ) -> Optional[Reference[Flag, __lifetime_of(self.flags)]]:
+    fn lookup(ref [_]self, name: String, type: String = "") raises -> ref [__lifetime_of(self.flags)] Flag:
         """Returns an mutable or immutable reference to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -100,14 +99,15 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         if type == "":
             for i in range(len(self.flags)):
                 if self.flags[i].name == name:
-                    return Reference(self.flags[i])
-        else:        
+                    return self.flags[i]
+        else:
             for i in range(len(self.flags)):
                 if self.flags[i].name == name and self.flags[i].type == type:
-                    return Reference(self.flags[i])
-        return None
-    
-    fn lookup_name(self, shorthand: String) -> Optional[String]:
+                    return self.flags[i]
+
+        raise Error("FlagNotFoundError: Could not find the following flag: " + name)
+
+    fn lookup_name(self, shorthand: String) raises -> String:
         """Returns the name of a flag given its shorthand.
 
         Args:
@@ -116,68 +116,69 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         for flag in self.flags:
             if flag[].shorthand and flag[].shorthand == shorthand:
                 return flag[].name
-        return None
+
+        raise Error("FlagNotFoundError: Could not find the following flag shorthand: " + shorthand)
 
     fn get_as[
-        R: CollectionElement, transform: fn (flag_set: FlagSet, name: String) -> Optional[R]
-    ](self, name: String) -> Optional[R]:
+        R: CollectionElement, transform: fn (flag_set: FlagSet, name: String) raises -> R
+    ](self, name: String) raises -> R:
         return transform(self, name)
 
-    fn get_string(self, name: String) -> Optional[String]:
+    fn get_string(self, name: String) raises -> String:
         """Returns the value of a flag as a String. If it isn't set, then return the default value."""
-        return self.get_as[R=String, transform=get_string](name)
+        return self.lookup(name, "String").value_or_default()
 
-    fn get_bool(self, name: String) -> Optional[Bool]:
+    fn get_bool(self, name: String) raises -> Bool:
         """Returns the value of a flag as a Bool. If it isn't set, then return the default value."""
-        return self.get_as[R=Bool, transform=get_bool](name)
+        return string_to_bool(self.lookup(name, "Bool").value_or_default())
 
-    fn get_int(self, name: String) -> Optional[Int]:
+    fn get_int(self, name: String, type: String = "Int") raises -> Int:
         """Returns the value of a flag as an Int. If it isn't set, then return the default value."""
-        return self.get_as[R=Int, transform=get_int](name)
+        return atol(self.lookup(name, type).value_or_default())
 
-    fn get_int8(self, name: String) -> Optional[Int8]:
+    fn get_int8(self, name: String) raises -> Int8:
         """Returns the value of a flag as a Int8. If it isn't set, then return the default value."""
-        return self.get_as[R=Int8, transform=get_int8](name)
+        return Int8(self.get_int(name, "Int8"))
 
-    fn get_int16(self, name: String) -> Optional[Int16]:
+    fn get_int16(self, name: String) raises -> Int16:
         """Returns the value of a flag as a Int16. If it isn't set, then return the default value."""
-        return self.get_as[R=Int16, transform=get_int16](name)
+        return Int16(self.get_int(name, "Int16"))
 
-    fn get_int32(self, name: String) -> Optional[Int32]:
+    fn get_int32(self, name: String) raises -> Int32:
         """Returns the value of a flag as a Int32. If it isn't set, then return the default value."""
-        return self.get_as[R=Int32, transform=get_int32](name)
+        return Int32(self.get_int(name, "Int32"))
 
-    fn get_int64(self, name: String) -> Optional[Int64]:
+    fn get_int64(self, name: String) raises -> Int64:
         """Returns the value of a flag as a Int64. If it isn't set, then return the default value."""
-        return self.get_as[R=Int64, transform=get_int64](name)
+        return Int64(self.get_int(name, "Int64"))
 
-    fn get_uint8(self, name: String) -> Optional[UInt8]:
+    fn get_uint8(self, name: String) raises -> UInt8:
         """Returns the value of a flag as a UInt8. If it isn't set, then return the default value."""
-        return self.get_as[R=UInt8, transform=get_uint8](name)
+        return UInt8(self.get_int(name, "UInt8"))
 
-    fn get_uint16(self, name: String) -> Optional[UInt16]:
+    fn get_uint16(self, name: String) raises -> UInt16:
         """Returns the value of a flag as a UInt16. If it isn't set, then return the default value."""
-        return self.get_as[R=UInt16, transform=get_uint16](name)
+        return UInt16(self.get_int(name, "UInt16"))
 
-    fn get_uint32(self, name: String) -> Optional[UInt32]:
+    fn get_uint32(self, name: String) raises -> UInt32:
         """Returns the value of a flag as a UInt32. If it isn't set, then return the default value."""
-        return self.get_as[R=UInt32, transform=get_uint32](name)
+        return UInt32(self.get_int(name, "UInt32"))
 
-    fn get_uint64(self, name: String) -> Optional[UInt64]:
+    fn get_uint64(self, name: String) raises -> UInt64:
         """Returns the value of a flag as a UInt64. If it isn't set, then return the default value."""
-        return self.get_as[R=UInt64, transform=get_uint64](name)
+        return UInt64(self.get_int(name, "UInt64"))
 
-    fn as_float16(self, name: String) -> Optional[Float16]:
+    fn as_float16(self, name: String) raises -> Float16:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
-        return self.get_as[R=Float16, transform=as_float16](name)
+        return self.as_float64(name).cast[DType.float16]()
 
-    fn as_float32(self, name: String) -> Optional[Float32]:
+    fn as_float32(self, name: String) raises -> Float32:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
-        return self.get_as[R=Float32, transform=as_float32](name)
+        return self.as_float64(name).cast[DType.float32]()
 
-    fn as_float64(self, name: String) -> Optional[Float64]:
+    fn as_float64(self, name: String) raises -> Float64:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
-        return self.get_as[R=Float64, transform=as_float64](name)
+        return string_to_float(self.lookup(name, "Float64").value_or_default())
 
     fn names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set."""
@@ -202,7 +203,7 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         default: Bool = False,
     ) -> None:
         """Adds a `Bool` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="Bool"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Bool"))
 
     fn string_flag(
         inout self,
@@ -212,55 +213,55 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         default: String = "",
     ) -> None:
         """Adds a `String` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="String"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="String"))
 
     fn int_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int = 0) -> None:
         """Adds an `Int` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="Int"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int"))
 
     fn int8_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int8 = 0) -> None:
         """Adds an `Int8` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="Int8"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int8"))
 
     fn int16_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int16 = 0) -> None:
         """Adds an `Int16` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="Int16"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int16"))
 
     fn int32_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int32 = 0) -> None:
         """Adds an `Int32` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="Int32"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int32"))
 
     fn int64_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int64 = 0) -> None:
         """Adds an `Int64` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="Int64"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int64"))
 
     fn uint8_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt8 = 0) -> None:
         """Adds a `UInt8` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="UInt8"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt8"))
 
     fn uint16_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt16 = 0) -> None:
         """Adds a `UInt16` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="UInt16"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt16"))
 
     fn uint32_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt32 = 0) -> None:
         """Adds a `UInt32` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="UInt32"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt32"))
 
     fn uint64_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt64 = 0) -> None:
         """Adds a `UInt64` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="UInt64"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt64"))
 
     fn float16_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float16 = 0) -> None:
         """Adds a `Float16` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="Float16"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Float16"))
 
     fn float32_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float32 = 0) -> None:
         """Adds a `Float32` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="Float32"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Float32"))
 
     fn float64_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float64 = 0) -> None:
         """Adds a `Float64` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, value=None, default=str(default), type="Float64"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Float64"))
 
     fn set_annotation(inout self, name: String, key: String, values: String) raises -> None:
         """Sets an annotation for a flag.
@@ -270,17 +271,15 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
             key: The key of the annotation.
             values: The values of the annotation.
         """
-        var result = self.lookup(name)
-        if not result:
-            raise Error(String("FlagSet.set_annotation: Failed to find flag: {}.").format(name))
-
         # Annotation value can be a concatenated string of values.
         # Why? Because we can have multiple required groups of flags for example.
         # So each value of the list for the annotation can be a group of flag names.
-        if not result.value()[].annotations.get(key):
-            result.value()[].annotations[key] = List[String](values)
-        else:
-            result.value()[].annotations[key].extend(values)
+        try:
+            # TODO: remove running 2 lookups when ref can return a reference
+            # we can store as a var without copying the result.
+            self.lookup(name).annotations[key].extend(values)
+        except:
+            self.lookup(name).annotations[key] = List[String](values)
 
     fn set_required(inout self, name: String) raises -> None:
         """Sets a flag as required or not.
@@ -303,9 +302,9 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
             self.set_annotation(name, annotation_type, names)
         except e:
             print(
-                String(
-                    "FlagSet.set_as: Failed to set flag, {}, with the following annotation: {}"
-                ).format(name, annotation_type),
+                String("FlagSet.set_as: Failed to set flag, {}, with the following annotation: {}").format(
+                    name, annotation_type
+                ),
                 file=2,
             )
             raise e
@@ -337,8 +336,11 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
 
         @always_inline
         fn add_flag(flag: Flag) capturing -> None:
-            if not self.lookup(flag.name):
-                self.flags.append(flag)
+            try:
+                _ = self.lookup(flag.name)
+            except e:
+                if str(e).find("FlagNotFoundError") != -1:
+                    self.flags.append(flag)
 
         new_set.visit_all[add_flag]()
 
@@ -369,4 +371,4 @@ fn validate_required_flags(flags: FlagSet) raises -> None:
     flags.visit_all[check_required_flag]()
 
     if len(missing_flag_names) > 0:
-        raise Error("required flag(s) " + missing_flag_names.__str__() + " not set")
+        raise Error("Required flag(s): " + missing_flag_names.__str__() + " not set.")

@@ -7,7 +7,9 @@ from gojo import fmt
 
 fn has_all_flags(flags: FlagSet, flag_names: List[String]) -> Bool:
     for name in flag_names:
-        if not flags.lookup(name[]):
+        try:
+            _ = flags.lookup(name[])
+        except:
             return False
     return True
 
@@ -40,7 +42,7 @@ fn process_flag_for_group_annotation(
             except e:
                 raise Error(
                     String(
-                        "process_flag_for_group_annotation: Failed to set group status for annotation {}: {}"
+                        "process_flag_for_group_annotation: Failed to set group status for annotation {}: {}."
                     ).format(annotation, str(e))
                 )
 
@@ -71,7 +73,7 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
 
         panic(
             fmt.sprintf(
-                "if any flags in the group, %s, are set they must all be set; missing %s",
+                "If any flags in the group, %s, are set they must all be set; missing %s.",
                 keys.__str__(),
                 unset.__str__(),
             )
@@ -101,7 +103,7 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> N
         for key in pair[].value.keys():
             keys.append(key[])
 
-        panic(fmt.sprintf("at least one of the flags in the group %s is required", keys.__str__()))
+        panic(fmt.sprintf("At least one of the flags in the group %s is required.", keys.__str__()))
 
 
 fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
@@ -129,7 +131,7 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
 
         panic(
             fmt.sprintf(
-                "if any flags in the group %s are set none of the others can be; %s were all set",
+                "If any flags in the group %s are set none of the others can be; %s were all set.",
                 keys.__str__(),
                 set.__str__(),
             )

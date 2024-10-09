@@ -20,8 +20,8 @@ def test_string_to_float():
 
 def test_get_flags():
     var flag_set = FlagSet()
-    flag_set.string_flag("key", "description", "default")
-    flag_set.bool_flag("flag", "description", "False")
+    flag_set.get_string("key", "usage", "default")
+    flag_set.get_bool("flag", "usage", "False")
     var flags = List[String]("--key=value", "positional", "--flag")
 
     _ = flag_set.from_args(flags)
@@ -31,8 +31,8 @@ def test_get_flags():
 
 def test_parse_flag():
     var flag_set = FlagSet()
-    flag_set.string_flag(name="key", usage="description", default="default")
-    flag_set.bool_flag(name="flag", usage="description", default=False)
+    flag_set.get_string(name="key", usage="usage", default="default")
+    flag_set.get_bool(name="flag", usage="usage", default=False)
 
     var parser = FlagParser()
     var name: String
@@ -51,8 +51,8 @@ def test_parse_flag():
 
 def test_parse_shorthand_flag():
     var flag_set = FlagSet()
-    flag_set.string_flag(name="key", usage="description", default="default", shorthand="k")
-    flag_set.bool_flag(name="flag", usage="description", default=False, shorthand="f")
+    flag_set.get_string(name="key", usage="usage", default="default", shorthand="k")
+    flag_set.get_bool(name="flag", usage="usage", default=False, shorthand="f")
 
     var parser = FlagParser()
     var name: String

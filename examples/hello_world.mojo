@@ -15,7 +15,7 @@ fn build_printer_command() -> Arc[Command]:
     var cmd = Arc(
         Command(
             name="printer",
-            description="Print the first arg.",
+            usage="Print the first arg.",
             run=printer,
         )
     )
@@ -42,7 +42,7 @@ fn build_say_command() -> Arc[Command]:
     return Arc(
         Command(
             name="say",
-            description="Say something to someone",
+            usage="Say something to someone",
             run=say,
         )
     )
@@ -52,7 +52,7 @@ fn build_hello_command() -> Arc[Command]:
     var cmd = Arc(
         Command(
             name="hello",
-            description="Say hello to someone",
+            usage="Say hello to someone",
             run=say_hello,
         )
     )
@@ -63,7 +63,7 @@ fn build_goodbye_command() -> Arc[Command]:
     var cmd = Arc(
         Command(
             name="goodbye",
-            description="Say goodbye to someone",
+            usage="Say goodbye to someone",
             run=say_goodbye,
         )
     )
@@ -71,7 +71,10 @@ fn build_goodbye_command() -> Arc[Command]:
 
 
 fn test(ctx: Context) -> None:
-    print(ctx.command[].flags.get_string("env").value())
+    try:
+        print(ctx.command[].flags.get_string("env"))
+    except:
+        print("No env flag provided.")
     for item in ctx.command[].flags.flags:
         if item[].value:
             print(item[].name, item[].value.value())
@@ -84,7 +87,7 @@ fn test(ctx: Context) -> None:
 fn main() -> None:
     var root = Command(
         name="tones",
-        description="This is a dummy command!",
+        usage="This is a dummy command!",
         run=test,
     )
     root.flags.string_flag(name="env", shorthand="e", usage="Environment.", default="")

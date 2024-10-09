@@ -16,7 +16,7 @@ fn print_information(ctx: Context) -> None:
 fn get_cat_fact(ctx: Context) raises -> None:
     var flags = ctx.command[].flags
     var lover = flags.get_bool("lover")
-    if lover and lover.value():
+    if lover:
         print("Hello fellow cat lover!")
 
     var requests = Python.import_module("requests")
@@ -29,7 +29,7 @@ fn get_cat_fact(ctx: Context) raises -> None:
     if not count:
         raise Error("Count flag was not found.")
 
-    for _ in range(count.value()):
+    for _ in range(count):
         var response = requests.get(url)
 
         # Check if the request was successful (status code 200)
@@ -43,7 +43,7 @@ fn get_cat_fact(ctx: Context) raises -> None:
 fn get_dog_breeds(ctx: Context) raises -> None:
     var flags = ctx.command[].flags
     var lover = flags.get_bool("lover")
-    if lover and lover.value():
+    if lover:
         print("Hello fellow dog lover!")
 
     var requests = Python.import_module("requests")
@@ -69,12 +69,12 @@ fn post_hook(ctx: Context) -> None:
 
 
 fn main() -> None:
-    var root = Command(name="nested", description="Base command.", run=base)
+    var root = Command(name="nested", usage="Base command.", run=base)
 
     var get_command = Arc(
         Command(
             name="get",
-            description="Base command for getting some data.",
+            usage="Base command for getting some data.",
             run=print_information,
             persistent_pre_run=pre_hook,
             persistent_post_run=post_hook,
@@ -85,8 +85,8 @@ fn main() -> None:
     var cat_command = Arc(
         Command(
             name="cat",
-            description="Get some cat facts!",
-            erroring_run=get_cat_fact,
+            usage="Get some cat facts!",
+            raising_run=get_cat_fact,
         )
     )
     cat_command[].flags.int_flag(name="count", shorthand="c", usage="Number of facts to get.")
@@ -94,8 +94,8 @@ fn main() -> None:
     var dog_command = Arc(
         Command(
             name="dog",
-            description="Get some dog breeds!",
-            erroring_run=get_dog_breeds,
+            usage="Get some dog breeds!",
+            raising_run=get_dog_breeds,
         )
     )
 
