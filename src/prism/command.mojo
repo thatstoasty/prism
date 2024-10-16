@@ -427,7 +427,7 @@ struct Command(CollectionElement):
             print("Failed to run post-run hooks for command: " + ctx.command[].name, file=2)
             raise e
 
-    fn execute(inout self) -> None:
+    fn execute(self) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch."""
         # Traverse from the root command through the children to find a match for the current argument.
         # Any additional arguments past the last matched command name are considered arguments.
