@@ -9,11 +9,29 @@ Inspired by: `Cobra`!
 ![Test Status](https://github.com/thatstoasty/prism/actions/workflows/test.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## New to Mojo?
+
+If you haven't created a project before you can follow these steps to create your project!
+
+1. Install Modular's CLI tool, `Magic`: <https://docs.modular.com/magic/>.
+2. Run `magic init my-mojo-project --format mojoproject` to create a `Mojo` project directory.
+3. Change directory into your project directory with `cd my-mojo-project`.
+
+Now you're ready to add `prism` to your project!
+
+**NOTE**: Keep in mind that `Mojo` is intended to run either in an activated `Magic` shell or through a `Magic` command. Personally, I like to run my code via `Magic` commands like so:
+
+```bash
+magic run mojo path/to/hello_world.mojo
+```
+
+`Magic` will ensure that `mojo` is executing using the version defined in your `mojoproject.toml` as well as any dependencies defined. I would advise against trying to set up a global `Mojo` installation until you're comfortable with the project based pattern.
+
 ## Installation
 
 1. First, you'll need to configure your `mojoproject.toml` file to include my Conda channel. Add `"https://repo.prefix.dev/mojo-community"` to the list of channels.
 2. Next, add `prism` to your project's dependencies by running `magic add prism`.
-3. Finally, run `magic install` to install in `prism` and its dependencies. You should see the `.mojopkg` files in `$CONDA_PREFIX/lib/mojo/`.
+3. Finally, run `magic install` to install in `prism` and its dependencies. You should see the `.mojopkg` files in `$CONDA_PREFIX/lib/mojo/` (usually resolves to `.magic/envs/default/lib/mojo`).
 
 ## Basic Command and Subcommand
 
@@ -24,22 +42,22 @@ from memory import Arc
 from prism import Command, Context
 
 
-fn test(context: Context) -> None:
+fn test(ctx: Context) -> None:
     print("Pass chromeria as a subcommand!")
 
 
-fn hello(context: Context) -> None:
+fn hello(ctx: Context) -> None:
     print("Hello from Chromeria!")
 
 
 fn main() -> None:
-    var root = Command(
+    root = Command(
         name="hello",
         description="This is a dummy command!",
         run=test,
     )
 
-    var hello_command = Arc(Command(name="chromeria", description="This is a dummy command!", run=hello))
+    hello_command = Arc(Command(name="chromeria", description="This is a dummy command!", run=hello))
 
     root.add_subcommand(hello_command)
     root.execute()
@@ -53,25 +71,25 @@ Due to the nature of self-referential structs, we need to use a smart pointer to
 
 This will be changed to `Box` in the upcoming release.
 
-## Command Flags
+## Accessing arguments
 
-Commands can have typed flags added to them to enable different behaviors.
+`prism` provides the parsed arguments as part of the `ctx` argument.
 
 ```mojo
-    var root = Command(
-        name="logger", description="Base command.", run=handler
-    )
-    root.flags.string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
-```
+fn printer(ctx: Context) raises -> None:
+    if len(ctx.args) == 0:
+        raise Error("No args provided.")
 
-![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
+    for arg in ctx.args:
+        print(arg[])
+```
 
 ## Command Aliases
 
 Commands can also be aliased to enable different ways to call the same command. You can change the command underneath the alias and maintain the same behavior.
 
 ```mojo
-var print_tool = Arc(Command(
+print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
 ```
@@ -83,18 +101,14 @@ var print_tool = Arc(Command(
 Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
 
 ```mojo
-fn pre_hook(context: Context) -> None:
+fn pre_hook(ctx: Context) -> None:
     print("Pre-hook executed!")
-    return None
 
-
-fn post_hook(context: Context) -> None:
+fn post_hook(ctx: Context) -> None:
     print("Post-hook executed!")
-    return None
-
 
 fn main() -> None:
-    var root = Command(
+    root = Command(
         name="printer",
         description="Base command.",
         run=printer,
@@ -107,6 +121,72 @@ fn main() -> None:
 
 ## Flags
 
+Commands can have typed flags added to them to enable different behaviors.
+
+```mojo
+fn main() -> None:
+    root = Command(
+        name="logger", description="Base command.", run=handler
+    )
+    root.flags.string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
+```
+
+![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
+
+### Default flag values from environment variables
+
+Flag values can also be retrieved from environment variables, if a value is not provided as an argument.
+
+```mojo
+fn test(ctx: Context) raises -> None:
+    name = ctx.command[].flags.get_string("name")
+    print(String("Hello {}").format(name))
+
+
+fn main() -> None:
+    root = Command(
+        name="greet",
+        usage="Greet a user!",
+        raising_run=test,
+    )
+
+    root.flags.string_flag(
+        name="name",
+        shorthand="n",
+        usage="The name of the person to greet.",
+        environment_variable="NAME",
+    )
+
+    root.execute()
+```
+
+### Default flag values from files
+
+Likewise, flag values can also be retrieved from a file as well, if a value is not provided as an argument.
+
+```mojo
+fn test(ctx: Context) raises -> None:
+    name = ctx.command[].flags.get_string("name")
+    print(String("Hello {}").format(name))
+
+
+fn main() -> None:
+    root = Command(
+        name="greet",
+        usage="Greet a user!",
+        raising_run=test,
+    )
+
+    root.flags.string_flag(
+        name="name",
+        shorthand="n",
+        usage="The name of the person to greet.",
+        file_path="$HOME/.myapp/config",
+    )
+
+    root.execute()
+```
+
 ### Flag Precedence
 
 The precedence for flag value sources is as follows (highest to lowest):
@@ -116,15 +196,15 @@ The precedence for flag value sources is as follows (highest to lowest):
 3. Configuration file (if specified)
 4. Default defined on the flag
 
-## Persistent Flags and Hooks
+### Persistent Flags and Hooks
 
 Flags and hooks can also be inherited by children commands! This can be useful for setting global flags or hooks that should be applied to all child commands.
 
 ```mojo
 fn main() -> None:
-    var root = Command(name="nested", description="Base command.", run=base)
+    root = Command(name="nested", description="Base command.", run=base)
 
-    var get_command = Arc(Command(
+    get_command = Arc(Command(
         name="get",
         description="Base command for getting some data.",
         run=print_information,
@@ -136,14 +216,14 @@ fn main() -> None:
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/main/doc/tapes/persistent.gif)
 
-## Required flags
+### Required flags
 
 Flags can be grouped together to enable relationships between them. This can be used to enable different behaviors based on the flags that are passed.
 
 By default flags are considered optional. If you want your command to report an error when a flag has not been set, mark it as required:
 
 ```mojo
-var print_tool = Arc(Command(
+print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
     print_tool[].flags.bool_flag(name="required", shorthand="r", usage="Always required.")
@@ -153,7 +233,7 @@ var print_tool = Arc(Command(
 Same for persistent flags:
 
 ```mojo
-    var root = Command(
+    root = Command(
         name="my",
         description="This is a dummy command!",
         run=test,
@@ -162,12 +242,12 @@ Same for persistent flags:
     root.mark_persistent_flag_required("free")
 ```
 
-## Flag Groups
+### Flag Groups
 
 If you have different flags that must be provided together (e.g. if they provide the `--color` flag they MUST provide the `--formatting` flag as well) then Prism can enforce that requirement:
 
 ```mojo
-    var print_tool = Arc(Command(
+    print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
     print_tool[].flags.uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464eb)
@@ -178,7 +258,7 @@ If you have different flags that must be provided together (e.g. if they provide
 You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
 
 ```mojo
-   var print_tool = Arc(Command(
+   print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
     print_tool[].string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
@@ -189,7 +269,7 @@ You can also prevent different flags from being provided together if they repres
 If you want to require at least one flag from a group to be present, you can use `mark_flags_one_required`. This can be combined with `mark_flags_mutually_exclusive` to enforce exactly one flag from a given group:
 
 ```mojo
-   var print_tool = Arc(Command(
+   print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
     print_tool[].flags.string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
@@ -213,7 +293,7 @@ See `examples/flag_groups/child.mojo` for an example.
 
 ```mojo
 fn main() -> None:
-    var root = Command(
+    root = Command(
         name="my",
         description="This is a dummy command!",
         run=test,
@@ -224,7 +304,7 @@ fn main() -> None:
     root.persistent_flags.string_flag(name="port", shorthand="p", usage="Port")
     root.mark_persistent_flag_required("required")
 
-    var print_tool = Arc(Command(
+    print_tool = Arc(Command(
         name="tool", description="This is a dummy command!", run=tool_func
     ))
     print_tool[].flags.bool_flag(name="also", shorthand="a", usage="Also always required.")
@@ -261,13 +341,11 @@ Validation of positional arguments can be specified using the `arg_validator` fi
 
 If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 
-> NOTE: `match_all` is unstable at the moment. I will work on ironing it out in the near future. This most likely does not work.
-
 Moreover, `match_all[arg_validators: List[ArgValidator]]` enables combining existing checks with arbitrary other checks. For instance, if you want to report an error if there are not exactly N positional args OR if there are any positional args that are not in the ValidArgs field of Command, you can call `match_all` on `exact_args` and `valid_args`, as shown below:
 
 ```mojo
 fn test_match_all():
-    var result = match_all[
+    result = match_all[
         List[ArgValidator](
             range_args[0, 1](),
             valid_args()
@@ -287,7 +365,7 @@ fn help_func(inout command: Arc[Command]) -> String:
     return "My help function."
 
 fn main() -> None:
-    var root = Command(
+    root = Command(
         name="hello",
         description="This is a dummy command!",
         run=test,

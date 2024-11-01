@@ -154,7 +154,7 @@ struct FlagParser:
                     if value != "":
                         flag[].set(value)
                 elif flag[].file_path:
-                    with open(flag[].file_path.value(), "r") as f:
+                    with open(os.path.expanduser(flag[].file_path.value()), "r") as f:
                         flag[].set(f.read())
 
         return remaining_args
