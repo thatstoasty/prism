@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Added environment variable and file path support for flags.
 - Added action support for flags.
+- Added `StringList`, `IntList`, `Float64List` `Flag` types.
 
 ## [0.2.0] - 2024-10-09
 

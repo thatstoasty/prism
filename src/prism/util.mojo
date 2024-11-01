@@ -25,31 +25,6 @@ fn string_to_bool(value: String) -> Bool:
     return False
 
 
-fn string_to_float(s: String) raises -> Float64:
-    try:
-        # locate decimal point
-        dot_pos = s.find(".")
-        # grab the integer part of the number
-        int_str = s[0:dot_pos]
-        # grab the decimal part of the number
-        num_str = s[dot_pos + 1 : len(s)]
-        # set the numerator to be the integer equivalent
-        numerator = atol(num_str)
-        # construct denom_str to be "1" + "0"s for the length of the fraction
-        denom_str = String()
-        for _ in range(len(num_str)):
-            denom_str += "0"
-        denominator = atol("1" + denom_str)
-        # school-level maths here :)
-        frac = numerator / denominator
-
-        # return the number as a Float64
-        result = atol(int_str) + frac
-        return result
-    except:
-        raise Error("string_to_float: Failed to convert " + s + " to a float.")
-
-
 fn to_string[T: StringableCollectionElement](vector: List[Arc[T]]) -> String:
     result = String("[")
     for i in range(vector.size):

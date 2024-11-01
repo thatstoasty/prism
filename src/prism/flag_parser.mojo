@@ -1,4 +1,5 @@
 from utils import Span
+from collections import InlineArray
 import os
 from .flag_set import FlagSet
 from .util import split
@@ -131,8 +132,9 @@ struct FlagParser:
                 raise Error("Expected a flag but found: " + argument)
 
             # Set the value of the flag.
+            alias list_types = InlineArray[String, 3]("StringList", "IntList", "Float64List")
             flag = flags.lookup(name)
-            if flag[].type == "StringList":
+            if flag[].type in list_types:
                 if not flag[].changed:
                     flag[].set(value)
                 else:

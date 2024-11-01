@@ -3,7 +3,7 @@ from utils import Variant
 from memory import Reference
 import gojo.fmt
 from .flag import Flag, FlagActionFn
-from .util import string_to_bool, string_to_float, split
+from .util import string_to_bool, split
 from .flag_parser import FlagParser
 
 
@@ -162,11 +162,31 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
 
     fn get_float64(self, name: String) raises -> Float64:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
-        return string_to_float(self.lookup(name, "Float64")[].value_or_default())
+        return atof(self.lookup(name, "Float64")[].value_or_default())
+    
+    fn _get_list(self, name: String, type: String) raises -> List[String]:
+        """Returns the value of a flag as a List[String]. If it isn't set, then return the default value."""
+        return self.lookup(name, type)[].value_or_default().split(sep=" ")
     
     fn get_string_list(self, name: String) raises -> List[String]:
         """Returns the value of a flag as a List[String]. If it isn't set, then return the default value."""
-        return self.lookup(name, "StringList")[].value_or_default().split(sep=" ")
+        return self._get_list(name, "StringList")
+    
+    fn get_int_list(self, name: String) raises -> List[Int]:
+        """Returns the value of a flag as a List[Int]. If it isn't set, then return the default value."""
+        values = self._get_list(name, "IntList")
+        ints = List[Int](capacity=len(values))
+        for value in values:
+            ints.append(atol(value[]))
+        return ints
+    
+    fn get_float64_list(self, name: String) raises -> List[Float64]:
+        """Returns the value of a flag as a List[Float64]. If it isn't set, then return the default value."""
+        values = self._get_list(name, "Float64List")
+        floats = List[Float64](capacity=len(values))
+        for value in values:
+            floats.append(atof(value[]))
+        return floats
 
     fn names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set."""
@@ -537,6 +557,54 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
                 usage=usage,
                 default=" ".join(default),
                 type="StringList",
+                environment_variable=environment_variable,
+                file_path=file_path,
+                action=action,
+            )
+        )
+    
+    fn int_list_flag(
+        inout self,
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: List[Int, True] = List[Int, True](),
+        environment_variable: Optional[StringLiteral] = None,
+        file_path: Optional[StringLiteral] = None,
+        action: Optional[FlagActionFn] = None,
+    ) -> None:
+        """Adds a `IntList` flag to the flag set."""
+        self.flags.append(
+            Flag(
+                name=name,
+                shorthand=shorthand,
+                usage=usage,
+                default=" ".join(default),
+                type="IntList",
+                environment_variable=environment_variable,
+                file_path=file_path,
+                action=action,
+            )
+        )
+    
+    fn float64_list_flag(
+        inout self,
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: List[Float64, True] = List[Float64, True](),
+        environment_variable: Optional[StringLiteral] = None,
+        file_path: Optional[StringLiteral] = None,
+        action: Optional[FlagActionFn] = None,
+    ) -> None:
+        """Adds a `Float64List` flag to the flag set."""
+        self.flags.append(
+            Flag(
+                name=name,
+                shorthand=shorthand,
+                usage=usage,
+                default=" ".join(default),
+                type="Float64List",
                 environment_variable=environment_variable,
                 file_path=file_path,
                 action=action,
