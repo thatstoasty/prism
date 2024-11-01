@@ -20,11 +20,7 @@ fn main() -> None:
     )
 
     root.flags.string_flag(
-        name="name",
-        shorthand="n",
-        usage="The name of the person to greet.",
-        default="World",
-        action=validate_name
+        name="name", shorthand="n", usage="The name of the person to greet.", default="World", action=validate_name
     )
 
     root.execute()

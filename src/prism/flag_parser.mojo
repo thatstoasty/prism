@@ -138,7 +138,7 @@ struct FlagParser:
                 if not flag[].changed:
                     flag[].set(value)
                 else:
-                    # TODO: Switch to write to the string in the next update. 
+                    # TODO: Switch to write to the string in the next update.
                     writer = flag[].value.value()._unsafe_to_formatter()
                     writer.write(" ", value)
             else:

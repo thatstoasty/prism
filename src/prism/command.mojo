@@ -478,10 +478,12 @@ struct Command(CollectionElement):
 
             # Run flag actions if they have any
             ctx = Context(command_ref, remaining_args)
+
             @parameter
             fn run_action(flag: Flag) raises -> None:
                 if flag.action and flag.value:
                     flag.action.value()(ctx, flag.value.value())
+
             command.flags.visit_all[run_action]()
 
             # Validate the remaining arguments

@@ -38,24 +38,22 @@ fn main() -> None:
     )
 
     sum_cmd = Arc(Command(
-        name="calculate",
+        name="sum",
         usage="Add up the numbers passed in with the -n flag!",
         raising_run=sum
     ))
     root.add_subcommand(sum_cmd)
 
     sum_cmd[].flags.int_list_flag(
-        name="sum",
+        name="number",
         shorthand="n",
         usage="A number to include in the sum.",
         default=List[Int, True](1, 2),
     )
 
-    sum_float_cmd = Arc(Command(
-        name="sum_float",
-        usage="Add up the numbers passed in with the -n flag!",
-        raising_run=sum_float
-    ))
+    sum_float_cmd = Arc(
+        Command(name="sum_float", usage="Add up the numbers passed in with the -n flag!", raising_run=sum_float)
+    )
     root.add_subcommand(sum_float_cmd)
 
     sum_float_cmd[].flags.float64_list_flag(

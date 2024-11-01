@@ -163,15 +163,15 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
     fn get_float64(self, name: String) raises -> Float64:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
         return atof(self.lookup(name, "Float64")[].value_or_default())
-    
+
     fn _get_list(self, name: String, type: String) raises -> List[String]:
         """Returns the value of a flag as a List[String]. If it isn't set, then return the default value."""
         return self.lookup(name, type)[].value_or_default().split(sep=" ")
-    
+
     fn get_string_list(self, name: String) raises -> List[String]:
         """Returns the value of a flag as a List[String]. If it isn't set, then return the default value."""
         return self._get_list(name, "StringList")
-    
+
     fn get_int_list(self, name: String) raises -> List[Int]:
         """Returns the value of a flag as a List[Int]. If it isn't set, then return the default value."""
         values = self._get_list(name, "IntList")
@@ -179,7 +179,7 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         for value in values:
             ints.append(atol(value[]))
         return ints
-    
+
     fn get_float64_list(self, name: String) raises -> List[Float64]:
         """Returns the value of a flag as a List[Float64]. If it isn't set, then return the default value."""
         values = self._get_list(name, "Float64List")
@@ -538,7 +538,7 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
                 action=action,
             )
         )
-    
+
     fn string_list_flag(
         inout self,
         name: String,
@@ -562,7 +562,7 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
                 action=action,
             )
         )
-    
+
     fn int_list_flag(
         inout self,
         name: String,
@@ -586,7 +586,7 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
                 action=action,
             )
         )
-    
+
     fn float64_list_flag(
         inout self,
         name: String,
