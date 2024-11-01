@@ -181,7 +181,7 @@ fn main() -> None:
         name="name",
         shorthand="n",
         usage="The name of the person to greet.",
-        file_path="$HOME/.myapp/config",
+        file_path="~/.myapp/config",
     )
 
     root.execute()
