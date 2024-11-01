@@ -162,7 +162,7 @@ fn get_args(arguments: List[String]) -> List[String]:
     Returns:
         The arguments that are not flags.
     """
-    var args = List[String](capacity=len(arguments))
+    args = List[String](capacity=len(arguments))
     for argument in arguments:
         # Argument is not a shorthand or full flag.
         if not (argument[].startswith("-", 0, 1)):

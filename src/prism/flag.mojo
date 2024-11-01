@@ -1,5 +1,7 @@
 from collections import Optional, Dict
 
+alias FlagActionFn = fn (ctx: Context, value: String) raises -> None
+
 
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
 # needing to cast values to and from string.
@@ -19,12 +21,16 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
     """The value of the flag."""
     var environment_variable: Optional[StringLiteral]
     """If no value is provided, will optionally check this environment variable for a value."""
+    var file_path: Optional[StringLiteral]
+    """If no value is provided, will optionally check read this file for a value. `environment_variable` takes precedence over this option."""
     var default: String
     """The default value of the flag."""
     var type: String
     """The type of the flag."""
     var annotations: Dict[String, List[String]]
     """The annotations of the flag which are used to determine grouping."""
+    var action: Optional[FlagActionFn]
+    """Function to run after the flag has been processed."""
     var changed: Bool
     """Whether the flag has been changed from its default value."""
 
@@ -36,6 +42,8 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
         usage: String = "",
         value: Optional[String] = None,
         environment_variable: Optional[StringLiteral] = None,
+        file_path: Optional[StringLiteral] = None,
+        action: Optional[FlagActionFn] = None,
         default: String = "",
     ) -> None:
         """Initializes a new Flag.
@@ -47,6 +55,8 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
             usage: The usage of the flag.
             value: The value of the flag.
             environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
             default: The default value of the flag.
         """
         self.name = name
@@ -54,14 +64,16 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
         self.usage = usage
         self.value = value
         self.environment_variable = environment_variable
+        self.file_path = file_path
         self.default = default
         self.type = type
         self.annotations = Dict[String, List[String]]()
+        self.action = action
         self.changed = False
 
     fn __str__(self) -> String:
-        var output = String()
-        var writer = output._unsafe_to_formatter()
+        output = String()
+        writer = output._unsafe_to_formatter()
         self.format_to(writer)
         return output
 

@@ -15,7 +15,7 @@ Inspired by: `Cobra`!
 2. Next, add `prism` to your project's dependencies by running `magic add prism`.
 3. Finally, run `magic install` to install in `prism` and its dependencies. You should see the `.mojopkg` files in `$CONDA_PREFIX/lib/mojo/`.
 
-### Basic Command and Subcommand
+## Basic Command and Subcommand
 
 Here's an example of a basic command and subcommand!
 
@@ -47,13 +47,13 @@ fn main() -> None:
 
 ![Chromeria](https://github.com/thatstoasty/prism/blob/main/doc/tapes/hello-chromeria.gif)
 
-### Why are subcommands wrapped with `Arc`?
+## Why are subcommands wrapped with `Arc`?
 
 Due to the nature of self-referential structs, we need to use a smart pointer to reference the subcommand. The child command is owned by the `Arc` pointer, and that pointer is then shared across the program execution.
 
 This will be changed to `Box` in the upcoming release.
 
-### Command Flags
+## Command Flags
 
 Commands can have typed flags added to them to enable different behaviors.
 
@@ -66,7 +66,7 @@ Commands can have typed flags added to them to enable different behaviors.
 
 ![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
 
-### Command Aliases
+## Command Aliases
 
 Commands can also be aliased to enable different ways to call the same command. You can change the command underneath the alias and maintain the same behavior.
 
@@ -78,7 +78,7 @@ var print_tool = Arc(Command(
 
 ![Aliases](https://github.com/thatstoasty/prism/blob/main/doc/tapes/aliases.gif)
 
-### Pre and Post Run Hooks
+## Pre and Post Run Hooks
 
 Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
 
@@ -105,7 +105,18 @@ fn main() -> None:
 
 ![Printer](https://github.com/thatstoasty/prism/blob/main/doc/tapes/printer.gif)
 
-### Persistent Flags and Hooks
+## Flags
+
+### Flag Precedence
+
+The precedence for flag value sources is as follows (highest to lowest):
+
+1. Command line flag value from user
+2. Environment variable (if specified)
+3. Configuration file (if specified)
+4. Default defined on the flag
+
+## Persistent Flags and Hooks
 
 Flags and hooks can also be inherited by children commands! This can be useful for setting global flags or hooks that should be applied to all child commands.
 
@@ -125,7 +136,7 @@ fn main() -> None:
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/main/doc/tapes/persistent.gif)
 
-### Required flags
+## Required flags
 
 Flags can be grouped together to enable relationships between them. This can be used to enable different behaviors based on the flags that are passed.
 
@@ -151,7 +162,7 @@ Same for persistent flags:
     root.mark_persistent_flag_required("free")
 ```
 
-### Flag Groups
+## Flag Groups
 
 If you have different flags that must be provided together (e.g. if they provide the `--color` flag they MUST provide the `--formatting` flag as well) then Prism can enforce that requirement:
 
@@ -234,7 +245,7 @@ fn main() -> None:
 
 ![Flag Groups 2](https://github.com/thatstoasty/prism/blob/main/doc/tapes/flag_groups-2.gif)
 
-### Positional and Custom Arguments
+## Positional and Custom Arguments
 
 Validation of positional arguments can be specified using the `arg_validator` field of `Command`. The following validators are built in:
 
@@ -267,7 +278,7 @@ fn test_match_all():
 
 ![Arg Validators](https://github.com/thatstoasty/prism/blob/main/doc/tapes/arg_validators.gif)
 
-### Help Commands
+## Help Commands
 
 Commands are configured to accept a `--help` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed.
 
@@ -292,7 +303,7 @@ fn main() -> None:
 
 ## TODO
 
-### Features
+## Features
 
 - Add suggestion logic to `Command` struct.
 - Autocomplete generation.
@@ -300,10 +311,10 @@ fn main() -> None:
 - Replace print usage with writers to enable stdout/stderr/file writing.
 - Update default help command to improve available commands and flags section.
 
-### Improvements
+## Improvements
 
 - Tree traversal improvements.
 - `Arc[Command]` being passed to validators and command functions is marked as inout because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
 - For now, help functions and arg validators will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
 
-### Bugs
+## Bugs

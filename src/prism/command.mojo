@@ -1,10 +1,11 @@
 from sys import argv
 from collections import Optional, Dict, InlineList
 from memory.arc import Arc
+from os import abort
 import mog
 import gojo.fmt
 from gojo.strings import StringBuilder
-from .util import panic, to_string, to_list
+from .util import to_string, to_list
 from .flag import Flag
 from .flag_set import FlagSet, validate_required_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from .flag_group import validate_flag_groups
@@ -13,8 +14,8 @@ from .context import Context
 
 
 fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
-    var result = String()
-    var writer = result._unsafe_to_formatter()
+    result = String()
+    writer = result._unsafe_to_formatter()
     for i in range(len(flag_names)):
         writer.write(flag_names[i])
         if i != len(flag_names) - 1:
@@ -25,9 +26,9 @@ fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
 
 fn get_args_as_list() -> List[String]:
     """Returns the arguments passed to the executable as a list of strings."""
-    var args = argv()
-    var result = List[String](capacity=len(args))
-    var i = 1
+    args = argv()
+    result = List[String](capacity=len(args))
+    i = 1
     while i < len(args):
         result.append(args[i])
         i += 1
@@ -42,13 +43,13 @@ fn default_help(inout command: Arc[Command]) -> String:
     """Prints the help information for the command.
     TODO: Add padding for commands, options, and aliases.
     """
-    var usage_style = mog.Style().border(mog.HIDDEN_BORDER)
-    var border_style = mog.Style().border(mog.ROUNDED_BORDER).border_foreground(mog.Color(0x383838)).padding(0, 1)
-    var option_style = mog.Style().foreground(mog.Color(0x81C8BE))
-    var bold_style = mog.Style().bold()
+    usage_style = mog.Style().border(mog.HIDDEN_BORDER)
+    border_style = mog.Style().border(mog.ROUNDED_BORDER).border_foreground(mog.Color(0x383838)).padding(0, 1)
+    option_style = mog.Style().foreground(mog.Color(0x81C8BE))
+    bold_style = mog.Style().bold()
 
-    var cmd = command
-    var builder = StringBuilder()
+    cmd = command
+    builder = StringBuilder()
     _ = builder.write_string(mog.Style().bold().foreground(mog.Color(0xE5C890)).render("Usage: "))
     _ = builder.write_string(bold_style.render(cmd[].full_name()))
 
@@ -58,7 +59,7 @@ fn default_help(inout command: Arc[Command]) -> String:
         _ = builder.write_string(" COMMAND")
     _ = builder.write_string(" [ARGS]...")
 
-    var usage = usage_style.render(mog.join_vertical(mog.left, str(builder), "\n", cmd[].usage))
+    usage = usage_style.render(mog.join_vertical(mog.left, str(builder), "\n", cmd[].usage))
 
     builder = StringBuilder()
     if cmd[].flags.flags:
@@ -66,7 +67,7 @@ fn default_help(inout command: Arc[Command]) -> String:
         for flag in cmd[].flags.flags:
             _ = builder.write_string(option_style.render(fmt.sprintf("\n-%s, --%s", flag[].shorthand, flag[].name)))
             _ = builder.write_string(fmt.sprintf("    %s", flag[].usage))
-    var options = border_style.render(str(builder))
+    options = border_style.render(str(builder))
 
     builder = StringBuilder()
     if cmd[].children:
@@ -83,7 +84,7 @@ fn default_help(inout command: Arc[Command]) -> String:
         _ = builder.write_string(bold_style.render("Aliases"))
         _ = builder.write_string(fmt.sprintf("\n%s", option_style.render(cmd[].aliases.__str__())))
 
-    var commands = border_style.render(str(builder))
+    commands = border_style.render(str(builder))
     return mog.join_vertical(mog.left, usage, options, commands)
 
 
@@ -116,7 +117,7 @@ struct Command(CollectionElement):
         print("Hello from Chromeria!")
 
     fn main():
-        var command = Command(
+        command = Command(
             name="hello",
             usage="This is a dummy command!",
             run=test,
@@ -223,7 +224,7 @@ struct Command(CollectionElement):
             help: The function to generate help text for the command.
         """
         if not run and not raising_run:
-            panic("A command must have a run or raising_run function.")
+            abort("A command must have a run or raising_run function.")
 
         self.name = name
         self.usage = usage
@@ -288,8 +289,8 @@ struct Command(CollectionElement):
         self.parent = existing.parent^
 
     fn __str__(self) -> String:
-        var output = String()
-        var writer = output._unsafe_to_formatter()
+        output = String()
+        writer = output._unsafe_to_formatter()
         self.format_to(writer)
         return output
 
@@ -327,7 +328,7 @@ struct Command(CollectionElement):
     fn full_name(self) -> String:
         """Traverses up the parent command tree to build the full command as a string."""
         if self.has_parent():
-            var ancestor: String = self.parent[0][].full_name()
+            ancestor = self.parent[0][].full_name()
             return ancestor + " " + self.name
         else:
             return self.name
@@ -354,9 +355,9 @@ struct Command(CollectionElement):
         if not self.children or not args:
             return self, args
 
-        var command = self
-        var children = self.children
-        var leftover_start = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
+        command = self
+        children = self.children
+        leftover_start = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
 
         for arg in args:
             command, children = self._parse_command(command, arg[], children, leftover_start)
@@ -365,7 +366,7 @@ struct Command(CollectionElement):
             return self, args
 
         # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
-        var remaining_args = List[String]()
+        remaining_args = List[String]()
         if len(args) >= leftover_start:
             remaining_args = args[leftover_start : len(args)]
 
@@ -435,18 +436,16 @@ struct Command(CollectionElement):
 
         # Always execute from the root command, regardless of what command was executed in main.
         if self.has_parent():
-            var root = self.root()
+            root = self.root()
             return root[].execute()
 
-        var remaining_args: List[String]
-        var command: Self
         command, remaining_args = self._parse_command_from_args(get_args_as_list())
 
         # Merge local and inherited flags
         command._merge_flags()
 
         # Add all parents to the list to check if they have persistent pre/post hooks.
-        var parents = List[Arc[Self]]()
+        parents = List[Arc[Self]]()
 
         @parameter
         fn append_parents(parent: Arc[Self]) capturing -> None:
@@ -465,8 +464,8 @@ struct Command(CollectionElement):
             remaining_args = command.flags.from_args(remaining_args)
 
             # Check if the help flag was passed
-            var help_passed = command.flags.get_bool("help")
-            var command_ref = Arc(command)
+            help_passed = command.flags.get_bool("help")
+            command_ref = Arc(command)
             if help_passed == True:
                 print(command.help(command_ref))
                 return None
@@ -477,8 +476,15 @@ struct Command(CollectionElement):
             # Validate flag groups (eg: one of required, mutually exclusive, required together)
             validate_flag_groups(command.flags)
 
+            # Run flag actions if they have any
+            ctx = Context(command_ref, remaining_args)
+            @parameter
+            fn run_action(flag: Flag) raises -> None:
+                if flag.action and flag.value:
+                    flag.action.value()(ctx, flag.value.value())
+            command.flags.visit_all[run_action]()
+
             # Validate the remaining arguments
-            var ctx = Context(command, remaining_args)
             command.arg_validator(ctx)
 
             # Run the function's commands.
@@ -489,7 +495,7 @@ struct Command(CollectionElement):
                 command.raising_run.value()(ctx)
             self._execute_post_run_hooks(ctx, parents)
         except e:
-            panic(e)
+            abort(e)
 
     fn inherited_flags(self) -> FlagSet:
         """Returns the flags for the command and inherited flags from its parent.
@@ -497,11 +503,11 @@ struct Command(CollectionElement):
         Returns:
             The flags for the command and its parent.
         """
-        var i_flags = FlagSet()
+        i_flags = FlagSet()
 
         @always_inline
         fn add_parent_persistent_flags(parent: Arc[Self]) capturing -> None:
-            var cmd = parent
+            cmd = parent
             if cmd[].persistent_flags:
                 i_flags += cmd[].persistent_flags
 
@@ -534,7 +540,7 @@ struct Command(CollectionElement):
         try:
             self.flags.set_required(flag_name)
         except e:
-            panic(e)
+            abort(e)
 
     fn mark_flags_required_together(inout self, *flag_names: String) -> None:
         """Marks the given flags with annotations so that Prism errors
@@ -544,13 +550,13 @@ struct Command(CollectionElement):
             flag_names: The names of the flags to mark as required together.
         """
         self._merge_flags()
-        var names = concat_names(flag_names)
+        names = concat_names(flag_names)
 
         try:
             for flag_name in flag_names:
                 self.flags.set_as[REQUIRED_AS_GROUP](flag_name[], names)
         except e:
-            panic(e)
+            abort(e)
 
     fn mark_flags_one_required(inout self, *flag_names: String) -> None:
         """Marks the given flags with annotations so that Prism errors
@@ -560,12 +566,12 @@ struct Command(CollectionElement):
             flag_names: The names of the flags to mark as required.
         """
         self._merge_flags()
-        var names = concat_names(flag_names)
+        names = concat_names(flag_names)
         try:
             for flag_name in flag_names:
                 self.flags.set_as[ONE_REQUIRED](flag_name[], names)
         except e:
-            panic(e)
+            abort(e)
 
     fn mark_flags_mutually_exclusive(inout self, *flag_names: String) -> None:
         """Marks the given flags with annotations so that Prism errors
@@ -575,13 +581,13 @@ struct Command(CollectionElement):
             flag_names: The names of the flags to mark as mutually exclusive.
         """
         self._merge_flags()
-        var names = concat_names(flag_names)
+        names = concat_names(flag_names)
 
         try:
             for flag_name in flag_names:
                 self.flags.set_as[MUTUALLY_EXCLUSIVE](flag_name[], names)
         except e:
-            panic(e)
+            abort(e)
 
     fn mark_persistent_flag_required(inout self, flag_name: String) -> None:
         """Marks the given persistent flag with annotations so that Prism errors
@@ -593,7 +599,7 @@ struct Command(CollectionElement):
         try:
             self.persistent_flags.set_required(flag_name)
         except e:
-            panic(e)
+            abort(e)
 
     fn has_parent(self) -> Bool:
         """Returns True if the command has a parent, False otherwise."""

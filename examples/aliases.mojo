@@ -18,9 +18,7 @@ fn main() -> None:
     )
 
     var print_tool = Arc(
-        Command(
-            name="tool", usage="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
-        )
+        Command(name="tool", usage="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing"))
     )
 
     root.add_subcommand(print_tool)

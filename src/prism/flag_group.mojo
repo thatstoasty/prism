@@ -1,5 +1,5 @@
 from collections import Dict
-from .util import panic
+from os import abort
 from .flag import Flag
 from .flag_set import REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
 from gojo import fmt
@@ -20,19 +20,19 @@ fn process_flag_for_group_annotation(
     annotation: String,
     inout group_status: Dict[String, Dict[String, Bool]],
 ) raises -> None:
-    var group_info = flag.annotations.get(annotation, List[String]())
+    group_info = flag.annotations.get(annotation, List[String]())
     if group_info:
         for group in group_info:
-            var group_name = group[]
+            group_name = group[]
             if len(group_status.get(group_name, Dict[String, Bool]())) == 0:
-                var flag_names = group_name.split(sep=" ")
+                flag_names = group_name.split(sep=" ")
 
                 # Only consider this flag group at all if all the flags are defined.
                 if not has_all_flags(flags, flag_names):
                     continue
 
                 for name in flag_names:
-                    var entry = Dict[String, Bool]()
+                    entry = Dict[String, Bool]()
                     entry[name[]] = False
                     group_status[group[]] = entry
 
@@ -57,7 +57,7 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
     # Within each group, is a Dict of flag name and if they're set.
     # If it's unset then add to a list to check the condition of all required flags being set.
     for pair in data.items():
-        var unset = List[String]()
+        unset = List[String]()
         for flag in pair[].value.items():
             if not flag[].value:
                 unset.append(flag[].key)
@@ -67,11 +67,11 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
 
         # Sort values, so they can be tested/scripted against consistently.
         # unset.sort()
-        var keys = List[String]()
+        keys = List[String]()
         for key in pair[].value.keys():
             keys.append(key[])
 
-        panic(
+        abort(
             fmt.sprintf(
                 "If any flags in the group, %s, are set they must all be set; missing %s.",
                 keys.__str__(),
@@ -89,7 +89,7 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> N
     """
     # Check if at least one key is set.
     for pair in data.items():
-        var set = List[String]()
+        set = List[String]()
         for flag in pair[].value.items():
             if flag[].value:
                 set.append(flag[].key)
@@ -99,11 +99,11 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) -> N
 
         # Sort values, so they can be tested/scripted against consistently.
         # unset.sort()
-        var keys = List[String]()
+        keys = List[String]()
         for key in pair[].value.keys():
             keys.append(key[])
 
-        panic(fmt.sprintf("At least one of the flags in the group %s is required.", keys.__str__()))
+        abort(fmt.sprintf("At least one of the flags in the group %s is required.", keys.__str__()))
 
 
 fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) -> None:
@@ -115,7 +115,7 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
     """
     # Check if more than one mutually exclusive flag is set.
     for pair in data.items():
-        var set = List[String]()
+        set = List[String]()
         for flag in pair[].value.items():
             if flag[].value:
                 set.append(flag[].key)
@@ -125,11 +125,11 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
 
         # Sort values, so they can be tested/scripted against consistently.
         # unset.sort()
-        var keys = List[String]()
+        keys = List[String]()
         for key in pair[].value.keys():
             keys.append(key[])
 
-        panic(
+        abort(
             fmt.sprintf(
                 "If any flags in the group %s are set none of the others can be; %s were all set.",
                 keys.__str__(),
@@ -158,9 +158,9 @@ fn validate_flag_groups(
 
 
 fn validate_flag_groups(flags: FlagSet) raises -> None:
-    var group_status = Dict[String, Dict[String, Bool]]()
-    var one_required_group_status = Dict[String, Dict[String, Bool]]()
-    var mutually_exclusive_group_status = Dict[String, Dict[String, Bool]]()
+    group_status = Dict[String, Dict[String, Bool]]()
+    one_required_group_status = Dict[String, Dict[String, Bool]]()
+    mutually_exclusive_group_status = Dict[String, Dict[String, Bool]]()
 
     @parameter
     fn flag_checker(flag: Flag) raises -> None:

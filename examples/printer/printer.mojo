@@ -2,6 +2,7 @@ from memory import Arc
 from prism import Command, Context, exact_args
 import mist
 
+
 fn printer(ctx: Context) raises -> None:
     if len(ctx.args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")

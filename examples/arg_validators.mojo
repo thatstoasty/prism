@@ -31,12 +31,7 @@ fn main() -> None:
     no_args_command[].arg_validator = no_args
 
     var valid_args_command = Arc(
-        Command(
-            name="valid_args",
-            usage="This is a dummy command!",
-            run=hello,
-            valid_args=List[String]("Pineapple")
-        )
+        Command(name="valid_args", usage="This is a dummy command!", run=hello, valid_args=List[String]("Pineapple"))
     )
     valid_args_command[].arg_validator = valid_args
 
