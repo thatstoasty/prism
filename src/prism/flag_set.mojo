@@ -1,5 +1,6 @@
 from collections import Optional, Dict, InlineList
 from utils import Variant
+from memory import Reference
 import gojo.fmt
 from .flag import Flag, FlagActionFn
 from .util import string_to_bool, string_to_float, split
@@ -68,7 +69,7 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
     fn __iadd__(inout self, other: Self):
         self.merge(other)
 
-    fn lookup(ref [_]self, name: String, type: String = "") raises -> ref [__lifetime_of(self.flags)] Flag:
+    fn lookup(ref [_]self, name: String, type: String = "") raises -> Reference[Flag, __lifetime_of(self.flags)]:
         """Returns an mutable or immutable reference to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -109,15 +110,15 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
 
     fn get_string(self, name: String) raises -> String:
         """Returns the value of a flag as a String. If it isn't set, then return the default value."""
-        return self.lookup(name, "String").value_or_default()
+        return self.lookup(name, "String")[].value_or_default()
 
     fn get_bool(self, name: String) raises -> Bool:
         """Returns the value of a flag as a Bool. If it isn't set, then return the default value."""
-        return string_to_bool(self.lookup(name, "Bool").value_or_default())
+        return string_to_bool(self.lookup(name, "Bool")[].value_or_default())
 
     fn get_int(self, name: String, type: String = "Int") raises -> Int:
         """Returns the value of a flag as an Int. If it isn't set, then return the default value."""
-        return atol(self.lookup(name, type).value_or_default())
+        return atol(self.lookup(name, type)[].value_or_default())
 
     fn get_int8(self, name: String) raises -> Int8:
         """Returns the value of a flag as a Int8. If it isn't set, then return the default value."""
@@ -151,17 +152,21 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         """Returns the value of a flag as a UInt64. If it isn't set, then return the default value."""
         return UInt64(self.get_int(name, "UInt64"))
 
-    fn as_float16(self, name: String) raises -> Float16:
+    fn get_float16(self, name: String) raises -> Float16:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
-        return self.as_float64(name).cast[DType.float16]()
+        return self.get_float64(name).cast[DType.float16]()
 
-    fn as_float32(self, name: String) raises -> Float32:
+    fn get_float32(self, name: String) raises -> Float32:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
-        return self.as_float64(name).cast[DType.float32]()
+        return self.get_float64(name).cast[DType.float32]()
 
-    fn as_float64(self, name: String) raises -> Float64:
+    fn get_float64(self, name: String) raises -> Float64:
         """Returns the value of a flag as a Float64. If it isn't set, then return the default value."""
-        return string_to_float(self.lookup(name, "Float64").value_or_default())
+        return string_to_float(self.lookup(name, "Float64")[].value_or_default())
+    
+    fn get_string_list(self, name: String) raises -> List[String]:
+        """Returns the value of a flag as a List[String]. If it isn't set, then return the default value."""
+        return self.lookup(name, "StringList")[].value_or_default().split(sep=" ")
 
     fn names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set."""
@@ -513,6 +518,30 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
                 action=action,
             )
         )
+    
+    fn string_list_flag(
+        inout self,
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: List[String] = List[String](),
+        environment_variable: Optional[StringLiteral] = None,
+        file_path: Optional[StringLiteral] = None,
+        action: Optional[FlagActionFn] = None,
+    ) -> None:
+        """Adds a `StringList` flag to the flag set."""
+        self.flags.append(
+            Flag(
+                name=name,
+                shorthand=shorthand,
+                usage=usage,
+                default=" ".join(default),
+                type="StringList",
+                environment_variable=environment_variable,
+                file_path=file_path,
+                action=action,
+            )
+        )
 
     fn set_annotation(inout self, name: String, key: String, values: String) raises -> None:
         """Sets an annotation for a flag.
@@ -528,9 +557,9 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         try:
             # TODO: remove running 2 lookups when ref can return a reference
             # we can store as a without copying the result.
-            self.lookup(name).annotations[key].extend(values)
+            self.lookup(name)[].annotations[key].extend(values)
         except:
-            self.lookup(name).annotations[key] = List[String](values)
+            self.lookup(name)[].annotations[key] = List[String](values)
 
     fn set_required(inout self, name: String) raises -> None:
         """Sets a flag as required or not.

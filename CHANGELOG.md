@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
-## [0.2.1] - 2024-10-09
+## [0.2.1] - 2024-11-02
 
-- Added environment variable support for flags.
+- Added environment variable and file path support for flags.
+- Added action support for flags.
 
 ## [0.2.0] - 2024-10-09
 

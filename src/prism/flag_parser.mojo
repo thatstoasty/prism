@@ -131,7 +131,16 @@ struct FlagParser:
                 raise Error("Expected a flag but found: " + argument)
 
             # Set the value of the flag.
-            flags.lookup(name).set(value)
+            flag = flags.lookup(name)
+            if flag[].type == "StringList":
+                if not flag[].changed:
+                    flag[].set(value)
+                else:
+                    # TODO: Switch to write to the string in the next update. 
+                    writer = flag[].value.value()._unsafe_to_formatter()
+                    writer.write(" ", value)
+            else:
+                flag[].set(value)
             self.index += increment_by
 
         # If flags are not set, check if they can be set from an environment variable or from a file.
