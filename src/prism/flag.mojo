@@ -17,6 +17,8 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
     """The usage of the flag."""
     var value: Optional[String]
     """The value of the flag."""
+    var environment_variable: Optional[StringLiteral]
+    """If no value is provided, will optionally check this environment variable for a value."""
     var default: String
     """The default value of the flag."""
     var type: String
@@ -33,6 +35,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
         shorthand: String = "",
         usage: String = "",
         value: Optional[String] = None,
+        environment_variable: Optional[StringLiteral] = None,
         default: String = "",
     ) -> None:
         """Initializes a new Flag.
@@ -43,12 +46,14 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
             shorthand: The shorthand of the flag.
             usage: The usage of the flag.
             value: The value of the flag.
+            environment_variable: The environment variable to check for a value.
             default: The default value of the flag.
         """
         self.name = name
         self.shorthand = shorthand
         self.usage = usage
         self.value = value
+        self.environment_variable = environment_variable
         self.default = default
         self.type = type
         self.annotations = Dict[String, List[String]]()

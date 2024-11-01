@@ -19,23 +19,6 @@ alias REQUIRED_AS_GROUP = "REQUIRED_AS_GROUP"
 alias ONE_REQUIRED = "ONE_REQUIRED"
 alias MUTUALLY_EXCLUSIVE = "MUTUALLY_EXCLUSIVE"
 
-alias FLAG_TYPES = [
-    "String",
-    "Bool",
-    "Int",
-    "Int8",
-    "Int16",
-    "Int32",
-    "Int64",
-    "UInt8",
-    "UInt16",
-    "UInt32",
-    "UInt64",
-    "Float16",
-    "Float32",
-    "Float64",
-]
-
 
 @value
 struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparable):
@@ -201,9 +184,10 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         usage: String,
         shorthand: String = "",
         default: Bool = False,
+        environment_variable: Optional[StringLiteral] = None
     ) -> None:
         """Adds a `Bool` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Bool"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Bool", environment_variable=environment_variable))
 
     fn string_flag(
         inout self,
@@ -211,57 +195,58 @@ struct FlagSet(CollectionElement, Stringable, Sized, Boolable, EqualityComparabl
         usage: String,
         shorthand: String = "",
         default: String = "",
+        environment_variable: Optional[StringLiteral] = None
     ) -> None:
         """Adds a `String` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="String"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="String", environment_variable=environment_variable))
 
-    fn int_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int = 0) -> None:
+    fn int_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds an `Int` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int", environment_variable=environment_variable))
 
-    fn int8_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int8 = 0) -> None:
+    fn int8_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int8 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds an `Int8` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int8"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int8", environment_variable=environment_variable))
 
-    fn int16_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int16 = 0) -> None:
+    fn int16_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int16 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds an `Int16` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int16"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int16", environment_variable=environment_variable))
 
-    fn int32_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int32 = 0) -> None:
+    fn int32_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int32 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds an `Int32` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int32"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int32", environment_variable=environment_variable))
 
-    fn int64_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int64 = 0) -> None:
+    fn int64_flag(inout self, name: String, usage: String, shorthand: String = "", default: Int64 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds an `Int64` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int64"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Int64", environment_variable=environment_variable))
 
-    fn uint8_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt8 = 0) -> None:
+    fn uint8_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt8 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds a `UInt8` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt8"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt8", environment_variable=environment_variable))
 
-    fn uint16_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt16 = 0) -> None:
+    fn uint16_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt16 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds a `UInt16` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt16"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt16", environment_variable=environment_variable))
 
-    fn uint32_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt32 = 0) -> None:
+    fn uint32_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt32 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds a `UInt32` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt32"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt32", environment_variable=environment_variable))
 
-    fn uint64_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt64 = 0) -> None:
+    fn uint64_flag(inout self, name: String, usage: String, shorthand: String = "", default: UInt64 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds a `UInt64` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt64"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="UInt64", environment_variable=environment_variable))
 
-    fn float16_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float16 = 0) -> None:
+    fn float16_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float16 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds a `Float16` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Float16"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Float16", environment_variable=environment_variable))
 
-    fn float32_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float32 = 0) -> None:
+    fn float32_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float32 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds a `Float32` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Float32"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Float32", environment_variable=environment_variable))
 
-    fn float64_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float64 = 0) -> None:
+    fn float64_flag(inout self, name: String, usage: String, shorthand: String = "", default: Float64 = 0, environment_variable: Optional[StringLiteral] = None) -> None:
         """Adds a `Float64` flag to the flag set."""
-        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Float64"))
+        self.flags.append(Flag(name=name, shorthand=shorthand, usage=usage, default=str(default), type="Float64", environment_variable=environment_variable))
 
     fn set_annotation(inout self, name: String, key: String, values: String) raises -> None:
         """Sets an annotation for a flag.

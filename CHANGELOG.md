@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [0.2.1] - 2024-10-09
 
-- Add flag features.
+- Added environment variable support for flags.
 
 ## [0.2.0] - 2024-10-09
 

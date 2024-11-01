@@ -1,4 +1,5 @@
 from utils import Span
+import os
 from .flag_set import FlagSet
 from .util import split
 
@@ -118,7 +119,7 @@ struct FlagParser:
 
             var name: String
             var value: String
-            var increment_by: Int = 0
+            var increment_by = 0
 
             # Full flag
             if argument.startswith("--", 0, 2):
@@ -132,5 +133,13 @@ struct FlagParser:
             # Set the value of the flag.
             flags.lookup(name).set(value)
             self.index += increment_by
+        
+        # If flags are not set, check if they can be set from an environment variable
+        # Set it from that value if there is one available
+        for flag in flags.flags:
+            if not flag[].value and flag[].environment_variable:
+                value = os.getenv(flag[].environment_variable.value())
+                if value != "":
+                    flag[].set(value)
 
         return remaining_args
