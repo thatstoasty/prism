@@ -341,19 +341,6 @@ Validation of positional arguments can be specified using the `arg_validator` fi
 
 If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 
-Moreover, `match_all[arg_validators: List[ArgValidator]]` enables combining existing checks with arbitrary other checks. For instance, if you want to report an error if there are not exactly N positional args OR if there are any positional args that are not in the ValidArgs field of Command, you can call `match_all` on `exact_args` and `valid_args`, as shown below:
-
-```mojo
-fn test_match_all():
-    result = match_all[
-        List[ArgValidator](
-            range_args[0, 1](),
-            valid_args()
-        )
-    ]()(List[String]("abc", "123"))
-    testing.assert_equal(result.value()[], "Command accepts between 0 to 1 argument(s). Received: 2.")
-```
-
 ![Arg Validators](https://github.com/thatstoasty/prism/blob/main/doc/tapes/arg_validators.gif)
 
 ## Help Commands

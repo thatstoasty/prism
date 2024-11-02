@@ -1,6 +1,6 @@
 from memory.arc import Arc
 import testing
-from prism import Command
+from prism import Command, Context
 from prism.args import (
     no_args,
     valid_args,
@@ -14,64 +14,79 @@ from prism.args import (
 )
 
 
-# fn dummy(inout command: CommandArc, args: List[String]) -> None:
-#     return None
+fn dummy(ctx: Context) -> None:
+    return None
 
 
-# TODO: renable these when we have assert raises in testing
-# def test_no_args():
-#     var cmd = Command(name="root", usage="Base command.", run=dummy)
-#     var arc = Arc(cmd)
-#     var result = no_args(arc, List[String]("abc"))
-#     testing.assert_equal(result.value(), String("The command `root` does not take any arguments."))
+def test_no_args():
+    ctx = Context(
+        Command(name="root", usage="Base command.", run=dummy),
+        List[String]("abc")
+    )
+    with testing.assert_raises(contains="does not take any arguments."):
+        no_args(ctx)
 
 
-# def test_valid_args():
-#     var cmd = Command(name="root", usage="Base command.", run=dummy)
-#     var result = valid_args[List[String]("Pineapple")]()(Arc(cmd), List[String]("abc"))
-#     testing.assert_equal(result.value(), "Invalid argument: `abc`, for the command `root`.")
+def test_valid_args():
+    ctx = Context(
+        Command(name="root", usage="Base command.", run=dummy, valid_args=List[String]("Pineapple")),
+        List[String]("abc")
+    )
+    with testing.assert_raises(contains="Invalid argument: `abc`"):
+        valid_args(ctx)
 
 
-# def test_arbitrary_args():
-#     var cmd = Command(name="root", usage="Base command.", run=dummy)
-#     var result = arbitrary_args(Arc(cmd), List[String]("abc", "blah", "blah"))
+def test_arbitrary_args():
+    ctx = Context(
+        Command(name="root", usage="Base command.", run=dummy),
+        List[String]("abc", "blah", "blah")
+    )
 
-#     # If the result is anything but None, fail the test.
-#     if result is not None:
-#         testing.assert_false(True)
-
-
-# def test_minimum_n_args():
-#     var cmd = Command(name="root", usage="Base command.", run=dummy)
-#     var result = minimum_n_args[3]()(Arc(cmd), List[String]("abc", "123"))
-#     testing.assert_equal(result.value(), "The command `root` accepts at least 3 argument(s). Received: 2.")
+    # It should not raise an error, ever.
+    arbitrary_args(ctx)
 
 
-# def test_maximum_n_args():
-#     var cmd = Command(name="root", usage="Base command.", run=dummy)
-#     var result = maximum_n_args[1]()(Arc(cmd), List[String]("abc", "123"))
-#     testing.assert_equal(result.value(), "The command `root` accepts at most 1 argument(s). Received: 2.")
+def test_minimum_n_args():
+    ctx = Context(
+        Command(name="root", usage="Base command.", run=dummy),
+        List[String]("abc", "123")
+    )
+    with testing.assert_raises(contains="accepts at least 3 argument(s). Received: 2."):
+        minimum_n_args[3]()(ctx)
 
 
-# def test_exact_args():
-#     var cmd = Command(name="root", usage="Base command.", run=dummy)
-#     var result = exact_args[1]()(Arc(cmd), List[String]("abc", "123"))
-#     testing.assert_equal(result.value(), "The command `root` accepts exactly 1 argument(s). Received: 2.")
+def test_maximum_n_args():
+    ctx = Context(
+        Command(name="root", usage="Base command.", run=dummy),
+        List[String]("abc", "123")
+    )
+    with testing.assert_raises(contains="accepts at most 1 argument(s). Received: 2."):
+        maximum_n_args[1]()(ctx)
 
 
-# def test_range_args():
-#     var cmd = Command(name="root", usage="Base command.", run=dummy)
-#     var result = range_args[0, 1]()(Arc(cmd), List[String]("abc", "123"))
-#     testing.assert_equal(result.value(), "The command `root`, accepts between 0 to 1 argument(s). Received: 2.")
+def test_exact_args():
+    ctx = Context(
+        Command(name="root", usage="Base command.", run=dummy),
+        List[String]("abc", "123")
+    )
+    with testing.assert_raises(contains="accepts exactly 1 argument(s). Received: 2."):
+        exact_args[1]()(ctx)
+
+
+def test_range_args():
+    ctx = Context(
+        Command(name="root", usage="Base command.", run=dummy),
+        List[String]("abc", "123")
+    )
+    with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2."):
+        range_args[0, 1]()(ctx)
 
 
 # def test_match_all():
-#     var cmd = Command(name="root", usage="Base command.", run=dummy)
-#     var args = List[String]("abc", "123")
-#     alias validators = List[ArgValidatorFn](
-#         range_args[0, 1](),
-#         valid_args[List[String]("Pineapple")]()
+#     ctx = Context(
+#         Command(name="root", usage="Base command.", run=dummy, valid_args=List[String]("Pineapple")),
+#         List[String]("abc", "123")
 #     )
-#     var validator = match_all[validators]()
-#     var results = validator(cmd, args)
-#     testing.assert_equal(results.value(), "Command accepts between 0 to 1 argument(s). Received: 2.")
+#     alias validators = List[ArgValidatorFn](range_args[0, 1](), valid_args)
+#     with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2."):
+#         match_all[validators]()(ctx)
