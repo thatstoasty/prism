@@ -1,4 +1,6 @@
 from utils import Span
+from collections import InlineArray
+import os
 from .flag_set import FlagSet
 from .util import split
 
@@ -22,9 +24,9 @@ struct FlagParser:
         """
         # Flag with value set like "--flag=<value>"
         if argument.find("=") != -1:
-            var flag = split(argument, "=")
-            var name = flag[0][2:]
-            var value = flag[1]
+            flag = split(argument, "=")
+            name = flag[0][2:]
+            value = flag[1]
 
             if name not in flags.names():
                 raise Error("Command does not accept the flag supplied: " + name)
@@ -32,7 +34,7 @@ struct FlagParser:
             return name, value, 1
 
         # Flag with value set like "--flag <value>"
-        var name = argument[2:]
+        name = argument[2:]
         if name not in flags.names():
             raise Error("Command does not accept the flag supplied: " + name)
 
@@ -67,18 +69,18 @@ struct FlagParser:
         """
         # Flag with value set like "-f=<value>"
         if argument.find("=") != -1:
-            var flag = split(argument, "=")
-            var shorthand = flag[0][1:]
-            var value = flag[1]
-            var name = flags.lookup_name(shorthand)
+            flag = split(argument, "=")
+            shorthand = flag[0][1:]
+            value = flag[1]
+            name = flags.lookup_name(shorthand)
             if name not in flags.names():
                 raise Error("Command does not accept the shorthand flag supplied: " + name)
 
             return name, value, 1
 
         # Flag with value set like "-f <value>"
-        var shorthand = argument[1:]
-        var name = flags.lookup_name(shorthand)
+        shorthand = argument[1:]
+        name = flags.lookup_name(shorthand)
         if name not in flags.names():
             raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
 
@@ -88,7 +90,7 @@ struct FlagParser:
             return name, String("True"), 1
         except:
             pass
-            
+
         if self.index + 1 >= len(arguments):
             raise Error("Flag `" + name + "` requires a value to be set but reached the end of arguments.")
 
@@ -106,9 +108,9 @@ struct FlagParser:
             flags: The flags to parse.
             arguments: The arguments passed via the command line.
         """
-        var remaining_args = List[String](capacity=len(arguments))
+        remaining_args = List[String](capacity=len(arguments))
         while self.index < len(arguments):
-            var argument = arguments[self.index]
+            argument = arguments[self.index]
 
             # Positional argument
             if not argument.startswith("-", 0, 1):
@@ -118,7 +120,7 @@ struct FlagParser:
 
             var name: String
             var value: String
-            var increment_by: Int = 0
+            increment_by = 0
 
             # Full flag
             if argument.startswith("--", 0, 2):
@@ -130,7 +132,29 @@ struct FlagParser:
                 raise Error("Expected a flag but found: " + argument)
 
             # Set the value of the flag.
-            flags.lookup(name).set(value)
+            alias list_types = InlineArray[String, 3]("StringList", "IntList", "Float64List")
+            flag = flags.lookup(name)
+            if flag[].type in list_types:
+                if not flag[].changed:
+                    flag[].set(value)
+                else:
+                    # TODO: Switch to write to the string in the next update.
+                    writer = flag[].value.value()._unsafe_to_formatter()
+                    writer.write(" ", value)
+            else:
+                flag[].set(value)
             self.index += increment_by
+
+        # If flags are not set, check if they can be set from an environment variable or from a file.
+        # Set it from that value if there is one available.
+        for flag in flags.flags:
+            if not flag[].value:
+                if flag[].environment_variable:
+                    value = os.getenv(flag[].environment_variable.value())
+                    if value != "":
+                        flag[].set(value)
+                elif flag[].file_path:
+                    with open(os.path.expanduser(flag[].file_path.value()), "r") as f:
+                        flag[].set(f.read())
 
         return remaining_args

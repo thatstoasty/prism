@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.2.1] - 2024-11-02
+
+- Added environment variable and file path support for flags.
+- Added action support for flags.
+- Added `StringList`, `IntList`, `Float64List` `Flag` types.
+
 ## [0.2.0] - 2024-10-09
 
 - Refactor flag get/parsing to use ref to simplify code and enable removal of transform module.

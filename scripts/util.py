@@ -79,7 +79,7 @@ def publish_to_prefix(args: Any) -> None:
         raise ValueError("CONDA_BLD_PATH environment variable is not set. This ")
 
     print(f"Publishing packages to: {args.channel}")
-    for file in glob.glob(f'{conda_build_path}/**/*.conda'):
+    for file in glob.glob(f"{conda_build_path}/**/*.conda"):
         try:
             subprocess.run(
                 ["magic", "run", "rattler-build", "upload", "prefix", "-c", args.channel, file],
@@ -98,7 +98,8 @@ def remove_temp_directory() -> None:
 
 
 def prepare_temp_directory() -> None:
-    """Creates the temporary directory used for building the package. Adds the compiled mojo package to the directory."""
+    """Creates the temporary directory used for building the package. Adds the compiled mojo package to the directory.
+    """
     package = load_project_config()["project"]["name"]
     remove_temp_directory()
     os.mkdir(TEMP_DIR)
@@ -175,9 +176,7 @@ def build_conda_package(args: Any) -> None:
 def main():
     # Configure the parser to receive the mode argument.
     # create the top-level parser
-    parser = argparse.ArgumentParser(
-        prog="util", description="Generate a recipe for the project."
-    )
+    parser = argparse.ArgumentParser(prog="util", description="Generate a recipe for the project.")
     subcommands = parser.add_subparsers(help="sub-command help")
 
     # create the parser for the "templater" command
