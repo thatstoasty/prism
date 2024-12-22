@@ -1,4 +1,4 @@
-from memory.arc import Arc
+from memory import ArcPointer
 import testing
 from prism import Command, Context
 from prism.args import (
@@ -9,7 +9,7 @@ from prism.args import (
     maximum_n_args,
     exact_args,
     range_args,
-    match_all,
+    # match_all,
     ArgValidatorFn,
 )
 

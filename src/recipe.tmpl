@@ -14,7 +14,7 @@ source:
 build:
   script:
     - mkdir -p ${PREFIX}/lib/mojo
-    - magic run mojo package {{NAME}} -o ${PREFIX}/lib/mojo/{{NAME}}.mojopkg
+    - magic run {{ENVIRONMENT_FLAG}} mojo package {{NAME}} -o ${PREFIX}/lib/mojo/{{NAME}}.mojopkg
 
 requirements:
   run:

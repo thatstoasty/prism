@@ -1,6 +1,5 @@
-from memory.arc import Arc
+from memory import ArcPointer
 from collections.optional import Optional
-import gojo.fmt
 from .command import ArgValidatorFn
 from .context import Context
 
@@ -12,7 +11,7 @@ fn no_args(ctx: Context) raises -> None:
         ctx: The context of the command being executed.
     """
     if len(ctx.args) > 0:
-        raise Error(fmt.sprintf("The command `%s` does not take any arguments.", ctx.command[].name))
+        raise Error("The command `{}` does not take any arguments.".format(ctx.command[].name))
 
 
 fn arbitrary_args(ctx: Context) raises -> None:
@@ -27,7 +26,7 @@ fn arbitrary_args(ctx: Context) raises -> None:
 fn minimum_n_args[n: Int]() -> ArgValidatorFn:
     """Returns an error if there is not at least n arguments.
 
-    Params:
+    Parameters:
         n: The minimum number of arguments.
 
     Returns:
@@ -37,8 +36,7 @@ fn minimum_n_args[n: Int]() -> ArgValidatorFn:
     fn less_than_n_args(ctx: Context) raises -> None:
         if len(ctx.args) < n:
             raise Error(
-                fmt.sprintf(
-                    "The command `%s` accepts at least %d argument(s). Received: %d.",
+                "The command `{}` accepts at least {} argument(s). Received: {}.".format(
                     ctx.command[].name,
                     n,
                     len(ctx.args),
@@ -51,7 +49,7 @@ fn minimum_n_args[n: Int]() -> ArgValidatorFn:
 fn maximum_n_args[n: Int]() -> ArgValidatorFn:
     """Returns an error if there are more than n arguments.
 
-    Params:
+    Parameters:
         n: The maximum number of arguments.
 
     Returns:
@@ -61,8 +59,7 @@ fn maximum_n_args[n: Int]() -> ArgValidatorFn:
     fn more_than_n_args(ctx: Context) raises -> None:
         if len(ctx.args) > n:
             raise Error(
-                fmt.sprintf(
-                    "The command `%s` accepts at most %d argument(s). Received: %d.",
+                "The command `{}` accepts at most {} argument(s). Received: {}.".format(
                     ctx.command[].name,
                     n,
                     len(ctx.args),
@@ -75,7 +72,7 @@ fn maximum_n_args[n: Int]() -> ArgValidatorFn:
 fn exact_args[n: Int]() -> ArgValidatorFn:
     """Returns an error if there are not exactly n arguments.
 
-    Params:
+    Parameters:
         n: The number of arguments.
 
     Returns:
@@ -85,8 +82,7 @@ fn exact_args[n: Int]() -> ArgValidatorFn:
     fn exactly_n_args(ctx: Context) raises -> None:
         if len(ctx.args) != n:
             raise Error(
-                fmt.sprintf(
-                    "The command `%s` accepts exactly %d argument(s). Received: %d.",
+                "The command `{}` accepts exactly {} argument(s). Received: {}.".format(
                     ctx.command[].name,
                     n,
                     len(ctx.args),
@@ -105,13 +101,13 @@ fn valid_args(ctx: Context) raises -> None:
     if ctx.command[].valid_args:
         for arg in ctx.args:
             if arg[] not in ctx.command[].valid_args:
-                raise Error(fmt.sprintf("Invalid argument: `%s`, for the command `%s`.", arg[], ctx.command[].name))
+                raise Error("Invalid argument: `{}`, for the command `{}`.".format(arg[], ctx.command[].name))
 
 
 fn range_args[minimum: Int, maximum: Int]() -> ArgValidatorFn:
     """Returns an error if there are not exactly n arguments.
 
-    Params:
+    Parameters:
         minimum: The minimum number of arguments.
         maximum: The maximum number of arguments.
 
@@ -122,8 +118,7 @@ fn range_args[minimum: Int, maximum: Int]() -> ArgValidatorFn:
     fn range_n_args(ctx: Context) raises -> None:
         if len(ctx.args) < minimum or len(ctx.args) > maximum:
             raise Error(
-                fmt.sprintf(
-                    "The command `%s`, accepts between %d to %d argument(s). Received: %d.",
+                "The command `{}`, accepts between {} to {} argument(s). Received: {}.".format(
                     ctx.command[].name,
                     minimum,
                     maximum,
@@ -139,7 +134,7 @@ fn range_args[minimum: Int, maximum: Int]() -> ArgValidatorFn:
 # fn match_all[arg_validators: List[ArgValidatorFn]]() -> ArgValidatorFn:
 #     """Returns an error if any of the arg_validators return an error.
 
-#     Params:
+#     Parameters:
 #         arg_validators: A list of ArgValidatorFn functions that check the arguments.
 
 #     Returns:

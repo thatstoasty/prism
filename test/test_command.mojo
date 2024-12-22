@@ -1,4 +1,4 @@
-from memory import Arc
+from memory import ArcPointer
 import testing
 from prism.command import Command, Context
 from prism.flag_set import FlagSet
@@ -8,14 +8,12 @@ def test_command_operations():
     fn dummy(ctx: Context) -> None:
         return None
 
-    cmd = Arc(Command(name="root", usage="Base command.", run=dummy))
+    cmd = Command(name="root", usage="Base command.", run=dummy)
+    for flag in cmd.flags.flags:
+        testing.assert_equal("help", flag[].name)
 
-    flags = cmd[].flags.flags
-    for flag in flags:
-        testing.assert_equal(String("help"), flag[].name)
-
-    child_cmd = Arc(Command(name="child", usage="Child command.", run=dummy))
-    cmd[].add_subcommand(child_cmd)
+    child_cmd = ArcPointer(Command(name="child", usage="Child command.", run=dummy))
+    cmd.add_subcommand(child_cmd)
     child_cmd[].flags.string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
 
     testing.assert_equal(child_cmd[].full_name(), "root child")

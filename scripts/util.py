@@ -55,6 +55,11 @@ def generate_recipe(args: Any) -> None:
         .replace("{{VERSION}}", config["project"]["version"])
     )
 
+    if args.mode != "default":
+        recipe = recipe.replace("{{ENVIRONMENT_FLAG}}", f"-e {args.mode}")
+    else:
+        recipe = recipe.replace("{{ENVIRONMENT_FLAG}}", "")
+
     # Dependencies are the only notable field that changes between environments.
     dependencies: dict[str, str]
     match args.mode:
@@ -79,10 +84,10 @@ def publish_to_prefix(args: Any) -> None:
         raise ValueError("CONDA_BLD_PATH environment variable is not set. This ")
 
     print(f"Publishing packages to: {args.channel}")
-    for file in glob.glob(f"{conda_build_path}/**/*.conda"):
+    for file in glob.glob(f'{conda_build_path}/**/*.conda'):
         try:
             subprocess.run(
-                ["magic", "run", "rattler-build", "upload", "prefix", "-c", args.channel, file],
+                ["rattler-build", "upload", "prefix", "-c", args.channel, file],
                 check=True,
             )
         except subprocess.CalledProcessError:
@@ -98,8 +103,7 @@ def remove_temp_directory() -> None:
 
 
 def prepare_temp_directory() -> None:
-    """Creates the temporary directory used for building the package. Adds the compiled mojo package to the directory.
-    """
+    """Creates the temporary directory used for building the package. Adds the compiled mojo package to the directory."""
     package = load_project_config()["project"]["name"]
     remove_temp_directory()
     os.mkdir(TEMP_DIR)
@@ -117,35 +121,62 @@ def execute_package_tests(args: Any) -> None:
     prepare_temp_directory()
     shutil.copytree(TEST_DIR, TEMP_DIR, dirs_exist_ok=True)
 
-    print("Running tests...")
-    subprocess.run(["mojo", "test", TEMP_DIR], check=True)
+    target = TEMP_DIR
+    if args.path:
+        target = f"{target}/{args.path}"
+    print(f"Running tests at {target}...")
+    subprocess.run(["mojo", "test", target], check=True)
 
     remove_temp_directory()
 
 
 def execute_package_examples(args: Any) -> None:
     """Executes the examples for the package."""
-    EXAMPLE_DIR = "./examples"
+    EXAMPLE_DIR = "examples"
+    if not os.path.exists("examples"):
+        print(f"Path does not exist: {EXAMPLE_DIR}.")
+        return
 
     print("Building package and copying examples.")
     prepare_temp_directory()
-    shutil.copytree(EXAMPLE_DIR, TEMP_DIR)
+    shutil.copytree(EXAMPLE_DIR, TEMP_DIR, dirs_exist_ok=True)
 
-    print("Running examples...")
-    subprocess.run(["mojo", "test", TEMP_DIR], check=True)
+    example_files = f'{EXAMPLE_DIR}/*.mojo'
+    if args.path:
+        example_files = f"{EXAMPLE_DIR}/{args.path}"
+
+    print(f"Running examples in {example_files}...")
+    for file in glob.glob(example_files):
+        file_name = os.path.basename(file)
+        name, _ = os.path.splitext(file_name)
+        shutil.copyfile(file, f"{TEMP_DIR}/{file_name}")
+        subprocess.run(["mojo", "build", f"{TEMP_DIR}/{file_name}", "-o", f"{TEMP_DIR}/{name}"], check=True)
+        subprocess.run([f"{TEMP_DIR}/{name}"], check=True)
 
     remove_temp_directory()
 
 
 def execute_package_benchmarks(args: Any) -> None:
     BENCHMARK_DIR = "./benchmarks"
+    if not os.path.exists("benchmarks"):
+        print(f"Path does not exist: {BENCHMARK_DIR}.")
+        return
 
     print("Building package and copying benchmarks.")
     prepare_temp_directory()
-    shutil.copytree(BENCHMARK_DIR, TEMP_DIR)
+    shutil.copytree(BENCHMARK_DIR, TEMP_DIR, dirs_exist_ok=True)
 
-    print("Running benchmarks...")
-    subprocess.run(["mojo", "test", TEMP_DIR], check=True)
+    benchmark_files = f'{BENCHMARK_DIR}/*.mojo'
+    if args.path:
+        benchmark_files = f"{BENCHMARK_DIR}/{args.path}"
+
+    print(f"Running benchmarks in {benchmark_files}...")
+    for file in glob.glob(benchmark_files):
+        file_name = os.path.basename(file)
+        name, _ = os.path.splitext(file_name)
+        shutil.copyfile(file, f"{TEMP_DIR}/{file_name}")
+        subprocess.run(["mojo", "build", f"{TEMP_DIR}/{file_name}", "-o", f"{TEMP_DIR}/{name}"], check=True)
+        subprocess.run([f"{TEMP_DIR}/{name}"], check=True)
 
     remove_temp_directory()
 
@@ -155,11 +186,14 @@ def build_conda_package(args: Any) -> None:
     # Build the conda package for the project.
     config = load_project_config()
     channels: list[str]
+    rattler_command: list[str]
     match args.mode:
         case "default":
             channels = config["project"]["channels"]
+            rattler_command = ["magic", "run", "rattler-build", "build"]
         case _:
             channels = config["feature"][args.mode]["channels"]
+            rattler_command = ["magic", "run", "-e", args.mode, "rattler-build", "build"]
 
     options: list[str] = []
     for channel in channels:
@@ -167,7 +201,7 @@ def build_conda_package(args: Any) -> None:
 
     generate_recipe(args)
     subprocess.run(
-        ["magic", "run", "rattler-build", "build", "-r", RECIPE_DIR, "--skip-existing=all", *options],
+        [*rattler_command, "-r", RECIPE_DIR, "--skip-existing=all", *options],
         check=True,
     )
     os.remove(f"{RECIPE_DIR}/recipe.yaml")
@@ -176,7 +210,9 @@ def build_conda_package(args: Any) -> None:
 def main():
     # Configure the parser to receive the mode argument.
     # create the top-level parser
-    parser = argparse.ArgumentParser(prog="util", description="Generate a recipe for the project.")
+    parser = argparse.ArgumentParser(
+        prog="util", description="Generate a recipe for the project."
+    )
     subcommands = parser.add_subparsers(help="sub-command help")
 
     # create the parser for the "templater" command
@@ -218,14 +254,35 @@ def main():
 
     # create the parser for the "run tests" command
     run_tests = run_subcommands.add_parser("tests", help="tests help")
+    run_tests.add_argument(
+        "-p",
+        "--path",
+        type=str,
+        default=None,
+        help="Optional path to test file or test directory to run tests for.",
+    )
     run_tests.set_defaults(func=execute_package_tests)
 
     # create the parser for the "run benchmarks" command
     run_benchmarks = run_subcommands.add_parser("benchmarks", help="benchmarks help")
+    run_benchmarks.add_argument(
+        "-p",
+        "--path",
+        type=str,
+        default=None,
+        help="Optional path to benchmark file or test directory to run tests for.",
+    )
     run_benchmarks.set_defaults(func=execute_package_benchmarks)
 
     # create the parser for the "run examples" command
     run_examples = run_subcommands.add_parser("examples", help="examples help")
+    run_examples.add_argument(
+        "-p",
+        "--path",
+        type=str,
+        default=None,
+        help="Optional path to example file or test directory to run tests for.",
+    )
     run_examples.set_defaults(func=execute_package_examples)
 
     args = parser.parse_args()

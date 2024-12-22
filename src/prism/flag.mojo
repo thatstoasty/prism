@@ -6,7 +6,7 @@ alias FlagActionFn = fn (ctx: Context, value: String) raises -> None
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
 # needing to cast values to and from string.
 @value
-struct Flag(RepresentableCollectionElement, Stringable, Formattable):
+struct Flag(RepresentableCollectionElement, Stringable, Writable):
     """Represents a flag that can be passed via the command line.
     Flags are passed in via --name or -shorthand and can have a value associated with them.
     """
@@ -35,7 +35,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
     """Whether the flag has been changed from its default value."""
 
     fn __init__(
-        inout self,
+        mut self,
         name: String,
         type: String,
         shorthand: String = "",
@@ -72,15 +72,30 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
         self.changed = False
 
     fn __str__(self) -> String:
-        output = String()
-        writer = output._unsafe_to_formatter()
-        self.format_to(writer)
-        return output
+        """Returns a string representation of the Flag.
+
+        Returns:
+            The string representation of the Flag.
+        """
+        return String.write(self)
 
     fn __repr__(self) -> String:
+        """Returns a string representation of the Flag.
+
+        Returns:
+            The string representation of the Flag.
+        """
         return self.__str__()
 
     fn __eq__(self, other: Self) -> Bool:
+        """Compares two Flags for equality.
+
+        Args:
+            other: The other Flag to compare against.
+        
+        Returns:
+            True if the Flags are equal, False otherwise.
+        """
         return (
             self.name == other.name
             and self.shorthand == other.shorthand
@@ -92,10 +107,21 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
         )
 
     fn __ne__(self, other: Self) -> Bool:
+        """Compares two Flags for inequality.
+
+        Args:
+            other: The other Flag to compare against.
+        
+        Returns:
+            True if the Flags are not equal, False otherwise.
+        """
         return not self == other
 
-    fn format_to(self, inout writer: Formatter):
-        """Write Flag string representation to a `Formatter`.
+    fn write_to[W: Writer, //](self, mut writer: W):
+        """Write Flag string representation to a writer.
+
+        Parameters:
+            W: The type of writer to write to.
 
         Args:
             writer: The formatter to write to.
@@ -108,27 +134,27 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
             else:
                 writer.write(repr(None))
 
-        writer.write("Flag(Name: ")
+        writer.write("Flag(name=")
         writer.write(self.name)
 
         if self.shorthand != "":
-            writer.write(", Shorthand: ")
+            writer.write(", shorthand=")
             writer.write(self.shorthand)
-        writer.write(", Usage: ")
+        writer.write(", Usage=")
         writer.write(self.usage)
 
         if self.value:
-            writer.write(", Value: ")
+            writer.write(", value=")
             write_optional(self.value)
-        writer.write(", Default: ")
+        writer.write(", default=")
         writer.write(self.default)
-        writer.write(", Type: ")
+        writer.write(", type=")
         writer.write(self.type)
-        writer.write(", Changed: ")
+        writer.write(", changed=")
         writer.write(self.changed)
         writer.write(")")
 
-    fn set(inout self, value: String) -> None:
+    fn set(mut self, value: String) -> None:
         """Sets the value of the flag.
 
         Args:
@@ -140,7 +166,8 @@ struct Flag(RepresentableCollectionElement, Stringable, Formattable):
     fn get_with_transform[T: CollectionElement, //, transform: fn (value: String) -> T](self) -> T:
         """Returns the value of the flag with a transformation applied to it.
 
-        Params:
+        Parameters:
+            T: The type of the value to return.
             transform: The transformation to apply to the value.
 
         Returns:
