@@ -1,4 +1,4 @@
-from memory import Arc
+from memory import ArcPointer
 from prism import Command, Context
 
 
@@ -11,8 +11,8 @@ fn printer(ctx: Context) -> None:
     return
 
 
-fn build_printer_command() -> Arc[Command]:
-    var cmd = Arc(
+fn build_printer_command() -> ArcPointer[Command]:
+    var cmd = ArcPointer(
         Command(
             name="printer",
             usage="Print the first arg.",
@@ -38,8 +38,8 @@ fn say_goodbye(ctx: Context) -> None:
 
 
 # for some reason returning the command object without setting it to variable breaks the compiler
-fn build_say_command() -> Arc[Command]:
-    return Arc(
+fn build_say_command() -> ArcPointer[Command]:
+    return ArcPointer(
         Command(
             name="say",
             usage="Say something to someone",
@@ -48,8 +48,8 @@ fn build_say_command() -> Arc[Command]:
     )
 
 
-fn build_hello_command() -> Arc[Command]:
-    var cmd = Arc(
+fn build_hello_command() -> ArcPointer[Command]:
+    var cmd = ArcPointer(
         Command(
             name="hello",
             usage="Say hello to someone",
@@ -59,8 +59,8 @@ fn build_hello_command() -> Arc[Command]:
     return cmd
 
 
-fn build_goodbye_command() -> Arc[Command]:
-    var cmd = Arc(
+fn build_goodbye_command() -> ArcPointer[Command]:
+    var cmd = ArcPointer(
         Command(
             name="goodbye",
             usage="Say goodbye to someone",

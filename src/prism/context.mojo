@@ -1,4 +1,4 @@
-from memory import ArcPointer
+from memory import ArcPointerPointer
 from .command import Command
 
 

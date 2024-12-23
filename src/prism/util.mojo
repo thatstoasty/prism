@@ -1,5 +1,5 @@
 from collections import InlineList
-from memory import ArcPointer
+from memory import ArcPointerPointer
 
 
 fn split(text: String, sep: String, max_split: Int = -1) -> List[String]:
@@ -28,11 +28,7 @@ fn string_to_bool(value: String) -> Bool:
     Returns:
         The boolean equivalent of the string.
     """
-    alias truthy = InlineList[String, 3]("true", "True", "1")
-    for i in range(len(truthy)):
-        if value == truthy[i]:
-            return True
-    return False
+    return value in ["true", "True", "1"]
 
 
 fn to_string[T: StringableCollectionElement](vector: List[ArcPointer[T]]) -> String:

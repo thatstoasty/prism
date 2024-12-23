@@ -1,6 +1,6 @@
 from sys import argv
 from collections import Optional, Dict, InlineList
-from memory import ArcPointer
+from memory import ArcPointerPointer
 from os import abort
 import mog
 from .util import to_string, to_list
@@ -125,7 +125,7 @@ struct Command(CollectionElement, Writable, Stringable):
     """A struct representing a command that can be executed from the command line.
 
     ```mojo
-    from memory import ArcPointer
+    from memory import ArcPointerPointer
     from prism import Command, Context
 
     fn test(ctx: Context) -> None:
@@ -209,6 +209,7 @@ struct Command(CollectionElement, Writable, Stringable):
         usage: String,
         aliases: List[String] = List[String](),
         valid_args: List[String] = List[String](),
+        children: List[ArcPointer[Self]] = List[ArcPointer[Self]](),
         run: Optional[CmdFn] = None,
         pre_run: Optional[CmdFn] = None,
         post_run: Optional[CmdFn] = None,
@@ -227,6 +228,7 @@ struct Command(CollectionElement, Writable, Stringable):
             usage: The usage of the command.
             aliases: The aliases for the command.
             valid_args: The valid arguments for the command.
+            children: The child commands.
             run: The function to run when the command is executed.
             pre_run: The function to run before the command is executed.
             post_run: The function to run after the command is executed.
@@ -263,7 +265,7 @@ struct Command(CollectionElement, Writable, Stringable):
         self.arg_validator = arbitrary_args
         self.valid_args = valid_args
 
-        self.children = List[ArcPointer[Self]]()
+        self.children = children
         self.parent = List[ArcPointer[Self]](capacity=1)
 
         # These need to be mutable so we can add flags to them.

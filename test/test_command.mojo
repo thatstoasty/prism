@@ -1,4 +1,4 @@
-from memory import ArcPointer
+from memory import ArcPointerPointer
 import testing
 from prism.command import Command, Context
 from prism.flag_set import FlagSet

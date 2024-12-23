@@ -1,4 +1,4 @@
-from memory import Arc
+from memory import ArcPointer
 from prism import (
     Command,
     Context,

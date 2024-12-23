@@ -38,7 +38,7 @@ magic run mojo path/to/hello_world.mojo
 Here's an example of a basic command and subcommand!
 
 ```mojo
-from memory import Arc
+from memory import ArcPointer
 from prism import Command, Context
 
 

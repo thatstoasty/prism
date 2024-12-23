@@ -1,6 +1,7 @@
 from collections import Optional, Dict
 
 alias FlagActionFn = fn (ctx: Context, value: String) raises -> None
+"""The type of a function that runs after a flag has been processed."""
 
 
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of

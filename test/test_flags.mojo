@@ -1,4 +1,4 @@
-from memory import ArcPointer
+from memory import ArcPointerPointer
 import testing
 from prism.flag import Flag
 from prism.flag_set import FlagSet, string_to_bool

@@ -1198,3 +1198,34 @@ fn validate_required_flags(flags: FlagSet) raises -> None:
 
     if len(missing_flag_names) > 0:
         raise Error("Required flag(s): " + missing_flag_names.__str__() + " not set.")
+
+
+fn string_flag(
+    name: String,
+    usage: String,
+    shorthand: String = "",
+    default: String = "",
+    environment_variable: Optional[StringLiteral] = None,
+    file_path: Optional[StringLiteral] = None,
+    action: Optional[FlagActionFn] = None,
+) -> Flag:
+    """Adds a `String` flag to the flag set.
+    
+    Args:
+        name: The name of the flag.
+        usage: The usage of the flag.
+        shorthand: The shorthand of the flag.
+        default: The default value of the flag.
+        environment_variable: The environment variable to check for a value.
+        file_path: The file to check for a value.
+        action: Function to run after the flag has been processed.
+    """
+    return Flag(name=name,
+        shorthand=shorthand,
+        usage=usage,
+        default=str(default),
+        type="String",
+        environment_variable=environment_variable,
+        file_path=file_path,
+        action=action,
+    )

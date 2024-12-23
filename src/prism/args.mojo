@@ -1,4 +1,4 @@
-from memory import ArcPointer
+from memory import ArcPointerPointer
 from collections.optional import Optional
 from .command import ArgValidatorFn
 from .context import Context
