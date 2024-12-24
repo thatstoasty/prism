@@ -1,5 +1,5 @@
 from collections import InlineList
-from memory import ArcPointerPointer
+from memory import ArcPointer
 
 
 fn split(text: String, sep: String, max_split: Int = -1) -> List[String]:
@@ -9,7 +9,7 @@ fn split(text: String, sep: String, max_split: Int = -1) -> List[String]:
         text: The string to split.
         sep: The separator to split the string by.
         max_split: The maximum number of splits to perform.
-    
+
     Returns:
         The list of substrings.
     """
@@ -39,7 +39,7 @@ fn to_string[T: StringableCollectionElement](vector: List[ArcPointer[T]]) -> Str
 
     Args:
         vector: The vector to convert to a string.
-    
+
     Returns:
         The string representation of the vector.
     """
@@ -58,7 +58,7 @@ fn to_list(flag_names: VariadicListMem[String, _]) -> List[String]:
 
     Args:
         flag_names: The variadic list to convert to a list.
-    
+
     Returns:
         The list representation of the variadic list.
     """

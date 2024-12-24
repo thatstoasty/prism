@@ -1,29 +1,28 @@
 from collections import Dict
 from os import abort
 from .flag import Flag
-from .flag_set import REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
+from .flag_set import REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE, visit_all
 
 
-fn has_all_flags(flags: FlagSet, flag_names: List[String]) -> Bool:
+fn has_all_flags(flags: List[Flag], flag_names: List[String]) -> Bool:
     """Checks if all flags are defined in the FlagSet.
 
     Args:
         flags: The FlagSet to check for the flags.
         flag_names: The names of the flags to check for.
-    
+
     Returns:
         True if all flags are defined, False otherwise.
     """
     for name in flag_names:
-        try:
-            _ = flags.lookup(name[])
-        except:
-            return False
-    return True
+        for flag in flags:
+            if flag[].name == name[]:
+                return True
+    return False
 
 
 fn process_flag_for_group_annotation(
-    flags: FlagSet,
+    flags: List[Flag],
     flag: Flag,
     annotation: String,
     mut group_status: Dict[String, Dict[String, Bool]],
@@ -35,7 +34,7 @@ fn process_flag_for_group_annotation(
         flag: The flag to process.
         annotation: The annotation to check for.
         group_status: The status of the flag groups.
-    
+
     Raises:
         Error: If an error occurred while processing the flag.
     """
@@ -72,7 +71,7 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -
 
     Args:
         data: The dictionary of flag groups to validate.
-    
+
     Raises:
         Error: If an error occurred while validating the flag groups.
     """
@@ -107,7 +106,7 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) rais
 
     Args:
         data: The dictionary of flag groups to validate.
-    
+
     Raises:
         Error: If an error occurred while validating the flag groups.
     """
@@ -136,7 +135,7 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
 
     Args:
         data: The dictionary of flag groups to validate.
-    
+
     Raises:
         Error: If an error occurred while validating the flag groups.
     """
@@ -177,7 +176,7 @@ fn validate_flag_groups(
         group_status: The status of flag groups that are required together.
         one_required_group_status: The status of flag groups that require at least one flag to be set.
         mutually_exclusive_group_status: The status of flag groups that are mutually exclusive.
-    
+
     Raises:
         Error: If an error occurred while validating the flag groups.
     """
@@ -186,12 +185,12 @@ fn validate_flag_groups(
     validate_mutually_exclusive_flag_group(mutually_exclusive_group_status)
 
 
-fn validate_flag_groups(flags: FlagSet) raises -> None:
+fn validate_flag_groups(flags: List[Flag]) raises -> None:
     """Validates the status of flag groups.
 
     Args:
         flags: The flags to validate.
-    
+
     Raises:
         Error: If an error occurred while validating the flag groups.
     """
@@ -205,7 +204,7 @@ fn validate_flag_groups(flags: FlagSet) raises -> None:
         process_flag_for_group_annotation(flags, flag, ONE_REQUIRED, one_required_group_status)
         process_flag_for_group_annotation(flags, flag, MUTUALLY_EXCLUSIVE, mutually_exclusive_group_status)
 
-    flags.visit_all[flag_checker]()
+    visit_all[flag_checker](flags)
 
     # Validate required flag groups
     validate_flag_groups(group_status, one_required_group_status, mutually_exclusive_group_status)

@@ -1,11 +1,23 @@
 from sys import argv
 from collections import Optional, Dict, InlineList
-from memory import ArcPointerPointer
+from memory import ArcPointer
 from os import abort
 import mog
-from .util import to_string, to_list
+from .util import to_string, to_list, string_to_bool
 from .flag import Flag
-from .flag_set import FlagSet, validate_required_flags, REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE
+from .flag_set import (
+    visit_all,
+    validate_required_flags,
+    from_args,
+    REQUIRED,
+    REQUIRED_AS_GROUP,
+    ONE_REQUIRED,
+    MUTUALLY_EXCLUSIVE,
+    set_as,
+    set_annotation,
+    bool_flag,
+    string_flag,
+)
 from .flag_group import validate_flag_groups
 from .args import arbitrary_args, get_args
 from .context import Context
@@ -16,7 +28,7 @@ fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
 
     Args:
         flag_names: The flag names to concatenate.
-    
+
     Returns:
         The concatenated flag names.
     """
@@ -31,7 +43,7 @@ fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
 
 fn get_args_as_list() -> List[String]:
     """Returns the arguments passed to the executable as a list of strings.
-    
+
     Returns:
         The arguments passed to the executable as a list of strings.
     """
@@ -53,10 +65,10 @@ fn default_help(mut command: ArcPointer[Command]) raises -> String:
 
     Args:
         command: The command to generate help information for.
-    
+
     Returns:
         The help information for the command.
-    
+
     Raises:
         Any error that occurs while generating the help information.
     """
@@ -79,9 +91,9 @@ fn default_help(mut command: ArcPointer[Command]) raises -> String:
     var usage = usage_style.render(mog.join_vertical(mog.left, builder, "\n", cmd[].usage))
 
     builder = String()
-    if cmd[].flags.flags:
+    if cmd[].flags:
         builder.write(bold_style.render("Options"))
-        for flag in cmd[].flags.flags:
+        for flag in cmd[].flags:
             builder.write(option_style.render("\n-{}, --{}".format(flag[].shorthand, flag[].name)))
             builder.write("    {}".format(flag[].usage))
     var options = border_style.render(builder)
@@ -125,7 +137,7 @@ struct Command(CollectionElement, Writable, Stringable):
     """A struct representing a command that can be executed from the command line.
 
     ```mojo
-    from memory import ArcPointerPointer
+    from memory import ArcPointer
     from prism import Command, Context
 
     fn test(ctx: Context) -> None:
@@ -185,16 +197,16 @@ struct Command(CollectionElement, Writable, Stringable):
     var valid_args: List[String]
     """Valid arguments for the command."""
 
-    var local_flags: FlagSet
+    var local_flags: List[Flag]
     """Local flags for the command. TODO: Use this field to store cached results for local flags."""
 
-    var persistent_flags: FlagSet
+    var persistent_flags: List[Flag]
     """Local flags that also persist to children."""
 
-    var flags: FlagSet
+    var flags: List[Flag]
     """It is all local, persistent, and inherited flags."""
 
-    var _inherited_flags: FlagSet
+    var _inherited_flags: List[Flag]
     """Cached results from self._merge_flags()."""
 
     var children: List[ArcPointer[Self]]
@@ -207,6 +219,7 @@ struct Command(CollectionElement, Writable, Stringable):
         mut self,
         name: String,
         usage: String,
+        *,
         aliases: List[String] = List[String](),
         valid_args: List[String] = List[String](),
         children: List[ArcPointer[Self]] = List[ArcPointer[Self]](),
@@ -220,6 +233,7 @@ struct Command(CollectionElement, Writable, Stringable):
         persistent_post_run: Optional[CmdFn] = None,
         persistent_raising_pre_run: Optional[RaisingCmdFn] = None,
         persistent_raising_post_run: Optional[RaisingCmdFn] = None,
+        flags: List[Flag] = List[Flag](),
     ):
         """Constructs a new `Command`.
 
@@ -239,6 +253,7 @@ struct Command(CollectionElement, Writable, Stringable):
             persistent_post_run: The function to run after the command is executed. This persists to children.
             persistent_raising_pre_run: The function to run before the command is executed that returns an error. This persists to children.
             persistent_raising_post_run: The function to run after the command is executed that returns an error. This persists to children.
+            flags: The flags for the command.
         """
         if not run and not raising_run:
             abort("A command must have a run or raising_run function.")
@@ -269,11 +284,11 @@ struct Command(CollectionElement, Writable, Stringable):
         self.parent = List[ArcPointer[Self]](capacity=1)
 
         # These need to be mutable so we can add flags to them.
-        self.flags = FlagSet()
-        self.local_flags = FlagSet()
-        self.persistent_flags = FlagSet()
-        self._inherited_flags = FlagSet()
-        self.flags.bool_flag(name="help", shorthand="h", usage="Displays help information about the command.")
+        self.flags = flags
+        self.local_flags = List[Flag]()
+        self.persistent_flags = List[Flag]()
+        self._inherited_flags = List[Flag]()
+        self.flags.append(bool_flag(name="help", shorthand="h", usage="Displays help information about the command."))
 
     fn __moveinit__(mut self, owned existing: Self):
         """Initializes a new `Command` by moving the fields from an existing `Command`.
@@ -327,6 +342,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Args:
             writer: The formatter to write to.
         """
+
         @parameter
         fn write_optional(opt: Optional[String]):
             if opt:
@@ -348,12 +364,12 @@ struct Command(CollectionElement, Writable, Stringable):
             writer.write(self.valid_args.__str__())
         if self.flags:
             writer.write(", Flags: ")
-            writer.write(self.flags)
+            writer.write(self.flags.__str__())
         writer.write(")")
 
     fn full_name(self) -> String:
         """Traverses up the parent command tree to build the full command as a string.
-        
+
         Returns:
             The full command name.
         """
@@ -364,7 +380,7 @@ struct Command(CollectionElement, Writable, Stringable):
 
     fn root(self) -> ArcPointer[Command]:
         """Returns the root command of the command tree.
-        
+
         Returns:
             The root command in the tree.
         """
@@ -382,7 +398,7 @@ struct Command(CollectionElement, Writable, Stringable):
             arg: The argument to match against the command name or aliases.
             children: The children of the current command.
             leftover_start: The index to start the remaining arguments at.
-        
+
         Returns:
             The command that matches the argument and the remaining children to traverse.
         """
@@ -398,7 +414,7 @@ struct Command(CollectionElement, Writable, Stringable):
 
         Args:
             args: The arguments to traverse the command tree with.
-        
+
         Returns:
             The command that matches the arguments and the remaining arguments to pass to that command.
         """
@@ -424,11 +440,11 @@ struct Command(CollectionElement, Writable, Stringable):
 
     fn _execute_pre_run_hooks(self, ctx: Context, parents: List[ArcPointer[Self]]) raises -> None:
         """Runs the pre-run hooks for the command.
-        
+
         Args:
             ctx: The context of the command being executed.
             parents: The parents of the command to check for persistent pre-run hooks.
-        
+
         Raises:
             Any error that occurs while running the pre-run hooks.
         """
@@ -460,11 +476,11 @@ struct Command(CollectionElement, Writable, Stringable):
 
     fn _execute_post_run_hooks(self, ctx: Context, parents: List[ArcPointer[Self]]) raises -> None:
         """Runs the post-run hooks for the command.
-        
+
         Args:
             ctx: The context of the command being executed.
             parents: The parents of the command to check for persistent post-run hooks.
-        
+
         Raises:
             Any error that occurs while running the post-run hooks.
         """
@@ -527,10 +543,10 @@ struct Command(CollectionElement, Writable, Stringable):
 
         try:
             # Get the flags for the command to be executed.
-            var remaining_args = command.flags.from_args(remaining_args)
+            var remaining_args = from_args(command.flags, remaining_args)
 
             # Check if the help flag was passed
-            var help_passed = command.flags.get_bool("help")
+            var help_passed = command.get_bool("help")
             var command_ref = ArcPointer(command)
             if help_passed == True:
                 print(command.help(command_ref))
@@ -543,14 +559,14 @@ struct Command(CollectionElement, Writable, Stringable):
             validate_flag_groups(command.flags)
 
             # Run flag actions if they have any
-            var ctx = Context(command_ref, remaining_args)
+            var ctx = Context(remaining_args, command_ref)
 
             @parameter
             fn run_action(flag: Flag) raises -> None:
                 if flag.action and flag.value:
                     flag.action.value()(ctx, flag.value.value())
 
-            command.flags.visit_all[run_action]()
+            visit_all[run_action](command.flags)
 
             # Validate the remaining arguments
             command.arg_validator(ctx)
@@ -565,19 +581,22 @@ struct Command(CollectionElement, Writable, Stringable):
         except e:
             abort(e)
 
-    fn inherited_flags(self) -> FlagSet:
+    fn inherited_flags(self) -> List[Flag]:
         """Returns the flags for the command and inherited flags from its parent.
 
         Returns:
             The flags for the command and its parent.
         """
-        var flags = FlagSet()
+        var flags = List[Flag]()
 
         @parameter
         fn add_parent_persistent_flags(parent: ArcPointer[Self]) capturing -> None:
-            if parent[].persistent_flags:
-                flags += parent[].persistent_flags
-    
+            for flag in parent[].flags:
+                if flag[].persistent:
+                    flags.append(flag[])
+            # if parent[].persistent_flags:
+            #     flags += parent[].persistent_flags
+
         self.visit_parents[add_parent_persistent_flags]()
         return flags
 
@@ -599,17 +618,17 @@ struct Command(CollectionElement, Writable, Stringable):
         else:
             command[].parent.append(self)
 
-    fn mark_flag_required(mut self, flag_name: String) -> None:
-        """Marks the given flag with annotations so that `Prism` errors
-        if the command is invoked without the flag.
+    # fn mark_flag_required(mut self, flag_name: String) -> None:
+    #     """Marks the given flag with annotations so that `Prism` errors
+    #     if the command is invoked without the flag.
 
-        Args:
-            flag_name: The name of the flag to mark as required.
-        """
-        try:
-            self.flags.set_required(flag_name)
-        except e:
-            abort(e)
+    #     Args:
+    #         flag_name: The name of the flag to mark as required.
+    #     """
+    #     try:
+    #         self.flags.set_required(flag_name)
+    #     except e:
+    #         abort(e)
 
     fn mark_flags_required_together(mut self, *flag_names: String) -> None:
         """Marks the given flags with annotations so that `Prism` errors
@@ -622,7 +641,7 @@ struct Command(CollectionElement, Writable, Stringable):
         var names = concat_names(flag_names)
         try:
             for flag_name in flag_names:
-                self.flags.set_as[REQUIRED_AS_GROUP](flag_name[], names)
+                set_as[REQUIRED_AS_GROUP](self.flags, flag_name[], names)
         except e:
             abort(e)
 
@@ -637,7 +656,7 @@ struct Command(CollectionElement, Writable, Stringable):
         var names = concat_names(flag_names)
         try:
             for flag_name in flag_names:
-                self.flags.set_as[ONE_REQUIRED](flag_name[], names)
+                set_as[ONE_REQUIRED](self.flags, flag_name[], names)
         except e:
             abort(e)
 
@@ -652,25 +671,25 @@ struct Command(CollectionElement, Writable, Stringable):
         var names = concat_names(flag_names)
         try:
             for flag_name in flag_names:
-                self.flags.set_as[MUTUALLY_EXCLUSIVE](flag_name[], names)
+                set_as[MUTUALLY_EXCLUSIVE](self.flags, flag_name[], names)
         except e:
             abort(e)
 
-    fn mark_persistent_flag_required(mut self, flag_name: String) -> None:
-        """Marks the given persistent flag with annotations so that `Prism` errors
-        if the command is invoked without the flag.
+    # fn mark_persistent_flag_required(mut self, flag_name: String) -> None:
+    #     """Marks the given persistent flag with annotations so that `Prism` errors
+    #     if the command is invoked without the flag.
 
-        Args:
-            flag_name: The name of the flag to mark as required.
-        """
-        try:
-            self.persistent_flags.set_required(flag_name)
-        except e:
-            abort(e)
+    #     Args:
+    #         flag_name: The name of the flag to mark as required.
+    #     """
+    #     try:
+    #         self.persistent_flags.set_required(flag_name)
+    #     except e:
+    #         abort(e)
 
     fn has_parent(self) -> Bool:
         """Returns True if the command has a parent, False otherwise.
-        
+
         Returns:
             True if the command has a parent, False otherwise.
         """
@@ -685,3 +704,304 @@ struct Command(CollectionElement, Writable, Stringable):
         if self.has_parent():
             func(self.parent[0][])
             self.parent[0][].visit_parents[func]()
+
+    fn lookup(ref self, name: String, type: String = "") raises -> Pointer[Flag, __origin_of(self.flags)]:
+        """Returns an mutable or immutable Pointer to a Flag with the given name.
+        Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
+
+        Args:
+            name: The name of the Flag to lookup.
+            type: The type of the Flag to lookup.
+
+        Returns:
+            Optional Pointer to the Flag.
+
+        Raises:
+            Error: If the Flag is not found.
+        """
+        if type == "":
+            for i in range(len(self.flags)):
+                if self.flags[i].name == name:
+                    return Pointer.address_of(self.flags[i])
+        else:
+            for i in range(len(self.flags)):
+                if self.flags[i].name == name and self.flags[i].type == type:
+                    return Pointer.address_of(self.flags[i])
+
+        raise Error("FlagNotFoundError: Could not find the following flag: " + name)
+
+    fn get_string(self, name: String) raises -> String:
+        """Returns the value of a flag as a `String`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `String`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return self.lookup(name, "String")[].value_or_default()
+
+    fn get_bool(self, name: String) raises -> Bool:
+        """Returns the value of a flag as a `Bool`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Bool`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return string_to_bool(self.lookup(name, "Bool")[].value_or_default())
+
+    fn get_int(self, name: String, type: String = "Int") raises -> Int:
+        """Returns the value of a flag as an `Int`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+            type: The type of the flag.
+
+        Returns:
+            The value of the flag as an `Int`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return atol(self.lookup(name, type)[].value_or_default())
+
+    fn get_int8(self, name: String) raises -> Int8:
+        """Returns the value of a flag as a `Int8`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Int8`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return Int8(self.get_int(name, "Int8"))
+
+    fn get_int16(self, name: String) raises -> Int16:
+        """Returns the value of a flag as a `Int16`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Int16`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return Int16(self.get_int(name, "Int16"))
+
+    fn get_int32(self, name: String) raises -> Int32:
+        """Returns the value of a flag as a `Int32`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Int32`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return Int32(self.get_int(name, "Int32"))
+
+    fn get_int64(self, name: String) raises -> Int64:
+        """Returns the value of a flag as a `Int64`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Int64`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return Int64(self.get_int(name, "Int64"))
+
+    fn get_uint(self, name: String) raises -> UInt:
+        """Returns the value of a flag as a `UInt`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `UInt`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return UInt(self.get_int(name, "UInt"))
+
+    fn get_uint8(self, name: String) raises -> UInt8:
+        """Returns the value of a flag as a `UInt8`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `UInt8`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return UInt8(self.get_int(name, "UInt8"))
+
+    fn get_uint16(self, name: String) raises -> UInt16:
+        """Returns the value of a flag as a `UInt16`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `UInt16`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return UInt16(self.get_int(name, "UInt16"))
+
+    fn get_uint32(self, name: String) raises -> UInt32:
+        """Returns the value of a flag as a `UInt32`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `UInt32`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return UInt32(self.get_int(name, "UInt32"))
+
+    fn get_uint64(self, name: String) raises -> UInt64:
+        """Returns the value of a flag as a `UInt64`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `UInt64`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return UInt64(self.get_int(name, "UInt64"))
+
+    fn get_float16(self, name: String) raises -> Float16:
+        """Returns the value of a flag as a `Float16`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Float16`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return self.get_float64(name).cast[DType.float16]()
+
+    fn get_float32(self, name: String) raises -> Float32:
+        """Returns the value of a flag as a `Float32`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Float32`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return self.get_float64(name).cast[DType.float32]()
+
+    fn get_float64(self, name: String) raises -> Float64:
+        """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Float64`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return atof(self.lookup(name, "Float64")[].value_or_default())
+
+    fn _get_list(self, name: String, type: String) raises -> List[String]:
+        """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+            type: The type of the flag.
+
+        Returns:
+            The value of the flag as a `List[String]`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return self.lookup(name, type)[].value_or_default().split(sep=" ")
+
+    fn get_string_list(self, name: String) raises -> List[String]:
+        """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `List[String]`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return self._get_list(name, "StringList")
+
+    fn get_int_list(self, name: String) raises -> List[Int]:
+        """Returns the value of a flag as a `List[Int]`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `List[Int]`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        var values = self._get_list(name, "IntList")
+        var ints = List[Int](capacity=len(values))
+        for value in values:
+            ints.append(atol(value[]))
+        return ints
+
+    fn get_float64_list(self, name: String) raises -> List[Float64]:
+        """Returns the value of a flag as a `List[Float64]`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `List[Float64]`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        var values = self._get_list(name, "Float64List")
+        var floats = List[Float64](capacity=len(values))
+        for value in values:
+            floats.append(atof(value[]))
+        return floats

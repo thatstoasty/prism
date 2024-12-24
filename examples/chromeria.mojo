@@ -1,4 +1,4 @@
-from memory import ArcPointerPointer
+from memory import ArcPointer
 from prism import Command, Context
 
 
@@ -16,7 +16,9 @@ fn main() -> None:
         usage="This is a dummy command!",
         run=test,
         children=List[ArcPointer[Command]](
-            ArcPointer(Command(name="chromeria", usage="This is a dummy command!", run=hello))
+            ArcPointer(Command(
+                name="chromeria", usage="This is a dummy command!", run=hello
+            ))
         ),
     )
 

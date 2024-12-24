@@ -33,19 +33,25 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
     var action: Optional[FlagActionFn]
     """Function to run after the flag has been processed."""
     var changed: Bool
-    """Whether the flag has been changed from its default value."""
+    """If the flag has been changed from its default value."""
+    var required: Bool
+    """If the flag is required."""
+    var persistent: Bool
+    """If the flag should persist to children commands."""
 
     fn __init__(
         mut self,
         name: String,
         type: String,
+        *,
         shorthand: String = "",
         usage: String = "",
-        value: Optional[String] = None,
         environment_variable: Optional[StringLiteral] = None,
         file_path: Optional[StringLiteral] = None,
         action: Optional[FlagActionFn] = None,
         default: String = "",
+        required: Bool = False,
+        persistent: Bool = False,
     ) -> None:
         """Initializes a new Flag.
 
@@ -54,16 +60,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             type: The type of the flag.
             shorthand: The shorthand of the flag.
             usage: The usage of the flag.
-            value: The value of the flag.
             environment_variable: The environment variable to check for a value.
             file_path: The file to check for a value.
             action: Function to run after the flag has been processed.
             default: The default value of the flag.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
         """
         self.name = name
         self.shorthand = shorthand
         self.usage = usage
-        self.value = value
+        self.value = None
         self.environment_variable = environment_variable
         self.file_path = file_path
         self.default = default
@@ -71,6 +78,8 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         self.annotations = Dict[String, List[String]]()
         self.action = action
         self.changed = False
+        self.required = required
+        self.persistent = persistent
 
     fn __str__(self) -> String:
         """Returns a string representation of the Flag.
@@ -93,7 +102,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
 
         Args:
             other: The other Flag to compare against.
-        
+
         Returns:
             True if the Flags are equal, False otherwise.
         """
@@ -112,7 +121,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
 
         Args:
             other: The other Flag to compare against.
-        
+
         Returns:
             True if the Flags are not equal, False otherwise.
         """
@@ -135,25 +144,26 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             else:
                 writer.write(repr(None))
 
-        writer.write("Flag(name=")
-        writer.write(self.name)
-
+        writer.write("Flag(name=", self.name)
         if self.shorthand != "":
-            writer.write(", shorthand=")
-            writer.write(self.shorthand)
-        writer.write(", Usage=")
-        writer.write(self.usage)
-
+            writer.write(", shorthand=", self.shorthand)
+        writer.write(", Usage=", self.usage)
         if self.value:
             writer.write(", value=")
             write_optional(self.value)
-        writer.write(", default=")
-        writer.write(self.default)
-        writer.write(", type=")
-        writer.write(self.type)
-        writer.write(", changed=")
-        writer.write(self.changed)
-        writer.write(")")
+        writer.write(
+            ", default=",
+            self.default,
+            ", type=",
+            self.type,
+            ", changed=",
+            self.changed,
+            ", required=",
+            self.required,
+            ", persistent=",
+            self.persistent,
+            ")",
+        )
 
     fn set(mut self, value: String) -> None:
         """Sets the value of the flag.
