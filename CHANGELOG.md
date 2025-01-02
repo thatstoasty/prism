@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased] - yyyy-mm-dd
 
+## [0.3.0] - 2024-01-02
+
+- Refactored the `Command` API to define everything up front similar to `urfave/cli`.
+  - This is a big change to how the library works, users should review the examples and readme to see how to use the new API.
+- Removed usage of the `FlagSet` struct and moved to functions that operate on `List[Flag]`.
+
 ## [0.2.1] - 2024-11-02
 
 - Added environment variable and file path support for flags.

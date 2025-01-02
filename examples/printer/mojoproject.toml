@@ -11,4 +11,4 @@ version = "0.1.0"
 [dependencies]
 max = ">=24.6.0"
 mist = ">=0.1.9"
-prism = ">=0.2.2"
+prism = ">=0.3.0"

@@ -78,6 +78,8 @@ Due to the nature of self-referential structs, we need to use a smart pointer to
 `prism` provides the parsed arguments as part of the `ctx` argument.
 
 ```mojo
+from prism import Context
+
 fn printer(ctx: Context) raises -> None:
     if len(ctx.args) == 0:
         raise Error("No args provided.")
@@ -91,8 +93,15 @@ fn printer(ctx: Context) raises -> None:
 Commands can also be aliased to enable different ways to call the same command. You can change the command underneath the alias and maintain the same behavior.
 
 ```mojo
-print_tool = ArcPointer(Command(
-        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+from memory import ArcPointer
+from prism import Command
+
+fn main():
+    print_tool = ArcPointer(Command(
+        name="tool",
+        description="This is a dummy command!",
+        run=tool_func,
+        aliases=List[String]("object", "thing")
     ))
 ```
 
@@ -103,6 +112,8 @@ print_tool = ArcPointer(Command(
 Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
 
 ```mojo
+from prism import Command, Context
+
 fn pre_hook(ctx: Context) -> None:
     print("Pre-hook executed!")
 
@@ -126,11 +137,23 @@ fn main() -> None:
 Commands can have typed flags added to them to enable different behaviors.
 
 ```mojo
+from memory import ArcPointer
+from prism import Command, Flag
+import prism
+
 fn main() -> None:
     root = Command(
-        name="logger", description="Base command.", run=handler
+        name="logger",
+        description="Base command.",
+        run=handler,
+        flags=List[Flag](
+            prism.string_flag(
+                name="type",
+                shorthand="t",
+                usage="Formatting type: [json, custom]",
+            )
+        ),
     )
-    root.flags.string_flag(name="type", shorthand="t", usage="Formatting type: [json, custom]")
 ```
 
 ![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
@@ -140,33 +163,10 @@ fn main() -> None:
 Flag values can also be retrieved from environment variables, if a value is not provided as an argument.
 
 ```mojo
-fn test(ctx: Context) raises -> None:
-    name = ctx.command[].get_string("name")
-    print(String("Hello {}").format(name))
+from memory import ArcPointer
+from prism import Command, Flag
+import prism
 
-
-fn main() -> None:
-    root = Command(
-        name="greet",
-        usage="Greet a user!",
-        raising_run=test,
-    )
-
-    root.flags.string_flag(
-        name="name",
-        shorthand="n",
-        usage="The name of the person to greet.",
-        environment_variable="NAME",
-    )
-
-    root.execute()
-```
-
-### Default flag values from files
-
-Likewise, flag values can also be retrieved from a file as well, if a value is not provided as an argument.
-
-```mojo
 fn test(ctx: Context) raises -> None:
     name = ctx.command[].get_string("name")
     print("Hello {}".format(name))
@@ -177,13 +177,45 @@ fn main() -> None:
         name="greet",
         usage="Greet a user!",
         raising_run=test,
+        flags=List[Flag](
+            prism.string_flag(
+                name="name",
+                shorthand="n",
+                usage="The name of the person to greet.",
+                environment_variable="NAME",
+            )
+        ),
     )
 
-    root.flags.string_flag(
-        name="name",
-        shorthand="n",
-        usage="The name of the person to greet.",
-        file_path="~/.myapp/config",
+    root.execute()
+```
+
+### Default flag values from files
+
+Likewise, flag values can also be retrieved from a file as well, if a value is not provided as an argument.
+
+```mojo
+from memory import ArcPointer
+from prism import Command, Flag
+import prism
+
+fn test(ctx: Context) raises -> None:
+    name = ctx.command[].get_string("name")
+    print("Hello {}".format(name))
+
+fn main() -> None:
+    root = Command(
+        name="greet",
+        usage="Greet a user!",
+        raising_run=test,
+        flags=List[Flag](
+            prism.string_flag(
+                name="name",
+                shorthand="n",
+                usage="The name of the person to greet.",
+                file_path="~/.myapp/config",
+            )
+        ),
     )
 
     root.execute()
@@ -203,17 +235,33 @@ The precedence for flag value sources is as follows (highest to lowest):
 Flags and hooks can also be inherited by children commands! This can be useful for setting global flags or hooks that should be applied to all child commands.
 
 ```mojo
-fn main() -> None:
-    root = Command(name="nested", description="Base command.", run=base)
+from memory import ArcPointer
+from prism import Command, Flag
+import prism
 
-    get_command = ArcPointer(Command(
-        name="get",
-        description="Base command for getting some data.",
-        run=print_information,
-        persistent_pre_run=pre_hook,
-        persistent_post_run=post_hook,
-    ))
-    get_command[].bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
+fn main() -> None:
+    root = Command(
+        name="nested",
+        description="Base command.",
+        run=base,
+        children=List[ArcPointer[Command]](
+            ArcPointer(Command(
+                name="get",
+                description="Base command for getting some data.",
+                run=print_information,
+                persistent_pre_run=pre_hook,
+                persistent_post_run=post_hook,
+            ))
+        ),
+        flags=List[Flag](
+            prism.bool_flag(
+                name="lover",
+                shorthand="l",
+                usage="Are you an animal lover?",
+                persistent=True,
+            )
+        ),
+    )
 ```
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/main/doc/tapes/persistent.gif)
@@ -225,23 +273,25 @@ Flags can be grouped together to enable relationships between them. This can be 
 By default flags are considered optional. If you want your command to report an error when a flag has not been set, mark it as required:
 
 ```mojo
-print_tool = ArcPointer(Command(
-        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
-    ))
-    print_tool[].flags.bool_flag(name="required", shorthand="r", usage="Always required.")
-    print_tool[].mark_flag_required("required")
-```
+from memory import ArcPointer
+from prism import Command, Flag
+import prism
 
-Same for persistent flags:
-
-```mojo
-    root = Command(
-        name="my",
+fn main():
+    print_tool = ArcPointer(Command(
+        name="tool",
         description="This is a dummy command!",
-        run=test,
-    )
-    root.persistent_flags.bool_flag(name="free", shorthand="f", usage="Always required.")
-    root.mark_persistent_flag_required("free")
+        run=tool_func,
+        aliases=List[String]("object", "thing"),
+        flags=List[Flag](
+            prism.bool_flag(
+                name="required",
+                shorthand="r",
+                usage="Always required.",
+                required=True,
+            )
+        ),
+    ))
 ```
 
 ### Flag Groups
@@ -249,83 +299,102 @@ Same for persistent flags:
 If you have different flags that must be provided together (e.g. if they provide the `--color` flag they MUST provide the `--formatting` flag as well) then Prism can enforce that requirement:
 
 ```mojo
+from memory import ArcPointer
+from prism import Command, Flag
+import prism
+
+fn main();:
     print_tool = ArcPointer(Command(
-        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+        name="tool",
+        description="This is a dummy command!",
+        run=tool_func,
+        aliases=List[String]("object", "thing"),
+        flags=List[Flag](
+            prism.uint32_flag(
+                name="color",
+                shorthand="c",
+                usage="Text color",
+                default=0x3464eb,
+            ),
+            prism.string_flag(
+                name="formatting",
+                shorthand="f",
+                usage="Text formatting",
+            ),
+        ),
+        flags_required_together=List[String]("color", "formatting"),
     ))
-    print_tool[].flags.uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464eb)
-    print_tool[].flags.string_flag(name="formatting", shorthand="f", usage="Text formatting")
-    print_tool[].mark_flags_required_together("color", "formatting")
 ```
 
 You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
 
 ```mojo
+from memory import ArcPointer
+from prism import Command, Flag
+import prism
+
+fn main():
    print_tool = ArcPointer(Command(
-        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+        name="tool",
+        description="This is a dummy command!",
+        run=tool_func,
+        aliases=List[String]("object", "thing"),
+        flags=List[Flag](
+            prism.uint32_flag(
+                name="color",
+                shorthand="c",
+                usage="Text color",
+                default=0x3464eb,
+            ),
+            prism.uint32_flag(
+                name="hue",
+                shorthand="x",
+                usage="Text color",
+                default="#3464eb",
+            ),
+        ),
+        mutually_exclusive_flags=List[String]("color", "hue"),
     ))
-    print_tool[].string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    print_tool[].string_flag(name="hue", shorthand="x", usage="Text color", default="#3464eb")
-    print_tool[].mark_flags_mutually_exclusive("color", "hue")
 ```
 
 If you want to require at least one flag from a group to be present, you can use `mark_flags_one_required`. This can be combined with `mark_flags_mutually_exclusive` to enforce exactly one flag from a given group:
 
 ```mojo
+from memory import ArcPointer
+from prism import Command, Flag
+import prism
+
+fn main():
    print_tool = ArcPointer(Command(
-        name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
+        name="tool",
+        description="This is a dummy command!",
+        run=tool_func,
+        aliases=List[String]("object", "thing"),
+        flags=List[Flag](
+            prism.uint32_flag(
+                name="color",
+                shorthand="c",
+                usage="Text color",
+                default=0x3464eb,
+            ),
+            prism.string_flag(
+                name="formatting",
+                shorthand="f",
+                usage="Text formatting",
+            ),
+        ),
+        one_required_flags=List[String]("color", "formatting"),
+        mutually_exclusive_flags=List[String]("color", "formatting"),
     ))
-    print_tool[].flags.string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
-    print_tool[].flags.string_flag(name="formatting", shorthand="f", usage="Text formatting")
-    print_tool[].mark_flags_one_required("color", "formatting")
-    print_tool[].mark_flags_mutually_exclusive("color", "formatting")
 ```
 
 In these cases:
 
-- Both local and persistent flags can be used.
-  - NOTE: the group is only enforced on commands where every flag is defined.
+- The group is only enforced on commands where every flag is defined.
 - A flag may appear in multiple groups.
 - A group may contain any number of flags.
 
 ![Flag Groups](https://github.com/thatstoasty/prism/blob/main/doc/tapes/flag_groups.gif)
-
-> NOTE: If you want to enforce a rule on persistent flags, then the child command must be added to the parent command **BEFORE** setting the rule.
-
-See `examples/flag_groups/child.mojo` for an example.
-
-```mojo
-fn main() -> None:
-    root = Command(
-        name="my",
-        description="This is a dummy command!",
-        run=test,
-    )
-    # Persistent flags are defined on the parent command.
-    root.persistent_flags.bool_flag(name="required", shorthand="r", usage="Always required.")
-    root.persistent_flags.string_flag(name="host", shorthand="h", usage="Host")
-    root.persistent_flags.string_flag(name="port", shorthand="p", usage="Port")
-    root.mark_persistent_flag_required("required")
-
-    print_tool = ArcPointer(Command(
-        name="tool", description="This is a dummy command!", run=tool_func
-    ))
-    print_tool[].flags.bool_flag(name="also", shorthand="a", usage="Also always required.")
-    print_tool[].flags.string_flag(name="uri", shorthand="u", usage="URI")
-
-    # Child commands are added to the parent command.
-    root.add_subcommand(print_tool)
-
-    # Rules are set on the child command, which can include persistent flags inherited from the parent command.
-    # When executing `mark_flags_required_together()` or `mark_flags_mutually_exclusive()`,
-    # the inherited flags from all parents will merged into the print_tool[].flags FlagSet.
-    print_tool[].mark_flag_required("also")
-    print_tool[].mark_flags_required_together("host", "port")
-    print_tool[].mark_flags_mutually_exclusive("host", "uri")
-
-    root.execute()
-```
-
-![Flag Groups 2](https://github.com/thatstoasty/prism/blob/main/doc/tapes/flag_groups-2.gif)
 
 ## Positional and Custom Arguments
 
@@ -352,6 +421,10 @@ If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 Commands are configured to accept a `--help` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed.
 
 ```mojo
+from memory import ArcPointer
+from prism import Command
+import prism
+
 fn help_func(mut command: ArcPointer[Command]) -> String:
     return "My help function."
 
@@ -389,7 +462,7 @@ fn main() -> None:
 ## Improvements
 
 - Tree traversal improvements.
-- `ArcPointerPointer[Command]` being passed to validators and command functions is marked as mut because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
+- `ArcPointer[Command]` being passed to validators and command functions is marked as `mut` because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
 - For now, help functions and arg validators will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
 - Once we have trait objects, use actual typed flags instead of converting values to and from strings.
 
