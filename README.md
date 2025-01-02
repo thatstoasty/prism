@@ -4,7 +4,7 @@ A Budding CLI Library!
 
 Inspired by: `Cobra` and `urfave/cli`!
 
-![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.5-orange)
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.6-orange)
 ![Build Status](https://github.com/thatstoasty/prism/actions/workflows/build.yml/badge.svg)
 ![Test Status](https://github.com/thatstoasty/prism/actions/workflows/test.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -55,21 +55,23 @@ fn main() -> None:
         name="hello",
         description="This is a dummy command!",
         run=test,
+        children=List[ArcPointer[Command]](
+            ArcPointer(Command(
+                name="chromeria",
+                description="This is a dummy command!",
+                run=hello
+            ))
+        ),
     )
 
-    hello_command = Arc(Command(name="chromeria", description="This is a dummy command!", run=hello))
-
-    root.add_subcommand(hello_command)
     root.execute()
 ```
 
 ![Chromeria](https://github.com/thatstoasty/prism/blob/main/doc/tapes/hello-chromeria.gif)
 
-## Why are subcommands wrapped with `Arc`?
+## Why are subcommands wrapped with `ArcPointer`?
 
-Due to the nature of self-referential structs, we need to use a smart pointer to reference the subcommand. The child command is owned by the `Arc` pointer, and that pointer is then shared across the program execution.
-
-This will be changed to `Box` in the upcoming release.
+Due to the nature of self-referential structs, we need to use a smart pointer to reference the subcommand. The child command is owned by the `ArcPointer`, and that pointer is then shared across the program execution.
 
 ## Accessing arguments
 
@@ -89,7 +91,7 @@ fn printer(ctx: Context) raises -> None:
 Commands can also be aliased to enable different ways to call the same command. You can change the command underneath the alias and maintain the same behavior.
 
 ```mojo
-print_tool = Arc(Command(
+print_tool = ArcPointer(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
 ```
@@ -139,7 +141,7 @@ Flag values can also be retrieved from environment variables, if a value is not 
 
 ```mojo
 fn test(ctx: Context) raises -> None:
-    name = ctx.command[].flags.get_string("name")
+    name = ctx.command[].get_string("name")
     print(String("Hello {}").format(name))
 
 
@@ -166,8 +168,8 @@ Likewise, flag values can also be retrieved from a file as well, if a value is n
 
 ```mojo
 fn test(ctx: Context) raises -> None:
-    name = ctx.command[].flags.get_string("name")
-    print(String("Hello {}").format(name))
+    name = ctx.command[].get_string("name")
+    print("Hello {}".format(name))
 
 
 fn main() -> None:
@@ -204,14 +206,14 @@ Flags and hooks can also be inherited by children commands! This can be useful f
 fn main() -> None:
     root = Command(name="nested", description="Base command.", run=base)
 
-    get_command = Arc(Command(
+    get_command = ArcPointer(Command(
         name="get",
         description="Base command for getting some data.",
         run=print_information,
         persistent_pre_run=pre_hook,
         persistent_post_run=post_hook,
     ))
-    get_command[].flags.persistent_flags.bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
+    get_command[].bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
 ```
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/main/doc/tapes/persistent.gif)
@@ -223,7 +225,7 @@ Flags can be grouped together to enable relationships between them. This can be 
 By default flags are considered optional. If you want your command to report an error when a flag has not been set, mark it as required:
 
 ```mojo
-print_tool = Arc(Command(
+print_tool = ArcPointer(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
     print_tool[].flags.bool_flag(name="required", shorthand="r", usage="Always required.")
@@ -247,7 +249,7 @@ Same for persistent flags:
 If you have different flags that must be provided together (e.g. if they provide the `--color` flag they MUST provide the `--formatting` flag as well) then Prism can enforce that requirement:
 
 ```mojo
-    print_tool = Arc(Command(
+    print_tool = ArcPointer(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
     print_tool[].flags.uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464eb)
@@ -258,7 +260,7 @@ If you have different flags that must be provided together (e.g. if they provide
 You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
 
 ```mojo
-   print_tool = Arc(Command(
+   print_tool = ArcPointer(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
     print_tool[].string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
@@ -269,7 +271,7 @@ You can also prevent different flags from being provided together if they repres
 If you want to require at least one flag from a group to be present, you can use `mark_flags_one_required`. This can be combined with `mark_flags_mutually_exclusive` to enforce exactly one flag from a given group:
 
 ```mojo
-   print_tool = Arc(Command(
+   print_tool = ArcPointer(Command(
         name="tool", description="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing")
     ))
     print_tool[].flags.string_flag(name="color", shorthand="c", usage="Text color", default="#3464eb")
@@ -304,7 +306,7 @@ fn main() -> None:
     root.persistent_flags.string_flag(name="port", shorthand="p", usage="Port")
     root.mark_persistent_flag_required("required")
 
-    print_tool = Arc(Command(
+    print_tool = ArcPointer(Command(
         name="tool", description="This is a dummy command!", run=tool_func
     ))
     print_tool[].flags.bool_flag(name="also", shorthand="a", usage="Also always required.")
@@ -338,6 +340,8 @@ Validation of positional arguments can be specified using the `arg_validator` fi
   - `range_args[min, max]` - report an error if the number of args is not between min and max.
 - Content of the arguments:
   - `valid_args` - report an error if there are any positional args not specified in the `valid_args` field of `Command`, which can optionally be set to a list of valid values for positional args.
+- Composition of validators:
+  - `match_all` - pass a list of validators to ensure all of them pass.
 
 If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 
@@ -348,7 +352,7 @@ If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 Commands are configured to accept a `--help` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed.
 
 ```mojo
-fn help_func(inout command: Arc[Command]) -> String:
+fn help_func(mut command: ArcPointer[Command]) -> String:
     return "My help function."
 
 fn main() -> None:
@@ -378,11 +382,14 @@ fn main() -> None:
 - Add support for combining shorthand flags, like so: `-abc` instead of `-a -b -c`.
 - Try to avoid `Dict` and `try/except` blocks in order to support compile time command building.
 - Add persistent flag mutually exclusive and required together checks back in.
+- Add version flag and version function, like with `help`.
+- Use os exiting function, instead of just panicking. This will let users handle the case where we normally just panic.
+- Add support for stdout/stderr writer configuration, instead of just using print.
 
 ## Improvements
 
 - Tree traversal improvements.
-- `ArcPointer[Command]` being passed to validators and command functions is marked as inout because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
+- `ArcPointerPointer[Command]` being passed to validators and command functions is marked as mut because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
 - For now, help functions and arg validators will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
 - Once we have trait objects, use actual typed flags instead of converting values to and from strings.
 

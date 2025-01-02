@@ -1,7 +1,7 @@
 from collections import Optional, Dict, InlineList
 from utils import Variant
 from memory import Pointer
-from .flag import Flag, FlagActionFn
+from .flag import Flag, FlagActionFn, FType
 from ._util import string_to_bool, split
 from ._flag_parser import FlagParser
 
@@ -179,17 +179,13 @@ fn lookup[type: String = ""](ref flags: List[Flag], name: String) raises -> Poin
     Raises:
         Error: If the Flag is not found.
     """
-    constrained[
-        type not in ["String", "Bool", "Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64", "Float16", "Float32", "Float64", "StringList", "IntList", "Float64List"],
-        "type must be one of `String`, `Bool`, `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Float16`, `Float32`, `Float64`, `StringList`, `IntList`, `Float64List`.",
-    ]()
+    constrained[type not in FType.ValidTypes, "type must be one of `String`, `Bool`, `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Float16`, `Float32`, `Float64`, `StringList`, `IntList`, `Float64List`."]()
     if type == "":
         for i in range(len(flags)):
             if flags[i].name == name:
                 return Pointer.address_of(flags[i])
     else:
         for i in range(len(flags)):
-            print(flags[i].name, name, flags[i].name == name, flags[i].type, type, flags[i].type == type)
             if flags[i].name == name and flags[i].type == type:
                 return Pointer.address_of(flags[i])
 

@@ -4,6 +4,65 @@ alias FlagActionFn = fn (ctx: Context, value: String) raises -> None
 """The type of a function that runs after a flag has been processed."""
 
 
+@value
+@register_passable("trivial")
+struct FType():
+    """Flag types enum helper."""
+    alias String = "String"
+    alias Bool = "Bool"
+    alias Int = "Int"
+    alias Int8 = "Int8"
+    alias Int16 = "Int16"
+    alias Int32 = "Int32"
+    alias Int64 = "Int64"
+    alias UInt = "UInt"
+    alias UInt8 = "UInt8"
+    alias UInt16 = "UInt16"
+    alias UInt32 = "UInt32"
+    alias UInt64 = "UInt64"
+    alias Float16 = "Float16"
+    alias Float32 = "Float32"
+    alias Float64 = "Float64"
+    alias StringList = "StringList"
+    alias IntList = "IntList"
+    alias Float64List = "Float64List"
+
+    alias IntTypes = [
+        Self.Int,
+        Self.Int8,
+        Self.Int16,
+        Self.Int32,
+        Self.Int64,
+        Self.UInt,
+        Self.UInt8,
+        Self.UInt16,
+        Self.UInt32,
+        Self.UInt64,
+    ]
+    alias FloatTypes = [Self.Float16, Self.Float32, Self.Float64]
+    alias ListTypes = [Self.StringList, Self.IntList, Self.Float64List]
+    alias ValidTypes = [
+        Self.String,
+        Self.Bool,
+        Self.Int,
+        Self.Int8,
+        Self.Int16,
+        Self.Int32,
+        Self.Int64,
+        Self.UInt,
+        Self.UInt8,
+        Self.UInt16,
+        Self.UInt32,
+        Self.UInt64,
+        Self.Float16,
+        Self.Float32,
+        Self.Float64,
+        Self.StringList,
+        Self.IntList,
+        Self.Float64List,
+    ]
+
+
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
 # needing to cast values to and from string.
 @value

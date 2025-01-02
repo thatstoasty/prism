@@ -3,7 +3,7 @@ from collections import Optional, Dict, InlineList
 from memory import ArcPointer
 import mog
 from ._util import to_string, to_list, string_to_bool, panic
-from .flag import Flag, bool_flag
+from .flag import Flag, FType, bool_flag
 from ._flag_set import (
     visit_all,
     validate_required_flags,
@@ -623,18 +623,6 @@ struct Command(CollectionElement, Writable, Stringable):
         """Returns all flags for the command and inherited flags from its parent."""
         self.flags += self.inherited_flags()
 
-    # fn add_subcommand(mut self, mut command: ArcPointer[Self]):
-    #     """Adds child command and set's child's parent attribute to self.
-
-    #     Args:
-    #         command: The command to add as a child of self.
-    #     """
-    #     self.children.append(command)
-    #     if command[].parent:
-    #         command[].parent[0] = self
-    #     else:
-    #         command[].parent.append(self)
-
     fn _mark_flag_group_as[annotation: String](mut self, flag_names: List[String]) -> None:
         """Marks the given flags with annotations so that `Prism` errors
 
@@ -690,7 +678,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return lookup["String"](self.flags, name)[].value_or_default()
+        return lookup[FType.String](self.flags, name)[].value_or_default()
 
     fn get_bool(self, name: String) raises -> Bool:
         """Returns the value of a flag as a `Bool`. If it isn't set, then return the default value.
@@ -721,10 +709,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        constrained[
-            type not in ["Int", "Int8", "Int16", "Int32", "Int64", "UInt", "UInt8", "UInt16", "UInt32", "UInt64"],
-            "type must be one of `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, or `UInt64`.",
-        ]()
+        constrained[type not in FType.IntTypes, "type must be one of `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, or `UInt64`."]()
         return atol(lookup[type](self.flags, name)[].value_or_default())
 
     fn get_int8(self, name: String) raises -> Int8:
@@ -739,7 +724,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return Int8(self.get_int["Int8"](name))
+        return Int8(self.get_int[FType.Int8](name))
 
     fn get_int16(self, name: String) raises -> Int16:
         """Returns the value of a flag as a `Int16`. If it isn't set, then return the default value.
@@ -753,7 +738,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return Int16(self.get_int["Int16"](name))
+        return Int16(self.get_int[FType.Int16](name))
 
     fn get_int32(self, name: String) raises -> Int32:
         """Returns the value of a flag as a `Int32`. If it isn't set, then return the default value.
@@ -767,7 +752,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return Int32(self.get_int["Int32"](name))
+        return Int32(self.get_int[FType.Int32](name))
 
     fn get_int64(self, name: String) raises -> Int64:
         """Returns the value of a flag as a `Int64`. If it isn't set, then return the default value.
@@ -781,7 +766,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return Int64(self.get_int["Int64"](name))
+        return Int64(self.get_int[FType.Int64](name))
 
     fn get_uint(self, name: String) raises -> UInt:
         """Returns the value of a flag as a `UInt`. If it isn't set, then return the default value.
@@ -795,7 +780,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return UInt(self.get_int["UInt"](name))
+        return UInt(self.get_int[FType.UInt](name))
 
     fn get_uint8(self, name: String) raises -> UInt8:
         """Returns the value of a flag as a `UInt8`. If it isn't set, then return the default value.
@@ -809,7 +794,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return UInt8(self.get_int["UInt8"](name))
+        return UInt8(self.get_int[FType.UInt8](name))
 
     fn get_uint16(self, name: String) raises -> UInt16:
         """Returns the value of a flag as a `UInt16`. If it isn't set, then return the default value.
@@ -823,7 +808,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return UInt16(self.get_int["UInt16"](name))
+        return UInt16(self.get_int[FType.UInt16](name))
 
     fn get_uint32(self, name: String) raises -> UInt32:
         """Returns the value of a flag as a `UInt32`. If it isn't set, then return the default value.
@@ -837,7 +822,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return UInt32(self.get_int["UInt32"](name))
+        return UInt32(self.get_int[FType.UInt32](name))
 
     fn get_uint64(self, name: String) raises -> UInt64:
         """Returns the value of a flag as a `UInt64`. If it isn't set, then return the default value.
@@ -851,7 +836,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return UInt64(self.get_int["UInt64"](name))
+        return UInt64(self.get_int[FType.UInt64](name))
     
     fn get_float[type: String](self, name: String) raises -> Float64:
         """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
@@ -868,6 +853,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
+        constrained[type not in FType.FloatTypes, "type must be one of `Float16`, `Float32`, `Float64`"]()
         return atof(lookup[type](self.flags, name)[].value_or_default())
 
     fn get_float16(self, name: String) raises -> Float16:
@@ -882,7 +868,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return self.get_float["Float16"](name).cast[DType.float16]()
+        return self.get_float[FType.Float16](name).cast[DType.float16]()
 
     fn get_float32(self, name: String) raises -> Float32:
         """Returns the value of a flag as a `Float32`. If it isn't set, then return the default value.
@@ -896,7 +882,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return self.get_float["Float32"](name).cast[DType.float32]()
+        return self.get_float[FType.Float32](name).cast[DType.float32]()
 
     fn get_float64(self, name: String) raises -> Float64:
         """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
@@ -910,7 +896,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return self.get_float["Float64"](name)
+        return self.get_float[FType.Float64](name)
 
     fn _get_list[type: String](self, name: String) raises -> List[String]:
         """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
@@ -927,10 +913,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        constrained[
-            type not in ["StringList", "IntList", "Float64List"],
-            "type must be one of `StringList`, `IntList`, or `Float64List`.",
-        ]()
+        constrained[type not in FType.ListTypes, "type must be one of `StringList`, `IntList`, or `Float64List`."]()
         return lookup[type](self.flags, name)[].value_or_default().split(sep=" ")
 
     fn get_string_list(self, name: String) raises -> List[String]:
@@ -945,7 +928,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return self._get_list["StringList"](name)
+        return self._get_list[FType.StringList](name)
 
     fn get_int_list(self, name: String) raises -> List[Int]:
         """Returns the value of a flag as a `List[Int]`. If it isn't set, then return the default value.
@@ -959,7 +942,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        var values = self._get_list["IntList"](name)
+        var values = self._get_list[FType.IntList](name)
         var ints = List[Int](capacity=len(values))
         for value in values:
             ints.append(atol(value[]))
@@ -977,7 +960,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        var values = self._get_list["Float64List"](name)
+        var values = self._get_list[FType.Float64List](name)
         var floats = List[Float64](capacity=len(values))
         for value in values:
             floats.append(atof(value[]))
