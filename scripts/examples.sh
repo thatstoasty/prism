@@ -12,6 +12,9 @@ magic run mojo build $TEMP_DIR/hello_world.mojo -o $TEMP_DIR/hello_world
 magic run mojo build $TEMP_DIR/fg_parent.mojo -o $TEMP_DIR/parent
 magic run mojo build $TEMP_DIR/fg_child.mojo -o $TEMP_DIR/child
 magic run mojo build $TEMP_DIR/arg_validators.mojo -o $TEMP_DIR/validators
+magic run mojo build $TEMP_DIR/alt_flag_values.mojo -o $TEMP_DIR/alt_flag_values
+magic run mojo build $TEMP_DIR/flag_action.mojo -o $TEMP_DIR/flag_action
+magic run mojo build $TEMP_DIR/list_flags.mojo -o $TEMP_DIR/list_flags
 
 echo "[INFO] Running examples..."
 # Need to run these first examples as part of a mojo project as they have external dependencies.
@@ -45,6 +48,15 @@ $TEMP_DIR/validators minimum_n_args Hello from Mojo!
 $TEMP_DIR/validators maximum_n_args Hello from Mojo!
 $TEMP_DIR/validators exact_args Hello from Mojo!
 $TEMP_DIR/validators range_args Hello from Mojo!
+$TEMP_DIR/alt_flag_values -n Mojo
+$TEMP_DIR/alt_flag_values
+$TEMP_DIR/flag_action
+$TEMP_DIR/flag_action -n Mojo
+$TEMP_DIR/list_flags 
+$TEMP_DIR/list_flags -n My -n Mojo
+$TEMP_DIR/list_flags sum -n 1 -n 2 -n 3 -n 4 -n 5
+$TEMP_DIR/list_flags sum_float -n 1.2 -n 2.3 -n 3.4 -n 4.5 -n 5.6
+
 
 echo "[INFO] Cleaning up the example directory."
 rm -R $TEMP_DIR

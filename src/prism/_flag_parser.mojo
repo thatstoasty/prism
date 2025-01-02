@@ -1,8 +1,8 @@
-from utils import Span
-from collections import InlineArray
 import os
-from .flag_set import FlagSet
-from .util import split
+from memory import Span
+from collections import InlineArray
+from ._flag_set import names, lookup, lookup_name
+from ._util import split
 
 
 struct FlagParser:
@@ -11,36 +11,45 @@ struct FlagParser:
     var index: Int
     """The current index in the arguments list."""
 
-    fn __init__(inout self) -> None:
+    fn __init__(mut self) -> None:
+        """Initializes the FlagParser."""
         self.index = 0
 
-    fn parse_flag(self, argument: String, arguments: Span[String], flags: FlagSet) raises -> Tuple[String, String, Int]:
+    fn parse_flag(
+        self, argument: String, arguments: Span[String], flags: List[Flag]
+    ) raises -> Tuple[String, String, Int]:
         """Parses a flag and returns the name, value, and the index to increment by.
 
         Args:
             argument: The argument to parse.
             arguments: The list of arguments passed via the command line.
             flags: The flags passed via the command line.
+
+        Returns:
+            The name, value, the index to increment by, and an error if one occurred.
+
+        Raises:
+            Error: If an error occurred while parsing the flag.
         """
         # Flag with value set like "--flag=<value>"
         if argument.find("=") != -1:
-            flag = split(argument, "=")
-            name = flag[0][2:]
-            value = flag[1]
+            var flag = split(argument, "=")
+            var name = flag[0][2:]
+            var value = flag[1]
 
-            if name not in flags.names():
+            if name not in names(flags):
                 raise Error("Command does not accept the flag supplied: " + name)
 
             return name, value, 1
 
         # Flag with value set like "--flag <value>"
-        name = argument[2:]
-        if name not in flags.names():
+        var name = argument[2:]
+        if name not in names(flags):
             raise Error("Command does not accept the flag supplied: " + name)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
         try:
-            _ = flags.lookup(name, "Bool")
+            _ = lookup["Bool"](flags, name)
             return name, String("True"), 1
         except:
             pass
@@ -55,7 +64,7 @@ struct FlagParser:
         return name, arguments[self.index + 1], 2
 
     fn parse_shorthand_flag(
-        self, argument: String, arguments: Span[String], flags: FlagSet
+        self, argument: String, arguments: Span[String], flags: List[Flag]
     ) raises -> Tuple[String, String, Int]:
         """Parses a shorthand flag and returns the name, value, and the index to increment by.
 
@@ -66,27 +75,30 @@ struct FlagParser:
 
         Returns:
             The name, value, the index to increment by, and an error if one occurred.
+
+        Raises:
+            Error: If an error occurred while parsing the shorthand flag.
         """
         # Flag with value set like "-f=<value>"
         if argument.find("=") != -1:
-            flag = split(argument, "=")
-            shorthand = flag[0][1:]
-            value = flag[1]
-            name = flags.lookup_name(shorthand)
-            if name not in flags.names():
+            var flag = split(argument, "=")
+            var shorthand = flag[0][1:]
+            var value = flag[1]
+            var name = lookup_name(flags, shorthand)
+            if name not in names(flags):
                 raise Error("Command does not accept the shorthand flag supplied: " + name)
 
             return name, value, 1
 
         # Flag with value set like "-f <value>"
-        shorthand = argument[1:]
-        name = flags.lookup_name(shorthand)
-        if name not in flags.names():
+        var shorthand = argument[1:]
+        var name = lookup_name(flags, shorthand)
+        if name not in names(flags):
             raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
         try:
-            _ = flags.lookup(name, "Bool")
+            _ = lookup["Bool"](flags, name)
             return name, String("True"), 1
         except:
             pass
@@ -101,16 +113,22 @@ struct FlagParser:
         return name, arguments[self.index + 1], 2
 
     # TODO: This parsing is dirty atm, will come back around and clean it up.
-    fn parse(inout self, inout flags: FlagSet, arguments: List[String]) raises -> List[String]:
+    fn parse(mut self, mut flags: List[Flag], arguments: List[String]) raises -> List[String]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
             flags: The flags to parse.
             arguments: The arguments passed via the command line.
+
+        Returns:
+            The arguments that are not flags.
+
+        Raises:
+            Error: If an error occurred while parsing the flags.
         """
-        remaining_args = List[String](capacity=len(arguments))
+        var remaining_args = List[String](capacity=len(arguments))
         while self.index < len(arguments):
-            argument = arguments[self.index]
+            var argument = arguments[self.index]
 
             # Positional argument
             if not argument.startswith("-", 0, 1):
@@ -120,7 +138,7 @@ struct FlagParser:
 
             var name: String
             var value: String
-            increment_by = 0
+            var increment_by = 0
 
             # Full flag
             if argument.startswith("--", 0, 2):
@@ -133,21 +151,19 @@ struct FlagParser:
 
             # Set the value of the flag.
             alias list_types = InlineArray[String, 3]("StringList", "IntList", "Float64List")
-            flag = flags.lookup(name)
+            var flag = lookup(flags, name)
             if flag[].type in list_types:
                 if not flag[].changed:
                     flag[].set(value)
                 else:
-                    # TODO: Switch to write to the string in the next update.
-                    writer = flag[].value.value()._unsafe_to_formatter()
-                    writer.write(" ", value)
+                    flag[].value.value().write(" ", value)
             else:
                 flag[].set(value)
             self.index += increment_by
 
         # If flags are not set, check if they can be set from an environment variable or from a file.
         # Set it from that value if there is one available.
-        for flag in flags.flags:
+        for flag in flags:
             if not flag[].value:
                 if flag[].environment_variable:
                     value = os.getenv(flag[].environment_variable.value())

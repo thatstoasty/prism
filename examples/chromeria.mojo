@@ -1,4 +1,4 @@
-from memory import Arc
+from memory import ArcPointer
 from prism import Command, Context
 
 
@@ -15,9 +15,9 @@ fn main() -> None:
         name="hello",
         usage="This is a dummy command!",
         run=test,
+        children=List[ArcPointer[Command]](
+            ArcPointer(Command(name="chromeria", usage="This is a dummy command!", run=hello))
+        ),
     )
 
-    var hello_command = Arc(Command(name="chromeria", usage="This is a dummy command!", run=hello))
-
-    root.add_subcommand(hello_command)
     root.execute()

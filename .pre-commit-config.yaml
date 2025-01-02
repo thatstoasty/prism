@@ -13,3 +13,9 @@ repos:
         language: system
         files: '\.(mojo|🔥)$'
         stages: [commit]
+      - id: mojo-docs
+        name: mojo-docs
+        entry: python3 ./scripts/check-docstrings.py
+        language: system
+        pass_filenames: false
+        stages: [commit]
