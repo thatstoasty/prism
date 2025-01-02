@@ -8,7 +8,7 @@ def test_command_operations():
     fn dummy(ctx: Context) -> None:
         return None
 
-    cmd = Command(
+    var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,

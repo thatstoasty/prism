@@ -1,7 +1,6 @@
 from memory import ArcPointer
 from prism import Command, Context, Flag
-from prism.flag_set import string_flag
-
+import prism
 
 fn test(ctx: Context) raises -> None:
     name = ctx.command[].get_string("name")
@@ -19,7 +18,7 @@ fn main() -> None:
         usage="Greet a user!",
         raising_run=test,
         flags=List[Flag](
-            string_flag(
+            prism.string_flag(
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",

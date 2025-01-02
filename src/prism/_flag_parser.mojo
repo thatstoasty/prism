@@ -1,8 +1,8 @@
 import os
 from memory import Span
 from collections import InlineArray
-from .flag_set import names, lookup, lookup_name
-from .util import split
+from ._flag_set import names, lookup, lookup_name
+from ._util import split
 
 
 struct FlagParser:
@@ -49,7 +49,7 @@ struct FlagParser:
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
         try:
-            _ = lookup(flags, name, "Bool")
+            _ = lookup["Bool"](flags, name)
             return name, String("True"), 1
         except:
             pass
@@ -98,7 +98,7 @@ struct FlagParser:
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
         try:
-            _ = lookup(flags, name, "Bool")
+            _ = lookup["Bool"](flags, name)
             return name, String("True"), 1
         except:
             pass
