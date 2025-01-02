@@ -1,5 +1,6 @@
 from memory import ArcPointer
-from prism import Command, Context
+from prism import Command, Context, Flag
+import prism
 
 
 fn printer(ctx: Context) -> None:
@@ -24,28 +25,14 @@ fn build_printer_command() -> ArcPointer[Command]:
 
 fn say(ctx: Context) -> None:
     print("Shouldn't be here!")
-    return None
 
 
 fn say_hello(ctx: Context) -> None:
     print("Hello World!")
-    return None
 
 
 fn say_goodbye(ctx: Context) -> None:
     print("Goodbye World!")
-    return None
-
-
-# for some reason returning the command object without setting it to variable breaks the compiler
-fn build_say_command() -> ArcPointer[Command]:
-    return ArcPointer(
-        Command(
-            name="say",
-            usage="Say something to someone",
-            run=say,
-        )
-    )
 
 
 fn build_hello_command() -> ArcPointer[Command]:
@@ -72,10 +59,10 @@ fn build_goodbye_command() -> ArcPointer[Command]:
 
 fn test(ctx: Context) -> None:
     try:
-        print(ctx.command[].flags.get_string("env"))
+        print(ctx.command[].get_string("env"))
     except:
         print("No env flag provided.")
-    for item in ctx.command[].flags.flags:
+    for item in ctx.command[].flags:
         if item[].value:
             print(item[].name, item[].value.value())
         else:
@@ -85,21 +72,34 @@ fn test(ctx: Context) -> None:
 
 
 fn main() -> None:
-    var root = Command(
-        name="tones",
-        usage="This is a dummy command!",
-        run=test,
-    )
-    root.flags.string_flag(name="env", shorthand="e", usage="Environment.", default="")
-
-    var say_command = build_say_command()
     var hello_command = build_hello_command()
     var goodbye_command = build_goodbye_command()
     var printer_command = build_printer_command()
 
-    say_command[].add_subcommand(goodbye_command)
-    say_command[].add_subcommand(hello_command)
-    root.add_subcommand(say_command)
-    root.add_subcommand(printer_command)
+    var root = Command(
+        name="tones",
+        usage="This is a dummy command!",
+        run=test,
+        flags=List[Flag](
+            prism.string_flag(
+                name="env",
+                shorthand="e",
+                usage="Environment.",
+                default="",
+            )
+        ),
+        children=List[ArcPointer[Command]](
+            ArcPointer(Command(
+                name="say",
+                usage="Say something to someone",
+                run=say,
+                children=List[ArcPointer[Command]](
+                    hello_command,
+                    goodbye_command,
+                ),
+            )),
+            printer_command,
+        ),
+    )
 
     root.execute()

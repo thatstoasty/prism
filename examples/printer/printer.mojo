@@ -1,5 +1,6 @@
 from memory import ArcPointer
-from prism import Command, Context, exact_args
+from prism import Command, Context, exact_args, Flag
+import prism
 import mist
 
 
@@ -8,8 +9,8 @@ fn printer(ctx: Context) raises -> None:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    var color = ctx.command[].flags.get_uint32("color")
-    var formatting = ctx.command[].flags.get_string("formatting")
+    var color = ctx.command[].get_uint32("color")
+    var formatting = ctx.command[].get_string("formatting")
     var style = mist.Style().foreground(color)
 
     if formatting == "":
@@ -44,10 +45,20 @@ fn main() -> None:
         raising_run=printer,
         pre_run=pre_hook,
         post_run=post_hook,
+        arg_validator=exact_args[1](),
+        flags=List[Flag](
+            prism.uint32_flag(
+                name="color",
+                shorthand="c",
+                usage="Text color",
+                default=0x3464EB
+            ),
+            prism.string_flag(
+                name="formatting",
+                shorthand="f",
+                usage="Text formatting"
+            )
+        )
     )
-    root.arg_validator = exact_args[1]()
-
-    root.flags.uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464EB)
-    root.flags.string_flag(name="formatting", shorthand="f", usage="Text formatting")
 
     root.execute()

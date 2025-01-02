@@ -1,11 +1,12 @@
 from memory import ArcPointer
 from prism import Command, Context
+import prism
 
 
 fn test(ctx: Context) raises -> None:
-    var host = ctx.command[].flags.get_string("host")
-    var port = ctx.command[].flags.get_string("port")
-    var uri = ctx.command[].flags.get_string("uri")
+    var host = ctx.command[].get_string("host")
+    var port = ctx.command[].get_string("port")
+    var uri = ctx.command[].get_string("uri")
 
     if uri != "":
         print("URI:", uri)
@@ -22,13 +23,31 @@ fn main() -> None:
         name="my",
         usage="This is a dummy command!",
         raising_run=test,
+        flags=List[prism.Flag](
+            prism.bool_flag(
+                name="required",
+                shorthand="r",
+                usage="Always required.",
+                required=True,
+            ),
+            prism.string_flag(
+                name="host",
+                shorthand="h",
+                usage="Host",
+            ),
+            prism.string_flag(
+                name="port",
+                shorthand="p",
+                usage="Port",
+            ),
+            prism.string_flag(
+                name="uri",
+                shorthand="u",
+                usage="URI",
+            ),
+        ),
+        mutually_exclusive_flags=List[String]("host", "uri"),
+        flags_required_together=List[String]("host", "port"),
     )
-    root.persistent_flags.bool_flag(name="required", shorthand="r", usage="Always required.")
-    root.persistent_flags.string_flag(name="host", shorthand="h", usage="Host")
-    root.persistent_flags.string_flag(name="port", shorthand="p", usage="Port")
-    root.persistent_flags.string_flag(name="uri", shorthand="u", usage="URI")
-    root.mark_flags_required_together("host", "port")
-    root.mark_flags_mutually_exclusive("host", "uri")
-    root.mark_flag_required("required")
 
     root.execute()

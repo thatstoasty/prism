@@ -131,21 +131,22 @@ fn range_args[minimum: Int, maximum: Int]() -> ArgValidatorFn:
 
 # TODO: Having some issues with varadic list of functions, so using List for now.
 # Broken until alias list of functions is fixed. Pointer to function incorrectly points to 0x0.
-# fn match_all[arg_validators: List[ArgValidatorFn]]() -> ArgValidatorFn:
-#     """Returns an error if any of the arg_validators return an error.
+fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
+    """Returns an error if any of the arg_validators return an error.
 
-#     Parameters:
-#         arg_validators: A list of ArgValidatorFn functions that check the arguments.
+    Parameters:
+        arg_validators: A list of ArgValidatorFn functions that check the arguments.
 
-#     Returns:
-#         A function that checks all the arguments using the arg_validators list..
-#     """
+    Returns:
+        A function that checks all the arguments using the arg_validators list..
+    """
 
-#     fn match_all_args(ctx: Context) raises -> None:
-#         for i in range(len(arg_validators)):
-#             arg_validators[i](ctx)
+    fn match_all_args(ctx: Context) raises -> None:
+        alias validators = VariadicList(arg_validators)
+        for validator in validators:
+            validator(ctx)
 
-#     return match_all_args
+    return match_all_args
 
 
 fn get_args(arguments: List[String]) -> List[String]:

@@ -26,7 +26,7 @@ fn main() -> None:
                 default="World",
                 action=validate_name,
             )
-        )
+        ),
     )
 
     root.execute()

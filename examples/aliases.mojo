@@ -15,11 +15,16 @@ fn main() -> None:
         name="my",
         usage="This is a dummy command!",
         run=test,
+        children=List[ArcPointer[Command]](
+            ArcPointer(
+                Command(
+                    name="tool",
+                    usage="This is a dummy command!",
+                    run=tool_func,
+                    aliases=List[String]("object", "thing")
+                )
+            )
+        ),
     )
-
-    var print_tool = Arc(
-        Command(name="tool", usage="This is a dummy command!", run=tool_func, aliases=List[String]("object", "thing"))
-    )
-
-    root.add_subcommand(print_tool)
+    
     root.execute()

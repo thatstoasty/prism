@@ -156,7 +156,7 @@ struct FlagParser:
                 if not flag[].changed:
                     flag[].set(value)
                 else:
-                    flag[].value.value().write(", ", value)
+                    flag[].value.value().write(" ", value)
             else:
                 flag[].set(value)
             self.index += increment_by

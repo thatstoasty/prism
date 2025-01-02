@@ -1,5 +1,6 @@
 from memory import ArcPointer
-from prism import Command, Context
+from prism import Command, Context, Flag
+import prism
 from python import Python
 
 
@@ -14,8 +15,7 @@ fn print_information(ctx: Context) -> None:
 
 
 fn get_cat_fact(ctx: Context) raises -> None:
-    var flags = ctx.command[].flags
-    var lover = flags.get_bool("lover")
+    var lover = ctx.command[].get_bool("lover")
     if lover:
         print("Hello fellow cat lover!")
 
@@ -25,7 +25,7 @@ fn get_cat_fact(ctx: Context) raises -> None:
     var url = "https://catfact.ninja/fact"
 
     # Send the GET requests
-    var count = flags.get_int("count")
+    var count = ctx.command[].get_int("count")
     if not count:
         raise Error("Count flag was not found.")
 
@@ -41,8 +41,7 @@ fn get_cat_fact(ctx: Context) raises -> None:
 
 
 fn get_dog_breeds(ctx: Context) raises -> None:
-    var flags = ctx.command[].flags
-    var lover = flags.get_bool("lover")
+    var lover = ctx.command[].get_bool("lover")
     if lover:
         print("Hello fellow dog lover!")
 
@@ -69,37 +68,52 @@ fn post_hook(ctx: Context) -> None:
 
 
 fn main() -> None:
-    var root = Command(name="nested", usage="Base command.", run=base)
+    var cat_command = ArcPointer(Command(
+        name="cat",
+        usage="Get some cat facts!",
+        raising_run=get_cat_fact,
+        flags=List[Flag](
+            prism.int_flag(
+                name="count",
+                shorthand="c",
+                usage="Number of facts to get.",
+            )
+        )
+    ))
 
-    var get_command = Arc(
-        Command(
-            name="get",
-            usage="Base command for getting some data.",
-            run=print_information,
-            persistent_pre_run=pre_hook,
-            persistent_post_run=post_hook,
+    var dog_command = ArcPointer(Command(
+        name="dog",
+        usage="Get some dog breeds!",
+        raising_run=get_dog_breeds,
+    ))
+
+    var get_command = ArcPointer(Command(
+        name="get",
+        usage="Base command for getting some data.",
+        run=print_information,
+        persistent_pre_run=pre_hook,
+        persistent_post_run=post_hook,
+        flags=List[Flag](
+            prism.bool_flag(
+                name="lover",
+                shorthand="l",
+                usage="Are you an animal lover?",
+                persistent=True,
+            )
+        ),
+        children=List[ArcPointer[Command]](
+            cat_command,
+            dog_command
+        )
+    ))
+
+    var root = Command(
+        name="nested",
+        usage="Base command.",
+        run=base,
+        children=List[ArcPointer[Command]](
+            get_command
         )
     )
-    get_command[].persistent_flags.bool_flag(name="lover", shorthand="l", usage="Are you an animal lover?")
 
-    var cat_command = Arc(
-        Command(
-            name="cat",
-            usage="Get some cat facts!",
-            raising_run=get_cat_fact,
-        )
-    )
-    cat_command[].flags.int_flag(name="count", shorthand="c", usage="Number of facts to get.")
-
-    var dog_command = Arc(
-        Command(
-            name="dog",
-            usage="Get some dog breeds!",
-            raising_run=get_dog_breeds,
-        )
-    )
-
-    get_command[].add_subcommand(cat_command)
-    get_command[].add_subcommand(dog_command)
-    root.add_subcommand(get_command)
     root.execute()

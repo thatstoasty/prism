@@ -2,7 +2,7 @@
 
 A Budding CLI Library!
 
-Inspired by: `Cobra`!
+Inspired by: `Cobra` and `urfave/cli`!
 
 ![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.5-orange)
 ![Build Status](https://github.com/thatstoasty/prism/actions/workflows/build.yml/badge.svg)
@@ -375,11 +375,15 @@ fn main() -> None:
 - Enable usage function to return the results of a usage function upon calling wrong functions or commands.
 - Replace print usage with writers to enable stdout/stderr/file writing.
 - Update default help command to improve available commands and flags section.
+- Add support for combining shorthand flags, like so: `-abc` instead of `-a -b -c`.
+- Try to avoid `Dict` and `try/except` blocks in order to support compile time command building.
+- Add persistent flag mutually exclusive and required together checks back in.
 
 ## Improvements
 
 - Tree traversal improvements.
-- `Arc[Command]` being passed to validators and command functions is marked as inout because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
+- `ArcPointer[Command]` being passed to validators and command functions is marked as inout because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
 - For now, help functions and arg validators will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
+- Once we have trait objects, use actual typed flags instead of converting values to and from strings.
 
 ## Bugs

@@ -1,9 +1,8 @@
 from sys import argv
 from collections import Optional, Dict, InlineList
 from memory import ArcPointer
-from os import abort
 import mog
-from .util import to_string, to_list, string_to_bool
+from .util import to_string, to_list, string_to_bool, panic
 from .flag import Flag
 from .flag_set import (
     visit_all,
@@ -23,7 +22,7 @@ from .args import arbitrary_args, get_args
 from .context import Context
 
 
-fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
+fn _concat_names(flag_names: VariadicListMem[String, _]) -> String:
     """Concatenates the flag names into a single string.
 
     Args:
@@ -41,7 +40,25 @@ fn concat_names(flag_names: VariadicListMem[String, _]) -> String:
     return result
 
 
-fn get_args_as_list() -> List[String]:
+fn _concat_names(flag_names: List[String]) -> String:
+    """Concatenates the flag names into a single string.
+
+    Args:
+        flag_names: The flag names to concatenate.
+
+    Returns:
+        The concatenated flag names.
+    """
+    var result = String()
+    for i in range(len(flag_names)):
+        result.write(flag_names[i])
+        if i != len(flag_names) - 1:
+            result.write(" ")
+
+    return result
+
+
+fn _get_args_as_list() -> List[String]:
     """Returns the arguments passed to the executable as a list of strings.
 
     Returns:
@@ -77,42 +94,40 @@ fn default_help(mut command: ArcPointer[Command]) raises -> String:
     var option_style = mog.Style().foreground(mog.Color(0x81C8BE))
     var bold_style = mog.Style().bold()
 
-    var cmd = command
     var builder = String()
     builder.write(mog.Style().bold().foreground(mog.Color(0xE5C890)).render("Usage: "))
-    builder.write(bold_style.render(cmd[].full_name()))
+    builder.write(bold_style.render(command[].full_name()))
 
-    if len(cmd[].flags) > 0:
+    if len(command[].flags) > 0:
         builder.write(" [OPTIONS]")
-    if len(cmd[].children) > 0:
+    if len(command[].children) > 0:
         builder.write(" COMMAND")
     builder.write(" [ARGS]...")
 
-    var usage = usage_style.render(mog.join_vertical(mog.left, builder, "\n", cmd[].usage))
+    var usage = usage_style.render(mog.join_vertical(mog.left, builder, "\n", command[].usage))
 
     builder = String()
-    if cmd[].flags:
+    if command[].flags:
         builder.write(bold_style.render("Options"))
-        for flag in cmd[].flags:
+        for flag in command[].flags:
             builder.write(option_style.render("\n-{}, --{}".format(flag[].shorthand, flag[].name)))
             builder.write("    {}".format(flag[].usage))
     var options = border_style.render(builder)
 
     builder = String()
-    if cmd[].children:
+    if command[].children:
         builder.write(bold_style.render("Commands"))
-        for i in range(len(cmd[].children)):
-            builder.write("\n{}    {}".format(option_style.render(cmd[].children[i][].name), cmd[].children[i][].usage))
+        for i in range(len(command[].children)):
+            builder.write("\n{}    {}".format(option_style.render(command[].children[i][].name), command[].children[i][].usage))
 
-            if i == len(cmd[].children) - 1:
+            if i == len(command[].children) - 1:
                 builder.write("\n")
 
-    if cmd[].aliases:
+    if command[].aliases:
         builder.write(bold_style.render("Aliases"))
-        builder.write("\n{}".format(option_style.render(cmd[].aliases.__str__())))
+        builder.write("\n{}".format(option_style.render(command[].aliases.__str__())))
 
-    var commands = border_style.render(builder)
-    return mog.join_vertical(mog.left, usage, options, commands)
+    return mog.join_vertical(mog.left, usage, options, border_style.render(builder))
 
 
 alias CmdFn = fn (ctx: Context) -> None
@@ -234,6 +249,9 @@ struct Command(CollectionElement, Writable, Stringable):
         persistent_raising_pre_run: Optional[RaisingCmdFn] = None,
         persistent_raising_post_run: Optional[RaisingCmdFn] = None,
         flags: List[Flag] = List[Flag](),
+        flags_required_together: Optional[List[String]] = None,
+        mutually_exclusive_flags: Optional[List[String]] = None,
+        arg_validator: Optional[ArgValidatorFn] = None,
     ):
         """Constructs a new `Command`.
 
@@ -254,9 +272,12 @@ struct Command(CollectionElement, Writable, Stringable):
             persistent_raising_pre_run: The function to run before the command is executed that returns an error. This persists to children.
             persistent_raising_post_run: The function to run after the command is executed that returns an error. This persists to children.
             flags: The flags for the command.
+            flags_required_together: The flags that are required together.
+            mutually_exclusive_flags: The flags that are mutually exclusive.
+            arg_validator: The function to validate arguments passed to the command.
         """
         if not run and not raising_run:
-            abort("A command must have a run or raising_run function.")
+            panic("A command must have a run or raising_run function.")
 
         self.name = name
         self.usage = usage
@@ -277,17 +298,32 @@ struct Command(CollectionElement, Writable, Stringable):
         self.persistent_raising_pre_run = persistent_raising_pre_run
         self.persistent_raising_post_run = persistent_raising_post_run
 
-        self.arg_validator = arbitrary_args
+        if arg_validator:
+            self.arg_validator = arg_validator.value()
+        else:
+            self.arg_validator = arbitrary_args
+
         self.valid_args = valid_args
 
-        self.children = children
-        self.parent = List[ArcPointer[Self]](capacity=1)
-
-        # These need to be mutable so we can add flags to them.
         self.flags = flags
         self.local_flags = List[Flag]()
         self.persistent_flags = List[Flag]()
         self._inherited_flags = List[Flag]()
+
+        self.parent = List[ArcPointer[Self]](capacity=1)
+        self.children = children
+        for command in children:
+            if command[][].parent:
+                command[][].parent[0] = self
+            else:
+                command[][].parent.append(self)
+
+        if flags_required_together:
+            self._mark_flags_required_together(flags_required_together.value())
+        
+        if mutually_exclusive_flags:
+            self._mark_flags_mutually_exclusive(mutually_exclusive_flags.value())
+
         self.flags.append(bool_flag(name="help", shorthand="h", usage="Displays help information about the command."))
 
     fn __moveinit__(mut self, owned existing: Self):
@@ -334,7 +370,7 @@ struct Command(CollectionElement, Writable, Stringable):
         return String.write(self)
 
     fn write_to[W: Writer, //](self, mut writer: W):
-        """Write Flag string representation to a `Formatter`.
+        """Write Flag string representation to a `Writer`.
 
         Parameters:
             W: The type of writer to write to.
@@ -521,7 +557,7 @@ struct Command(CollectionElement, Writable, Stringable):
             var root = self.root()
             return root[].execute()
 
-        command, remaining_args = self._parse_command_from_args(get_args_as_list())
+        command, remaining_args = self._parse_command_from_args(_get_args_as_list())
 
         # Merge local and inherited flags
         command._merge_flags()
@@ -579,7 +615,7 @@ struct Command(CollectionElement, Writable, Stringable):
                 command.raising_run.value()(ctx)
             self._execute_post_run_hooks(ctx, parents)
         except e:
-            abort(e)
+            panic(e)
 
     fn inherited_flags(self) -> List[Flag]:
         """Returns the flags for the command and inherited flags from its parent.
@@ -594,8 +630,6 @@ struct Command(CollectionElement, Writable, Stringable):
             for flag in parent[].flags:
                 if flag[].persistent:
                     flags.append(flag[])
-            # if parent[].persistent_flags:
-            #     flags += parent[].persistent_flags
 
         self.visit_parents[add_parent_persistent_flags]()
         return flags
@@ -606,31 +640,19 @@ struct Command(CollectionElement, Writable, Stringable):
         self._inherited_flags = self.inherited_flags()
         self.flags += self._inherited_flags
 
-    fn add_subcommand(mut self, mut command: ArcPointer[Self]):
-        """Adds child command and set's child's parent attribute to self.
-
-        Args:
-            command: The command to add as a child of self.
-        """
-        self.children.append(command)
-        if command[].parent:
-            command[].parent[0] = self
-        else:
-            command[].parent.append(self)
-
-    # fn mark_flag_required(mut self, flag_name: String) -> None:
-    #     """Marks the given flag with annotations so that `Prism` errors
-    #     if the command is invoked without the flag.
+    # fn add_subcommand(mut self, mut command: ArcPointer[Self]):
+    #     """Adds child command and set's child's parent attribute to self.
 
     #     Args:
-    #         flag_name: The name of the flag to mark as required.
+    #         command: The command to add as a child of self.
     #     """
-    #     try:
-    #         self.flags.set_required(flag_name)
-    #     except e:
-    #         abort(e)
-
-    fn mark_flags_required_together(mut self, *flag_names: String) -> None:
+    #     self.children.append(command)
+    #     if command[].parent:
+    #         command[].parent[0] = self
+    #     else:
+    #         command[].parent.append(self)
+    
+    fn _mark_flags_required_together(mut self, flag_names: List[String]) -> None:
         """Marks the given flags with annotations so that `Prism` errors
         if the command is invoked with a subset (but not all) of the given flags.
 
@@ -638,14 +660,14 @@ struct Command(CollectionElement, Writable, Stringable):
             flag_names: The names of the flags to mark as required together.
         """
         self._merge_flags()
-        var names = concat_names(flag_names)
+        var names = _concat_names(flag_names)
         try:
             for flag_name in flag_names:
                 set_as[REQUIRED_AS_GROUP](self.flags, flag_name[], names)
         except e:
-            abort(e)
+            panic(e)
 
-    fn mark_flags_one_required(mut self, *flag_names: String) -> None:
+    fn _mark_flags_one_required(mut self, *flag_names: String) -> None:
         """Marks the given flags with annotations so that `Prism` errors
         if the command is invoked without at least one flag from the given set of flags.
 
@@ -653,14 +675,14 @@ struct Command(CollectionElement, Writable, Stringable):
             flag_names: The names of the flags to mark as required.
         """
         self._merge_flags()
-        var names = concat_names(flag_names)
+        var names = _concat_names(flag_names)
         try:
             for flag_name in flag_names:
                 set_as[ONE_REQUIRED](self.flags, flag_name[], names)
         except e:
-            abort(e)
-
-    fn mark_flags_mutually_exclusive(mut self, *flag_names: String) -> None:
+            panic(e)
+    
+    fn _mark_flags_mutually_exclusive(mut self, flag_names: List[String]) -> None:
         """Marks the given flags with annotations so that `Prism` errors
         if the command is invoked with more than one flag from the given set of flags.
 
@@ -668,24 +690,12 @@ struct Command(CollectionElement, Writable, Stringable):
             flag_names: The names of the flags to mark as mutually exclusive.
         """
         self._merge_flags()
-        var names = concat_names(flag_names)
+        var names = _concat_names(flag_names)
         try:
             for flag_name in flag_names:
                 set_as[MUTUALLY_EXCLUSIVE](self.flags, flag_name[], names)
         except e:
-            abort(e)
-
-    # fn mark_persistent_flag_required(mut self, flag_name: String) -> None:
-    #     """Marks the given persistent flag with annotations so that `Prism` errors
-    #     if the command is invoked without the flag.
-
-    #     Args:
-    #         flag_name: The name of the flag to mark as required.
-    #     """
-    #     try:
-    #         self.persistent_flags.set_required(flag_name)
-    #     except e:
-    #         abort(e)
+            panic(e)
 
     fn has_parent(self) -> Bool:
         """Returns True if the command has a parent, False otherwise.

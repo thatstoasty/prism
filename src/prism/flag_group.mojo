@@ -1,7 +1,9 @@
 from collections import Dict
-from os import abort
+
+# from os import panic
 from .flag import Flag
 from .flag_set import REQUIRED, REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE, visit_all
+from .util import panic
 
 
 fn has_all_flags(flags: List[Flag], flag_names: List[String]) -> Bool:
@@ -92,7 +94,7 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -
         for key in pair[].value.keys():
             keys.append(key[])
 
-        abort(
+        panic(
             "If any flags in the group, {}, are set they must all be set; missing {}.".format(
                 keys.__str__(),
                 unset.__str__(),
@@ -126,7 +128,7 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) rais
         for key in pair[].value.keys():
             keys.append(key[])
 
-        abort("At least one of the flags in the group {} is required.".format(keys.__str__()))
+        panic("At least one of the flags in the group {} is required.".format(keys.__str__()))
 
 
 fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
@@ -155,7 +157,7 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
         for key in pair[].value.keys():
             keys.append(key[])
 
-        abort(
+        panic(
             "If any flags in the group {} are set none of the others can be; {} were all set.".format(
                 keys.__str__(),
                 set.__str__(),

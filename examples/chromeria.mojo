@@ -16,13 +16,8 @@ fn main() -> None:
         usage="This is a dummy command!",
         run=test,
         children=List[ArcPointer[Command]](
-            ArcPointer(Command(
-                name="chromeria", usage="This is a dummy command!", run=hello
-            ))
+            ArcPointer(Command(name="chromeria", usage="This is a dummy command!", run=hello))
         ),
     )
 
-    # var hello_command = ArcPointer(Command(name="chromeria", usage="This is a dummy command!", run=hello))
-
-    # root.add_subcommand(hello_command)
     root.execute()

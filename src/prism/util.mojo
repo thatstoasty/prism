@@ -1,5 +1,17 @@
+from sys import exit
 from collections import InlineList
 from memory import ArcPointer
+
+
+fn panic[W: Writable, //](message: W, code: Int = 1) -> None:
+    """Panics with the given message.
+
+    Args:
+        message: The message to panic with.
+        code: The exit code to use.
+    """
+    print(message)
+    exit(code)
 
 
 fn split(text: String, sep: String, max_split: Int = -1) -> List[String]:
@@ -28,7 +40,7 @@ fn string_to_bool(value: String) -> Bool:
     Returns:
         The boolean equivalent of the string.
     """
-    return value in ["true", "True", "1"]
+    return value in List[String]("true", "True", "1")
 
 
 fn to_string[T: StringableCollectionElement](vector: List[ArcPointer[T]]) -> String:
