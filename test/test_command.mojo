@@ -16,7 +16,7 @@ def test_command_operations():
             ArcPointer(Command(name="child", usage="Child command.", run=dummy, flags=List[Flag](prism.uint32_flag(name="color", shorthand="c", usage="Text color", default=0x3464eb))))
         )
     )
-    for flag in cmd.flags:
+    for flag in cmd.flags.flags:
         testing.assert_equal("help", flag[].name)
 
     # testing.assert_equal(child_cmd[].full_name(), "root child")

@@ -1,24 +1,17 @@
 from sys import argv
 from collections import Optional, Dict, InlineList
+from collections.string import StaticString
 from memory import ArcPointer
 import mog
-from ._util import to_string, to_list, string_to_bool, panic
-from .flag import Flag, FType, bool_flag
-from ._flag_set import (
-    visit_all,
-    validate_required_flags,
-    from_args,
-    REQUIRED,
-    REQUIRED_AS_GROUP,
-    ONE_REQUIRED,
-    MUTUALLY_EXCLUSIVE,
-    set_as,
-    set_annotation,
-    lookup
+from mog import Position
+from prism._util import to_string, to_list, string_to_bool, panic
+from prism.flag import Flag, FType, bool_flag
+from prism._flag_set import (
+    Annotation,
+    FlagSet
 )
-from ._flag_group import validate_flag_groups
-from .args import arbitrary_args, get_args
-from .context import Context
+from prism.args import arbitrary_args, get_args
+from prism.context import Context
 
 
 fn _concat_names(flag_names: VariadicListMem[String, _]) -> String:
@@ -57,14 +50,14 @@ fn _concat_names(flag_names: List[String]) -> String:
     return result
 
 
-fn _get_args_as_list() -> List[String]:
+fn _get_args_as_list() -> List[StaticString]:
     """Returns the arguments passed to the executable as a list of strings.
 
     Returns:
         The arguments passed to the executable as a list of strings.
     """
     var args = argv()
-    var result = List[String](capacity=len(args))
+    var result = List[StaticString](capacity=len(args))
     var i = 1
     while i < len(args):
         result.append(args[i])
@@ -88,13 +81,14 @@ fn default_help(mut command: ArcPointer[Command]) raises -> String:
     Raises:
         Any error that occurs while generating the help information.
     """
-    var usage_style = mog.Style().border(mog.HIDDEN_BORDER)
-    var border_style = mog.Style().border(mog.ROUNDED_BORDER).border_foreground(mog.Color(0x383838)).padding(0, 1)
-    var option_style = mog.Style().foreground(mog.Color(0x81C8BE))
-    var bold_style = mog.Style().bold()
+    var style = mog.Style()
+    var usage_style = style.border(mog.HIDDEN_BORDER)
+    var border_style = style.border(mog.ROUNDED_BORDER).border_foreground(mog.Color(0x383838)).padding(0, 1)
+    var option_style = style.foreground(mog.Color(0x81C8BE))
+    var bold_style = style.bold()
 
     var builder = String()
-    builder.write(mog.Style().bold().foreground(mog.Color(0xE5C890)).render("Usage: "))
+    builder.write(style.bold().foreground(mog.Color(0xE5C890)).render("Usage: "))
     builder.write(bold_style.render(command[].full_name()))
 
     if len(command[].flags) > 0:
@@ -103,7 +97,7 @@ fn default_help(mut command: ArcPointer[Command]) raises -> String:
         builder.write(" COMMAND")
     builder.write(" [ARGS]...")
 
-    var usage = usage_style.render(mog.join_vertical(mog.left, builder, "\n", command[].usage))
+    var usage = usage_style.render(mog.join_vertical(Position.LEFT, builder, "\n", command[].usage))
 
     builder = String()
     if command[].flags:
@@ -126,7 +120,7 @@ fn default_help(mut command: ArcPointer[Command]) raises -> String:
         builder.write(bold_style.render("Aliases"))
         builder.write("\n{}".format(option_style.render(command[].aliases.__str__())))
 
-    return mog.join_vertical(mog.left, usage, options, border_style.render(builder))
+    return mog.join_vertical(Position.LEFT, usage, options, border_style.render(builder))
 
 
 alias CmdFn = fn (ctx: Context) -> None
@@ -211,7 +205,7 @@ struct Command(CollectionElement, Writable, Stringable):
     var valid_args: List[String]
     """Valid arguments for the command."""
 
-    var flags: List[Flag]
+    var flags: FlagSet
     """It is all local, persistent, and inherited flags."""
 
     var children: List[ArcPointer[Self]]
@@ -238,7 +232,7 @@ struct Command(CollectionElement, Writable, Stringable):
         persistent_post_run: Optional[CmdFn] = None,
         persistent_raising_pre_run: Optional[RaisingCmdFn] = None,
         persistent_raising_post_run: Optional[RaisingCmdFn] = None,
-        flags: List[Flag] = List[Flag](),
+        flags: FlagSet = FlagSet(),
         flags_required_together: Optional[List[String]] = None,
         mutually_exclusive_flags: Optional[List[String]] = None,
         one_required_flags: Optional[List[String]] = None,
@@ -308,11 +302,11 @@ struct Command(CollectionElement, Writable, Stringable):
                 command[][].parent.append(self)
 
         if flags_required_together:
-            self._mark_flag_group_as[REQUIRED_AS_GROUP](flags_required_together.value())
+            self._mark_flag_group_as[Annotation.REQUIRED_AS_GROUP](flags_required_together.value())
         if mutually_exclusive_flags:
-            self._mark_flag_group_as[MUTUALLY_EXCLUSIVE](mutually_exclusive_flags.value())
+            self._mark_flag_group_as[Annotation.MUTUALLY_EXCLUSIVE](mutually_exclusive_flags.value())
         if one_required_flags:
-            self._mark_flag_group_as[ONE_REQUIRED](one_required_flags.value())
+            self._mark_flag_group_as[Annotation.ONE_REQUIRED](one_required_flags.value())
 
         self.flags.append(bool_flag(name="help", shorthand="h", usage="Displays help information about the command."))
 
@@ -387,7 +381,7 @@ struct Command(CollectionElement, Writable, Stringable):
             writer.write(self.valid_args.__str__())
         if self.flags:
             writer.write(", Flags: ")
-            writer.write(self.flags.__str__())
+            writer.write(self.flags)
         writer.write(")")
 
     fn full_name(self) -> String:
@@ -412,7 +406,7 @@ struct Command(CollectionElement, Writable, Stringable):
         return self
 
     fn _parse_command(
-        self, command: Self, arg: String, children: List[ArcPointer[Self]], mut leftover_start: Int
+        self, command: Self, arg: StaticString, children: List[ArcPointer[Self]], mut leftover_start: Int
     ) -> (Self, List[ArcPointer[Self]]):
         """Traverses the command tree to find the command that matches the given argument.
 
@@ -425,14 +419,15 @@ struct Command(CollectionElement, Writable, Stringable):
         Returns:
             The command that matches the argument and the remaining children to traverse.
         """
+        var argument = String(arg)
         for cmd in children:
-            if cmd[][].name == arg or arg in cmd[][].aliases:
+            if cmd[][].name == argument or argument in cmd[][].aliases:
                 leftover_start += 1
                 return cmd[][], cmd[][].children
 
         return command, children
 
-    fn _parse_command_from_args(self, args: List[String]) -> (Self, List[String]):
+    fn _parse_command_from_args(self, args: List[StaticString]) -> (Self, List[StaticString]):
         """Traverses the command tree to find the command that matches the given arguments.
 
         Args:
@@ -455,7 +450,7 @@ struct Command(CollectionElement, Writable, Stringable):
             return self, args
 
         # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
-        var remaining_args = List[String]()
+        var remaining_args = List[StaticString]()
         if len(args) >= leftover_start:
             remaining_args = args[leftover_start : len(args)]
 
@@ -566,7 +561,7 @@ struct Command(CollectionElement, Writable, Stringable):
 
         try:
             # Get the flags for the command to be executed.
-            remaining_args = from_args(command_ptr[].flags, remaining_args)
+            remaining_args = command_ptr[].flags.from_args(remaining_args)
 
             # Check if the help flag was passed
             if command_ptr[].get_bool("help") == True:
@@ -574,10 +569,10 @@ struct Command(CollectionElement, Writable, Stringable):
                 return
 
             # Validate individual required flags (eg: flag is required)
-            validate_required_flags(command_ptr[].flags)
+            command_ptr[].flags.validate_required_flags()
 
             # Validate flag groups (eg: one of required, mutually exclusive, required together)
-            validate_flag_groups(command_ptr[].flags)
+            command_ptr[].flags.validate_flag_groups()
 
             # Run flag actions if they have any
             var ctx = Context(remaining_args, command_ptr)
@@ -587,7 +582,7 @@ struct Command(CollectionElement, Writable, Stringable):
                 if flag.action and flag.value:
                     flag.action.value()(ctx, flag.value.value())
 
-            visit_all[run_action](command_ptr[].flags)
+            command_ptr[].flags.visit_all[run_action]()
 
             # Validate the remaining arguments
             command_ptr[].arg_validator(ctx)
@@ -602,7 +597,7 @@ struct Command(CollectionElement, Writable, Stringable):
         except e:
             panic(e)
 
-    fn inherited_flags(self) -> List[Flag]:
+    fn inherited_flags(self) -> FlagSet:
         """Returns the flags for the command and inherited flags from its parent.
 
         Returns:
@@ -617,13 +612,13 @@ struct Command(CollectionElement, Writable, Stringable):
                     flags.append(flag[])
 
         self.visit_parents[add_parent_persistent_flags]()
-        return flags
+        return FlagSet(flags^)
 
     fn _merge_flags(mut self):
         """Returns all flags for the command and inherited flags from its parent."""
-        self.flags += self.inherited_flags()
+        self.flags.extend(self.inherited_flags())
 
-    fn _mark_flag_group_as[annotation: String](mut self, flag_names: List[String]) -> None:
+    fn _mark_flag_group_as[annotation: Annotation](mut self, flag_names: List[String]) -> None:
         """Marks the given flags with annotations so that `Prism` errors
 
         Parameters:
@@ -637,14 +632,10 @@ struct Command(CollectionElement, Writable, Stringable):
         - If the annotation is `ONE_REQUIRED`, then at least one flag in the group must be set.
         - If the annotation is `MUTUALLY_EXCLUSIVE`, then only one flag in the group can be set.
         """
-        constrained[
-            annotation not in [REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE],
-            "annotation must be one of REQUIRED_AS_GROUP, ONE_REQUIRED, or MUTUALLY_EXCLUSIVE.",
-        ]()
         self._merge_flags()
         try:
-            for flag_name in flag_names:
-                set_as[annotation](self.flags, flag_name[], _concat_names(flag_names))
+            for name in flag_names:
+                self.flags.set_annotation[annotation](name[], _concat_names(flag_names))
         except e:
             panic(e)
 
@@ -678,7 +669,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return lookup[FType.String](self.flags, name)[].value_or_default()
+        return self.flags.lookup[FType.String](name)[].value_or_default()
 
     fn get_bool(self, name: String) raises -> Bool:
         """Returns the value of a flag as a `Bool`. If it isn't set, then return the default value.
@@ -692,7 +683,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return string_to_bool(lookup["Bool"](self.flags, name)[].value_or_default())
+        return string_to_bool(self.flags.lookup["Bool"](name)[].value_or_default())
 
     fn get_int[type: String = "Int"](self, name: String) raises -> Int:
         """Returns the value of a flag as an `Int`. If it isn't set, then return the default value.
@@ -710,7 +701,7 @@ struct Command(CollectionElement, Writable, Stringable):
             Error: If the flag is not found.
         """
         constrained[type not in FType.IntTypes, "type must be one of `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, or `UInt64`."]()
-        return atol(lookup[type](self.flags, name)[].value_or_default())
+        return atol(self.flags.lookup[type](name)[].value_or_default())
 
     fn get_int8(self, name: String) raises -> Int8:
         """Returns the value of a flag as a `Int8`. If it isn't set, then return the default value.
@@ -854,7 +845,7 @@ struct Command(CollectionElement, Writable, Stringable):
             Error: If the flag is not found.
         """
         constrained[type not in FType.FloatTypes, "type must be one of `Float16`, `Float32`, `Float64`"]()
-        return atof(lookup[type](self.flags, name)[].value_or_default())
+        return atof(self.flags.lookup[type](name)[].value_or_default())
 
     fn get_float16(self, name: String) raises -> Float16:
         """Returns the value of a flag as a `Float16`. If it isn't set, then return the default value.
@@ -914,7 +905,7 @@ struct Command(CollectionElement, Writable, Stringable):
             Error: If the flag is not found.
         """
         constrained[type not in FType.ListTypes, "type must be one of `StringList`, `IntList`, or `Float64List`."]()
-        return lookup[type](self.flags, name)[].value_or_default().split(sep=" ")
+        return self.flags.lookup[type](name)[].value_or_default().split(sep=" ")
 
     fn get_string_list(self, name: String) raises -> List[String]:
         """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.

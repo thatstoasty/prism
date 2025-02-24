@@ -4,7 +4,7 @@ channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://co
 description = "A Budding CLI Library!"
 name = "prism"
 platforms = ["osx-arm64", "linux-64"]
-version = "0.3.0"
+version = "25.1.0"
 license = "MIT"
 license-file = "LICENSE"
 homepage = "https://github.com/thatstoasty/prism"
@@ -17,8 +17,8 @@ examples = "bash scripts/examples.sh"
 template = "python scripts/util.py templater"
 build = { cmd = "python scripts/util.py build", env = {MODULAR_MOJO_IMPORT_PATH = "$CONDA_PREFIX/lib/mojo"} }
 publish = { cmd = "python scripts/util.py publish", env = { PREFIX_API_KEY = "$PREFIX_API_KEY" } }
-bp = { depends_on=["build", "publish"] }
+bp = { depends-on=["build", "publish"] }
 
 [dependencies]
-max = ">=24.6.0"
-mog = ">=0.1.7"
+max = "==25.1.0"
+mog = ">=25.1.0"

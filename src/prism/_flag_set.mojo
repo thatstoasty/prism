@@ -1,9 +1,13 @@
-from collections import Optional, Dict, InlineList
+from collections import Optional, InlineList
+from collections.list import _ListIter
+from collections.dict import Dict, DictEntry
+from collections.string import StaticString
 from utils import Variant
 from memory import Pointer
-from .flag import Flag, FlagActionFn, FType
-from ._util import string_to_bool, split
-from ._flag_parser import FlagParser
+from prism.flag import Flag, FlagActionFn, FType
+from prism._util import string_to_bool, split
+from prism._flag_parser import FlagParser
+from prism._flag_group import validate_required_flag_group, validate_one_required_flag_group, validate_mutually_exclusive_flag_group
 
 
 alias FlagVisitorFn = fn (Flag) capturing -> None
@@ -11,202 +15,305 @@ alias FlagVisitorFn = fn (Flag) capturing -> None
 alias FlagVisitorRaisingFn = fn (Flag) capturing raises -> None
 """Function perform some action while visiting all flags. Can raise."""
 
-# Individual flag annotations
-alias REQUIRED = "REQUIRED"
 
 # Flag Group annotations
-alias REQUIRED_AS_GROUP = "REQUIRED_AS_GROUP"
-alias ONE_REQUIRED = "ONE_REQUIRED"
-alias MUTUALLY_EXCLUSIVE = "MUTUALLY_EXCLUSIVE"
+@value
+struct Annotation:
+    var value: String
+
+    # Individual flag annotations
+    alias REQUIRED = Self("REQUIRED")
+
+    # Flag Group annotations
+    alias REQUIRED_AS_GROUP = Self("REQUIRED_AS_GROUP")
+    alias ONE_REQUIRED = Self("ONE_REQUIRED")
+    alias MUTUALLY_EXCLUSIVE = Self("MUTUALLY_EXCLUSIVE")
+
+    fn __eq__(self, other: Self) -> Bool:
+        return self.value == other.value
+    
+    fn __ne__(self, other: Self) -> Bool:
+        return self.value != other.value
 
 
-fn set_annotation(mut flags: List[Flag], name: String, key: String, values: String) raises -> None:
-    """Sets an annotation for a flag.
+@value
+struct FlagSet(Writable, Stringable, Boolable):
+    """A set of flags."""
 
-    Args:
-        flags: The flags to set the annotation for.
-        name: The name of the flag to set the annotation for.
-        key: The key of the annotation.
-        values: The values of the annotation.
+    var flags: List[Flag]
+    """The flags in the set."""
 
-    Raises:
-        Error: If setting the value for the annotation fails.
-    """
-    # Annotation value can be a concatenated string of values.
-    # Why? Because we can have multiple required groups of flags for example.
-    # So each value of the list for the annotation can be a group of flag names.
-    var flag = lookup(flags, name)
-    try:
-        flag[].annotations[key].extend(values)
-    except:
-        flag[].annotations[key] = List[String](values)
+    @implicit
+    fn __init__(out self, flags: List[Flag] = List[Flag]()):
+        """Initializes a new FlagSet."""
+        self.flags = flags
+    
+    fn __bool__(self) -> Bool:
+        return Bool(self.flags)
+    
+    fn __len__(self) -> Int:
+        return len(self.flags)
+    
+    fn __iter__(ref self) -> _ListIter[Flag, False, __origin_of(self.flags)]:
+        return self.flags.__iter__()
+    
+    fn append(mut self, flag: Flag):
+        """Adds a flag to the flag set.
 
+        Args:
+            flag: The flag to add to the flag set.
 
-fn set_as[annotation_type: String](mut flags: List[Flag], name: String, names: String) raises -> None:
-    """Sets a flag as a specific annotation type.
+        """
+        self.flags.append(flag)
+    
+    fn extend(mut self, other: FlagSet):
+        """Adds a flag to the flag set.
 
-    Parameters:
-        annotation_type: The type of annotation to set.
+        Args:
+            other: The flag to add to the flag set.
 
-    Args:
-        flags: The flags to set the annotation for.
-        name: The name of the flag to set the annotation for.
-        names: The values of the annotation.
+        """
+        self.flags.extend(other.flags)
+    
+    fn __str__(self) -> String:
+        return String.write(self)
+    
+    fn write_to[W: Writer, //](self, mut writer: W) -> None:
+        """Writes the flag set to a writer.
 
-    Raises:
-        Error: If the annotation type is not one of `REQUIRED_AS_GROUP`, `ONE_REQUIRED`, or `MUTUALLY_EXCLUSIVE`.
-    """
-    constrained[
-        annotation_type not in [REQUIRED_AS_GROUP, ONE_REQUIRED, MUTUALLY_EXCLUSIVE],
-        "annotation_type must be one of REQUIRED_AS_GROUP, ONE_REQUIRED, or MUTUALLY_EXCLUSIVE.",
-    ]()
-    try:
-        set_annotation(flags, name, annotation_type, names)
-    except e:
-        print(
-            "FlagSet.set_as: Failed to set flag, {}, with the following annotation: {}".format(name, annotation_type),
-            file=2,
-        )
-        raise e
+        Args:
+            writer: The writer to write the flag set to.
+        """
+        writer.write(self.flags.__str__())
 
+    fn set_annotation[annotation: Annotation](mut self, name: String, value: String) raises -> None:
+        """Sets an annotation for a flag.
 
-fn from_args(mut flags: List[Flag], arguments: List[String]) raises -> List[String]:
-    """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
+        Args:
+            name: The name of the flag to set the annotation for.
+            value: The value of the annotation.
 
-    Args:
-        flags: The flags to parse.
-        arguments: The arguments passed via the command line.
+        Raises:
+            Error: If setting the value for the annotation fails.
+        """
+        # Annotation value can be a concatenated string of values.
+        # Why? Because we can have multiple required groups of flags for example.
+        # So each value of the list for the annotation can be a group of flag names.
+        var flag: Pointer[Flag, __origin_of(self.flags)]
+        try:
+            flag = self.lookup(name)
+        except e:
+            print(e, file=2)
+            raise Error("FlagSet.set_annotation: Failed to set flag, {}, with the following annotation: {}".format(name, annotation.value))
+        
+        try:
+            flag[].annotations[annotation.value].append(value)
+        except:
+            flag[].annotations[annotation.value] = List[String](value)
 
-    Returns:
-        The remaining arguments after parsing out flags.
+    fn from_args(mut self, arguments: List[StaticString]) raises -> List[StaticString]:
+        """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
-    Raises:
-        Error: If a flag is not recognized.
-    """
-    var parser = FlagParser()
-    return parser.parse(flags, arguments)
+        Args:
+            arguments: The arguments passed via the command line.
 
+        Returns:
+            The remaining arguments after parsing out flags.
 
-fn names(flags: List[Flag]) -> List[String]:
-    """Returns a list of names of all flags in the flag set.
+        Raises:
+            Error: If a flag is not recognized.
+        """
+        var parser = FlagParser()
+        return parser.parse(self, arguments)
 
-    Args:
-        flags: The flags to get the names for.
+    fn names(self) -> List[String]:
+        """Returns a list of names of all flags in the flag set.
 
-    Returns:
-        A list of names of all flags in the flag set.
-    """
-    var result = List[String](capacity=len(flags))
-    for flag in flags:
-        result.append(flag[].name)
-    return result
+        Returns:
+            A list of names of all flags in the flag set.
+        """
+        var result = List[String](capacity=len(self.flags))
+        for flag in self.flags:
+            result.append(flag[].name)
+        return result^
 
+    fn shorthands(self) -> List[String]:
+        """Returns a list of shorthands of all flags in the flag set.
 
-fn shorthands(flags: List[Flag]) -> List[String]:
-    """Returns a list of shorthands of all flags in the flag set.
+        Returns:
+            A list of shorthands of all flags in the flag set.
+        """
+        var result = List[String](capacity=len(self.flags))
+        for flag in self.flags:
+            if flag[].shorthand:
+                result.append(flag[].shorthand)
+        return result^
 
-    Args:
-        flags: The flags to get the shorthands for.
+    fn visit_all[visitor: FlagVisitorFn](self) -> None:
+        """Visits all flags in the flag set.
 
-    Returns:
-        A list of shorthands of all flags in the flag set.
-    """
-    var result = List[String](capacity=len(flags))
-    for flag in flags:
-        if flag[].shorthand:
-            result.append(flag[].shorthand)
-    return result
+        Parameters:
+            visitor: The visitor function to call for each flag.
+        """
+        for flag in self.flags:
+            visitor(flag[])
 
+    fn visit_all[visitor: FlagVisitorRaisingFn](self) raises -> None:
+        """Visits all flags in the flag set.
 
-fn visit_all[visitor: FlagVisitorFn](flags: List[Flag]) -> None:
-    """Visits all flags in the flag set.
+        Parameters:
+            visitor: The visitor function to call for each flag.
 
-    Parameters:
-        visitor: The visitor function to call for each flag.
-    """
-    for flag in flags:
-        visitor(flag[])
+        Raises:
+            Error: If the visitor raises an error.
+        """
+        for flag in self.flags:
+            visitor(flag[])
 
+    fn validate_required_flags(self) raises -> None:
+        """Validates all required flags are present and returns an error otherwise.
 
-fn visit_all[visitor: FlagVisitorRaisingFn](flags: List[Flag]) raises -> None:
-    """Visits all flags in the flag set.
+        Raises:
+            Error: If a required flag is not set.
+        """
+        var missing_flag_names = List[String]()
 
-    Parameters:
-        visitor: The visitor function to call for each flag.
+        @parameter
+        fn check_required_flag(flag: Flag) -> None:
+            if flag.required and not flag.changed:
+                missing_flag_names.append(flag.name)
 
-    Raises:
-        Error: If the visitor raises an error.
-    """
-    for flag in flags:
-        visitor(flag[])
+        self.visit_all[check_required_flag]()
+        if len(missing_flag_names) > 0:
+            raise Error("Required flag(s): " + missing_flag_names.__str__() + " not set.")
 
+    fn lookup[type: String = ""](ref self, name: String) raises -> Pointer[Flag, __origin_of(self.flags)]:
+        """Returns an mutable or immutable Pointer to a Flag with the given name.
+        Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
-fn validate_required_flags(flags: List[Flag]) raises -> None:
-    """Validates all required flags are present and returns an error otherwise.
+        Parameters:
+            type: The type of the Flag to lookup.
 
-    Args:
-        flags: The flags to validate.
+        Args:
+            name: The name of the Flag to lookup.
 
-    Raises:
-        Error: If a required flag is not set.
-    """
-    var missing_flag_names = List[String]()
+        Returns:
+            Optional Pointer to the Flag.
 
-    @parameter
-    fn check_required_flag(flag: Flag) -> None:
-        if flag.required and not flag.changed:
-            missing_flag_names.append(flag.name)
+        Raises:
+            Error: If the Flag is not found.
+        """
+        constrained[type not in FType.ValidTypes, "type must be one of `String`, `Bool`, `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Float16`, `Float32`, `Float64`, `StringList`, `IntList`, `Float64List`."]()
+        if type == "":
+            for i in range(len(self.flags)):
+                if self.flags[i].name == name:
+                    return Pointer.address_of(self.flags[i])
+        else:
+            for i in range(len(self.flags)):
+                if self.flags[i].name == name and self.flags[i].type == type:
+                    return Pointer.address_of(self.flags[i])
 
-    visit_all[check_required_flag](flags)
-    if len(missing_flag_names) > 0:
-        raise Error("Required flag(s): " + missing_flag_names.__str__() + " not set.")
+        raise Error("FlagNotFoundError: Could not find the following flag: " + name)
 
+    fn lookup_name(self, shorthand: String) raises -> String:
+        """Returns the name of a flag given its shorthand.
 
-fn lookup[type: String = ""](ref flags: List[Flag], name: String) raises -> Pointer[Flag, __origin_of(flags)]:
-    """Returns an mutable or immutable Pointer to a Flag with the given name.
-    Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
+        Args:
+            shorthand: The shorthand of the flag to lookup.
 
-    Parameters:
-        type: The type of the Flag to lookup.
+        Returns:
+            The name of the flag.
 
-    Args:
-        flags: The flags to lookup.
-        name: The name of the Flag to lookup.
+        Raises:
+            Error: If the flag is not found.
+        """
+        for flag in self.flags:
+            if flag[].shorthand and flag[].shorthand == shorthand:
+                return flag[].name
 
-    Returns:
-        Optional Pointer to the Flag.
+        raise Error("FlagNotFoundError: Could not find the following flag shorthand: " + shorthand)
 
-    Raises:
-        Error: If the Flag is not found.
-    """
-    constrained[type not in FType.ValidTypes, "type must be one of `String`, `Bool`, `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Float16`, `Float32`, `Float64`, `StringList`, `IntList`, `Float64List`."]()
-    if type == "":
-        for i in range(len(flags)):
-            if flags[i].name == name:
-                return Pointer.address_of(flags[i])
-    else:
-        for i in range(len(flags)):
-            if flags[i].name == name and flags[i].type == type:
-                return Pointer.address_of(flags[i])
+    fn has_all_flags(self, owned flag_names: List[String]) -> Bool:
+        """Checks if all flags are defined in the flag set.
 
-    raise Error("FlagNotFoundError: Could not find the following flag: " + name)
+        Args:
+            flag_names: The names of the flags to check for.
 
+        Returns:
+            True if all flags are defined, False otherwise.
+        """
+        var names = self.names()
+        for name in flag_names:
+            if name[] not in names:
+                return False
+        return True
+    
 
-fn lookup_name(flags: List[Flag], shorthand: String) raises -> String:
-    """Returns the name of a flag given its shorthand.
+    fn process_group_annotations[annotation: Annotation](
+        self,
+        flag: Flag,
+        mut group_status: Dict[String, Dict[String, Bool]],
+    ) raises -> None:
+        """Processes a flag for a group annotation.
 
-    Args:
-        flags: The flags to lookup.
-        shorthand: The shorthand of the flag to lookup.
+        Parameters:
+            annotation: The annotation to check for.
 
-    Returns:
-        The name of the flag.
+        Args:
+            flag: The flag to process.
+            group_status: The status of the flag groups.
 
-    Raises:
-        Error: If the flag is not found.
-    """
-    for flag in flags:
-        if flag[].shorthand and flag[].shorthand == shorthand:
-            return flag[].name
+        Raises:
+            Error: If an error occurred while processing the flag.
+        """
+        var fg_annotations = flag.annotations.get(annotation.value, List[String]())
+        if not fg_annotations:
+            return
 
-    raise Error("FlagNotFoundError: Could not find the following flag shorthand: " + shorthand)
+        for group in fg_annotations:
+            if len(group_status.get(group[], Dict[String, Bool]())) == 0:
+                var flag_names = group[].split(sep=" ")
+
+                # Only consider this flag group at all if all the flags are defined.
+                if not self.has_all_flags(flag_names):
+                    continue
+
+                for name in flag_names:
+                    var entry = Dict[String, Bool]()
+                    entry[name[]] = False
+                    group_status[group[]] = entry
+
+            # If flag.changed = True, then it had a value set on it.
+            try:
+                group_status[group[]][flag.name] = flag.changed
+            except e:
+                raise Error(
+                    "process_group_annotations: Failed to set group status for annotation {}: {}.".format(
+                        annotation.value, String(e)
+                    )
+                )
+
+    fn validate_flag_groups(self) raises -> None:
+        """Validates the status of flag groups.
+        Checks for flags annotated with the `REQUIRED_AS_GROUP`, `ONE_REQUIRED`, or `MUTUALLY_EXCLUSIVE` annotations.
+        Then validates if the flags in the group are set correctly to satisfy the annotation.
+
+        Raises:
+            Error: If an error occurred while validating the flag groups.
+        """
+        var group_status = Dict[String, Dict[String, Bool]]()
+        var one_required_group_status = Dict[String, Dict[String, Bool]]()
+        var mutually_exclusive_group_status = Dict[String, Dict[String, Bool]]()
+
+        @parameter
+        fn flag_checker(flag: Flag) raises -> None:
+            self.process_group_annotations[Annotation.REQUIRED_AS_GROUP](flag, group_status)
+            self.process_group_annotations[Annotation.ONE_REQUIRED](flag, one_required_group_status)
+            self.process_group_annotations[Annotation.MUTUALLY_EXCLUSIVE](flag, mutually_exclusive_group_status)
+
+        self.visit_all[flag_checker]()
+
+        # Validate required flag groups
+        validate_required_flag_group(group_status)
+        validate_one_required_flag_group(one_required_group_status)
+        validate_mutually_exclusive_flag_group(mutually_exclusive_group_status)

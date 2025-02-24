@@ -1,5 +1,6 @@
 from memory import ArcPointer
-from .command import Command
+from collections.string import StaticString
+from prism.command import Command
 
 
 struct Context:
@@ -7,10 +8,10 @@ struct Context:
 
     var command: ArcPointer[Command]
     """The command being executed."""
-    var args: List[String]
+    var args: List[StaticString]
     """The arguments passed to the command."""
 
-    def __init__(mut self, args: List[String], command: ArcPointer[Command]) -> None:
+    def __init__(mut self, args: List[StaticString], command: ArcPointer[Command]) -> None:
         """Initializes a new Context.
 
         Args:

@@ -1,4 +1,5 @@
 from memory import ArcPointer
+from collections.string import StaticString
 import testing
 from prism import Command, Context
 from prism.args import (
@@ -19,17 +20,18 @@ fn dummy(ctx: Context) -> None:
 
 
 def test_no_args():
-    ctx = Context(
-        args=List[String]("abc"),
-        command=Command(name="root", usage="Base command.", run=dummy),
-    )
     with testing.assert_raises(contains="does not take any arguments."):
-        no_args(ctx)
+        no_args(
+            Context(
+                args=List[StaticString]("abc"),
+                command=Command(name="root", usage="Base command.", run=dummy),
+            )
+        )
 
 
 def test_valid_args():
     ctx = Context(
-        args=List[String]("abc"),
+        args=List[StaticString]("abc"),
         command=Command(name="root", usage="Base command.", run=dummy, valid_args=List[String]("Pineapple")),
     )
     with testing.assert_raises(contains="Invalid argument: `abc`"):
@@ -39,7 +41,7 @@ def test_valid_args():
 def test_arbitrary_args():
     ctx = Context(
         command=Command(name="root", usage="Base command.", run=dummy),
-        args=List[String]("abc", "blah", "blah")
+        args=List[StaticString]("abc", "blah", "blah")
     )
 
     # It should not raise an error, ever.
@@ -49,7 +51,7 @@ def test_arbitrary_args():
 def test_minimum_n_args():
     ctx = Context(
         command=Command(name="root", usage="Base command.", run=dummy),
-        args=List[String]("abc", "123")
+        args=List[StaticString]("abc", "123")
     )
     with testing.assert_raises(contains="accepts at least 3 argument(s). Received: 2."):
         minimum_n_args[3]()(ctx)
@@ -58,7 +60,7 @@ def test_minimum_n_args():
 def test_maximum_n_args():
     ctx = Context(
         command=Command(name="root", usage="Base command.", run=dummy),
-        args=List[String]("abc", "123")
+        args=List[StaticString]("abc", "123")
     )
     with testing.assert_raises(contains="accepts at most 1 argument(s). Received: 2."):
         maximum_n_args[1]()(ctx)
@@ -67,7 +69,7 @@ def test_maximum_n_args():
 def test_exact_args():
     ctx = Context(
         command=Command(name="root", usage="Base command.", run=dummy),
-        args=List[String]("abc", "123")
+        args=List[StaticString]("abc", "123")
     )
     with testing.assert_raises(contains="accepts exactly 1 argument(s). Received: 2."):
         exact_args[1]()(ctx)
@@ -76,7 +78,7 @@ def test_exact_args():
 def test_range_args():
     ctx = Context(
         command=Command(name="root", usage="Base command.", run=dummy),
-        args=List[String]("abc", "123")
+        args=List[StaticString]("abc", "123")
     )
     with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2."):
         range_args[0, 1]()(ctx)
@@ -85,7 +87,7 @@ def test_range_args():
 def test_match_all():
     ctx = Context(
         command=Command(name="root", usage="Base command.", run=dummy, valid_args=List[String]("Pineapple")),
-        args=List[String]("abc", "123")
+        args=List[StaticString]("abc", "123")
     )
     with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2."):
         match_all[range_args[0, 1](), valid_args]()(ctx)

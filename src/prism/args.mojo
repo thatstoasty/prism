@@ -100,7 +100,7 @@ fn valid_args(ctx: Context) raises -> None:
     """
     if ctx.command[].valid_args:
         for arg in ctx.args:
-            if arg[] not in ctx.command[].valid_args:
+            if String(arg[]) not in ctx.command[].valid_args:
                 raise Error("Invalid argument: `{}`, for the command `{}`.".format(arg[], ctx.command[].name))
 
 

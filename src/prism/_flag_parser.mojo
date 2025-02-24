@@ -1,8 +1,9 @@
 import os
 from memory import Span
 from collections import InlineArray
-from ._flag_set import names, lookup, lookup_name
-from ._util import split
+from collections.string import StaticString
+from prism._flag_set import FlagSet
+from prism._util import split
 
 
 struct FlagParser:
@@ -16,7 +17,7 @@ struct FlagParser:
         self.index = 0
 
     fn parse_flag(
-        self, argument: String, arguments: Span[String], flags: List[Flag]
+        self, argument: StaticString, arguments: Span[StaticString], flags: FlagSet
     ) raises -> Tuple[String, String, Int]:
         """Parses a flag and returns the name, value, and the index to increment by.
 
@@ -37,19 +38,19 @@ struct FlagParser:
             var name = flag[0][2:]
             var value = flag[1]
 
-            if name not in names(flags):
+            if name not in flags.names():
                 raise Error("Command does not accept the flag supplied: " + name)
 
             return name, value, 1
 
         # Flag with value set like "--flag <value>"
-        var name = argument[2:]
-        if name not in names(flags):
+        var name = String(argument[2:])
+        if String(name) not in flags.names():
             raise Error("Command does not accept the flag supplied: " + name)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
         try:
-            _ = lookup["Bool"](flags, name)
+            _ = flags.lookup["Bool"](name)
             return name, String("True"), 1
         except:
             pass
@@ -61,10 +62,10 @@ struct FlagParser:
             raise Error("Flag `" + name + "` requires a value to be set but found another flag instead.")
 
         # Increment index by 2 because 2 args were used (one for name and value).
-        return name, arguments[self.index + 1], 2
+        return name, String(arguments[self.index + 1]), 2
 
     fn parse_shorthand_flag(
-        self, argument: String, arguments: Span[String], flags: List[Flag]
+        self, argument: StaticString, arguments: Span[StaticString], flags: FlagSet
     ) raises -> Tuple[String, String, Int]:
         """Parses a shorthand flag and returns the name, value, and the index to increment by.
 
@@ -84,21 +85,21 @@ struct FlagParser:
             var flag = split(argument, "=")
             var shorthand = flag[0][1:]
             var value = flag[1]
-            var name = lookup_name(flags, shorthand)
-            if name not in names(flags):
+            var name = flags.lookup_name(shorthand)
+            if name not in flags.names():
                 raise Error("Command does not accept the shorthand flag supplied: " + name)
 
             return name, value, 1
 
         # Flag with value set like "-f <value>"
-        var shorthand = argument[1:]
-        var name = lookup_name(flags, shorthand)
-        if name not in names(flags):
+        var shorthand = String(argument[1:])
+        var name = flags.lookup_name(shorthand)
+        if name not in flags.names():
             raise Error("Command does not accept the shorthand flag supplied: " + shorthand)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
         try:
-            _ = lookup["Bool"](flags, name)
+            _ = flags.lookup["Bool"](name)
             return name, String("True"), 1
         except:
             pass
@@ -110,10 +111,10 @@ struct FlagParser:
             raise Error("Flag `" + name + "` requires a value to be set but found another flag instead.")
 
         # Increment index by 2 because 2 args were used (one for name and value).
-        return name, arguments[self.index + 1], 2
+        return name, String(arguments[self.index + 1]), 2
 
     # TODO: This parsing is dirty atm, will come back around and clean it up.
-    fn parse(mut self, mut flags: List[Flag], arguments: List[String]) raises -> List[String]:
+    fn parse(mut self, mut flags: FlagSet, arguments: List[StaticString]) raises -> List[StaticString]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
@@ -126,7 +127,7 @@ struct FlagParser:
         Raises:
             Error: If an error occurred while parsing the flags.
         """
-        var remaining_args = List[String](capacity=len(arguments))
+        var remaining_args = List[StaticString](capacity=len(arguments))
         while self.index < len(arguments):
             var argument = arguments[self.index]
 
@@ -147,11 +148,11 @@ struct FlagParser:
             elif argument.startswith("-", 0, 1):
                 name, value, increment_by = self.parse_shorthand_flag(argument, arguments, flags)
             else:
-                raise Error("Expected a flag but found: " + argument)
+                raise Error("Expected a flag but found: " + String(argument))
 
             # Set the value of the flag.
             alias list_types = InlineArray[String, 3]("StringList", "IntList", "Float64List")
-            var flag = lookup(flags, name)
+            var flag = flags.lookup(name)
             if flag[].type in list_types:
                 if not flag[].changed:
                     flag[].set(value)
