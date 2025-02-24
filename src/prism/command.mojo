@@ -69,7 +69,7 @@ fn _get_args_as_list() -> List[StaticString]:
 alias NEWLINE = ord("\n")
 
 
-fn default_help(mut command: ArcPointer[Command]) raises -> String:
+fn default_help(command: ArcPointer[Command]) raises -> String:
     """Prints the help information for the command.
 
     Args:
@@ -127,17 +127,30 @@ alias CmdFn = fn (ctx: Context) -> None
 """The function for a command to run."""
 alias RaisingCmdFn = fn (ctx: Context) raises -> None
 """The function for a command to run that can error."""
-alias HelpFn = fn (mut command: ArcPointer[Command]) raises -> String
+alias HelpFn = fn (command: ArcPointer[Command]) raises -> String
 """The function to generate help output."""
 alias ArgValidatorFn = fn (ctx: Context) raises -> None
 """The function for an argument validator."""
 alias ParentVisitorFn = fn (parent: ArcPointer[Command]) capturing -> None
 """The function for visiting parents of a command."""
+alias ExitFn = fn (Error) -> None
+"""The function to call when an error occurs."""
+alias VersionFn = fn () -> String
+"""The function to call when the version flag is passed."""
 
 # TODO: For now it's locked to False until file scope variables.
 alias ENABLE_TRAVERSE_RUN_HOOKS = False
 """Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
+
+
+fn default_exit(e: Error) -> None:
+    """The default function to call when an error occurs.
+
+    Args:
+        e: The error that occurred.
+    """
+    panic(e)
 
 
 @value
@@ -175,6 +188,10 @@ struct Command(CollectionElement, Writable, Stringable):
     """Aliases that can be used instead of the first word in name."""
     var help: HelpFn
     """Generates help text."""
+    var exit: ExitFn
+    """Function to call when an error occurs."""
+    var version: Optional[VersionFn]
+    """Function to call when the version flag is passed."""
 
     var pre_run: Optional[CmdFn]
     """A function to run before the run function is executed."""
@@ -220,6 +237,8 @@ struct Command(CollectionElement, Writable, Stringable):
         usage: String,
         *,
         aliases: List[String] = List[String](),
+        exit: ExitFn = default_exit,
+        version: Optional[VersionFn] = None,
         valid_args: List[String] = List[String](),
         children: List[ArcPointer[Self]] = List[ArcPointer[Self]](),
         run: Optional[CmdFn] = None,
@@ -244,6 +263,8 @@ struct Command(CollectionElement, Writable, Stringable):
             name: The name of the command.
             usage: The usage of the command.
             aliases: The aliases for the command.
+            exit: The function to call when an error occurs.
+            version: The function to call when the version flag is passed.
             valid_args: The valid arguments for the command.
             children: The child commands.
             run: The function to run when the command is executed.
@@ -269,7 +290,9 @@ struct Command(CollectionElement, Writable, Stringable):
         self.usage = usage
         self.aliases = aliases
 
+        self.exit = exit
         self.help = default_help
+        self.version = version
 
         self.pre_run = pre_run
         self.run = run
@@ -309,6 +332,8 @@ struct Command(CollectionElement, Writable, Stringable):
             self._mark_flag_group_as[Annotation.ONE_REQUIRED](one_required_flags.value())
 
         self.flags.append(bool_flag(name="help", shorthand="h", usage="Displays help information about the command."))
+        if self.version:
+            self.flags.append(bool_flag(name="version", shorthand="v", usage="Displays the version of the command."))
 
     fn __moveinit__(mut self, owned existing: Self):
         """Initializes a new `Command` by moving the fields from an existing `Command`.
@@ -321,6 +346,8 @@ struct Command(CollectionElement, Writable, Stringable):
         self.aliases = existing.aliases^
 
         self.help = existing.help
+        self.exit = existing.exit
+        self.version = existing.version^
 
         self.pre_run = existing.pre_run^
         self.run = existing.run^
@@ -568,6 +595,11 @@ struct Command(CollectionElement, Writable, Stringable):
                 print(command_ptr[].help(command_ptr))
                 return
 
+            # Check if the help flag was passed
+            if self.version and command_ptr[].get_bool("version") == True:
+                print(command_ptr[].version.value()())
+                return
+
             # Validate individual required flags (eg: flag is required)
             command_ptr[].flags.validate_required_flags()
 
@@ -595,7 +627,7 @@ struct Command(CollectionElement, Writable, Stringable):
                 command_ptr[].raising_run.value()(ctx)
             self._execute_post_run_hooks(ctx, parents)
         except e:
-            panic(e)
+            self.exit(e)
 
     fn inherited_flags(self) -> FlagSet:
         """Returns the flags for the command and inherited flags from its parent.
@@ -637,7 +669,7 @@ struct Command(CollectionElement, Writable, Stringable):
             for name in flag_names:
                 self.flags.set_annotation[annotation](name[], _concat_names(flag_names))
         except e:
-            panic(e)
+            self.exit(e)
 
     fn has_parent(self) -> Bool:
         """Returns True if the command has a parent, False otherwise.

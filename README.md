@@ -455,8 +455,6 @@ fn main() -> None:
 - Add support for combining shorthand flags, like so: `-abc` instead of `-a -b -c`.
 - Try to avoid `Dict` and `try/except` blocks in order to support compile time command building.
 - Add persistent flag mutually exclusive and required together checks back in.
-- Add version flag and version function, like with `help`.
-- Use os exiting function, instead of just panicking. This will let users handle the case where we normally just panic.
 - Add support for stdout/stderr writer configuration, instead of just using print.
 
 ## Improvements

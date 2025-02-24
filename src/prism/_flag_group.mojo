@@ -2,7 +2,6 @@ from collections.dict import Dict, DictEntry
 from collections.string import StaticString
 from prism.flag import Flag
 from prism._flag_set import FlagSet, Annotation
-from prism._util import panic
 
 
 fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
@@ -28,7 +27,7 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -
 
         var keys = extract_keys(pair[])
         alias msg = "If any flags in the group, {}, are set they must all be set; missing {}."
-        panic(msg.format(keys.__str__(), unset.__str__()))
+        raise Error(msg.format(keys.__str__(), unset.__str__()))
 
 
 fn get_set_flags(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:
@@ -80,7 +79,7 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) rais
             continue
 
         var keys = extract_keys(pair[])
-        panic("At least one of the flags in the group {} is required.".format(keys.__str__()))
+        raise Error("At least one of the flags in the group {} is required.".format(keys.__str__()))
 
 
 fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
@@ -101,5 +100,5 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
 
         var keys = extract_keys(pair[])
         alias msg = "If any flags in the group {} are set none of the others can be; {} were all set."
-        panic(msg.format(keys.__str__(), set.__str__()))
+        raise Error(msg.format(keys.__str__(), set.__str__()))
 
