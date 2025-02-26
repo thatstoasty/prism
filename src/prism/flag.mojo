@@ -1,4 +1,4 @@
-from collections import Optional, Dict
+from collections import Optional, Dict, InlineArray
 from prism._flag_set import Annotation
 
 alias FlagActionFn = fn (ctx: Context, value: String) raises -> None
@@ -6,62 +6,100 @@ alias FlagActionFn = fn (ctx: Context, value: String) raises -> None
 
 
 @value
-@register_passable("trivial")
-struct FType():
+struct FType(EqualityComparableCollectionElement):
     """Flag types enum helper."""
-    alias String = "String"
-    alias Bool = "Bool"
-    alias Int = "Int"
-    alias Int8 = "Int8"
-    alias Int16 = "Int16"
-    alias Int32 = "Int32"
-    alias Int64 = "Int64"
-    alias UInt = "UInt"
-    alias UInt8 = "UInt8"
-    alias UInt16 = "UInt16"
-    alias UInt32 = "UInt32"
-    alias UInt64 = "UInt64"
-    alias Float16 = "Float16"
-    alias Float32 = "Float32"
-    alias Float64 = "Float64"
-    alias StringList = "StringList"
-    alias IntList = "IntList"
-    alias Float64List = "Float64List"
+    var value: String
+    alias String = Self("String")
+    alias Bool = Self("Bool")
+    alias Int = Self("Int")
+    alias Int8 = Self("Int8")
+    alias Int16 = Self("Int16")
+    alias Int32 = Self("Int32")
+    alias Int64 = Self("Int64")
+    alias UInt = Self("UInt")
+    alias UInt8 = Self("UInt8")
+    alias UInt16 = Self("UInt16")
+    alias UInt32 = Self("UInt32")
+    alias UInt64 = Self("UInt64")
+    alias Float16 = Self("Float16")
+    alias Float32 = Self("Float32")
+    alias Float64 = Self("Float64")
+    alias StringList = Self("StringList")
+    alias IntList = Self("IntList")
+    alias Float64List = Self("Float64List")
 
-    alias IntTypes = [
-        Self.Int,
-        Self.Int8,
-        Self.Int16,
-        Self.Int32,
-        Self.Int64,
-        Self.UInt,
-        Self.UInt8,
-        Self.UInt16,
-        Self.UInt32,
-        Self.UInt64,
-    ]
-    alias FloatTypes = [Self.Float16, Self.Float32, Self.Float64]
-    alias ListTypes = [Self.StringList, Self.IntList, Self.Float64List]
-    alias ValidTypes = [
-        Self.String,
-        Self.Bool,
-        Self.Int,
-        Self.Int8,
-        Self.Int16,
-        Self.Int32,
-        Self.Int64,
-        Self.UInt,
-        Self.UInt8,
-        Self.UInt16,
-        Self.UInt32,
-        Self.UInt64,
-        Self.Float16,
-        Self.Float32,
-        Self.Float64,
-        Self.StringList,
-        Self.IntList,
-        Self.Float64List,
-    ]
+    fn is_int_type(self) -> Bool:
+        """Returns if the type is an integer type.
+
+        Returns:
+            True if the type is an integer type, False otherwise.
+        """
+        alias int_types = InlineArray[String, 10](
+            "Int",
+            "Int8",
+            "Int16",
+            "Int32",
+            "Int64",
+            "UInt",
+            "UInt8",
+            "UInt16",
+            "UInt32",
+            "UInt64",
+        )
+        return self.value in int_types
+
+    fn is_float_type(self) -> Bool:
+        """Returns if the type is an float type.
+
+        Returns:
+            True if the type is an float type, False otherwise.
+        """
+        alias float_types = InlineArray[String, 3]("Float16", "Float32", "Float64")
+        return self.value in float_types
+    
+    fn is_list_type(self) -> Bool:
+        """Returns if the type is a list type.
+
+        Returns:
+            True if the type is a list type, False otherwise.
+        """
+        alias list_types = InlineArray[String, 3]("StringList", "IntList", "Float64List")
+        return self.value in list_types
+    
+    fn is_valid(self) -> Bool:
+        """Returns if the type is a valid type.
+
+        Returns:
+            True if the type is a valid type, False otherwise.
+        """
+        alias valid_types = InlineArray[String, 18](
+            "String",
+            "Bool",
+            "Int",
+            "Int8",
+            "Int16",
+            "Int32",
+            "Int64",
+            "UInt",
+            "UInt8",
+            "UInt16",
+            "UInt32",
+            "UInt64",
+            "Float16",
+            "Float32",
+            "Float64",
+            "StringList",
+            "IntList",
+            "Float64List",
+        )
+
+        return self.value in valid_types
+    
+    fn __eq__(self, other: Self) -> Bool:
+        return self.value == other.value
+    
+    fn __ne__(self, other: Self) -> Bool:
+        return self.value != other.value
 
 
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
@@ -80,13 +118,13 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
     """The usage of the flag."""
     var value: Optional[String]
     """The value of the flag."""
-    var environment_variable: Optional[StringLiteral]
+    var environment_variable: Optional[String]
     """If no value is provided, will optionally check this environment variable for a value."""
-    var file_path: Optional[StringLiteral]
+    var file_path: Optional[String]
     """If no value is provided, will optionally check read this file for a value. `environment_variable` takes precedence over this option."""
     var default: String
     """The default value of the flag."""
-    var type: String
+    var type: FType
     """The type of the flag."""
     var annotations: Dict[String, List[String]]
     """The annotations of the flag which are used to determine grouping."""
@@ -100,19 +138,19 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
     """If the flag should persist to children commands."""
 
     fn __init__(
-        mut self,
+        out self,
         name: String,
-        type: String,
+        type: FType,
         *,
         shorthand: String = "",
         usage: String = "",
-        environment_variable: Optional[StringLiteral] = None,
-        file_path: Optional[StringLiteral] = None,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
         default: String = "",
         required: Bool = False,
         persistent: Bool = False,
-    ) -> None:
+    ):
         """Initializes a new Flag.
 
         Args:
@@ -215,7 +253,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             ", default=",
             self.default,
             ", type=",
-            self.type,
+            self.type.value,
             ", changed=",
             self.changed,
             ", required=",
@@ -262,8 +300,8 @@ fn string_flag(
     usage: String,
     shorthand: String = "",
     default: String = "",
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -286,7 +324,7 @@ fn string_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="String",
+        type=FType.String,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -300,8 +338,8 @@ fn bool_flag(
     usage: String,
     shorthand: String = "",
     default: Bool = False,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -324,7 +362,7 @@ fn bool_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="Bool",
+        type=FType.Bool,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -338,8 +376,8 @@ fn int_flag(
     usage: String,
     shorthand: String = "",
     default: Int = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -362,7 +400,7 @@ fn int_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="Int",
+        type=FType.Int,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -376,8 +414,8 @@ fn int8_flag(
     usage: String,
     shorthand: String = "",
     default: Int8 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -400,7 +438,7 @@ fn int8_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="Int8",
+        type=FType.Int8,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -414,8 +452,8 @@ fn int16_flag(
     usage: String,
     shorthand: String = "",
     default: Int16 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -438,7 +476,7 @@ fn int16_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="Int16",
+        type=FType.Int16,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -452,8 +490,8 @@ fn int32_flag(
     usage: String,
     shorthand: String = "",
     default: Int32 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -476,7 +514,7 @@ fn int32_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="Int32",
+        type=FType.Int32,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -490,8 +528,8 @@ fn int64_flag(
     usage: String,
     shorthand: String = "",
     default: Int64 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -514,7 +552,7 @@ fn int64_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="Int64",
+        type=FType.Int64,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -528,8 +566,8 @@ fn uint_flag(
     usage: String,
     shorthand: String = "",
     default: UInt8 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -552,7 +590,7 @@ fn uint_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="UInt",
+        type=FType.UInt,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -566,8 +604,8 @@ fn uint8_flag(
     usage: String,
     shorthand: String = "",
     default: UInt8 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -590,7 +628,7 @@ fn uint8_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="UInt8",
+        type=FType.UInt8,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -604,8 +642,8 @@ fn uint16_flag(
     usage: String,
     shorthand: String = "",
     default: UInt16 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -628,7 +666,7 @@ fn uint16_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="UInt16",
+        type=FType.UInt16,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -642,8 +680,8 @@ fn uint32_flag(
     usage: String,
     shorthand: String = "",
     default: UInt32 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -666,7 +704,7 @@ fn uint32_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="UInt32",
+        type=FType.UInt32,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -680,8 +718,8 @@ fn uint64_flag(
     usage: String,
     shorthand: String = "",
     default: UInt64 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -704,7 +742,7 @@ fn uint64_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="UInt64",
+        type=FType.UInt64,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -718,8 +756,8 @@ fn float16_flag(
     usage: String,
     shorthand: String = "",
     default: Float16 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -742,7 +780,7 @@ fn float16_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="Float16",
+        type=FType.Float16,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -756,8 +794,8 @@ fn float32_flag(
     usage: String,
     shorthand: String = "",
     default: Float32 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -780,7 +818,7 @@ fn float32_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="Float32",
+        type=FType.Float32,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -794,8 +832,8 @@ fn float64_flag(
     usage: String,
     shorthand: String = "",
     default: Float64 = 0,
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -818,7 +856,7 @@ fn float64_flag(
         shorthand=shorthand,
         usage=usage,
         default=String(default),
-        type="Float64",
+        type=FType.Float64,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -832,8 +870,8 @@ fn string_list_flag(
     usage: String,
     shorthand: String = "",
     default: List[String] = List[String](),
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -856,7 +894,7 @@ fn string_list_flag(
         shorthand=shorthand,
         usage=usage,
         default=" ".join(default),
-        type="StringList",
+        type=FType.StringList,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -870,8 +908,8 @@ fn int_list_flag(
     usage: String,
     shorthand: String = "",
     default: List[Int, True] = List[Int, True](),
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -894,7 +932,7 @@ fn int_list_flag(
         shorthand=shorthand,
         usage=usage,
         default=" ".join(default),
-        type="IntList",
+        type=FType.IntList,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,
@@ -908,8 +946,8 @@ fn float64_list_flag(
     usage: String,
     shorthand: String = "",
     default: List[Float64, True] = List[Float64, True](),
-    environment_variable: Optional[StringLiteral] = None,
-    file_path: Optional[StringLiteral] = None,
+    environment_variable: Optional[String] = None,
+    file_path: Optional[String] = None,
     action: Optional[FlagActionFn] = None,
     required: Bool = False,
     persistent: Bool = False,
@@ -932,7 +970,7 @@ fn float64_list_flag(
         shorthand=shorthand,
         usage=usage,
         default=" ".join(default),
-        type="Float64List",
+        type=FType.Float64List,
         environment_variable=environment_variable,
         file_path=file_path,
         action=action,

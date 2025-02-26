@@ -1,35 +1,14 @@
 from sys import argv
-from collections import Optional, Dict, InlineList
+from collections import Optional, Dict
 from collections.string import StaticString
 from memory import ArcPointer
 import mog
 from mog import Position
 from prism._util import to_string, to_list, string_to_bool, panic
 from prism.flag import Flag, FType, bool_flag
-from prism._flag_set import (
-    Annotation,
-    FlagSet
-)
-from prism.args import arbitrary_args, get_args
+from prism._flag_set import Annotation, FlagSet
+from prism.args import arbitrary_args
 from prism.context import Context
-
-
-fn _concat_names(flag_names: VariadicListMem[String, _]) -> String:
-    """Concatenates the flag names into a single string.
-
-    Args:
-        flag_names: The flag names to concatenate.
-
-    Returns:
-        The concatenated flag names.
-    """
-    var result = String()
-    for i in range(len(flag_names)):
-        result.write(flag_names[i])
-        if i != len(flag_names) - 1:
-            result.write(" ")
-
-    return result
 
 
 fn _concat_names(flag_names: List[String]) -> String:
@@ -63,10 +42,7 @@ fn _get_args_as_list() -> List[StaticString]:
         result.append(args[i])
         i += 1
 
-    return result
-
-
-alias NEWLINE = ord("\n")
+    return result^
 
 
 fn default_help(command: ArcPointer[Command]) raises -> String:
@@ -137,6 +113,17 @@ alias ExitFn = fn (Error) -> None
 """The function to call when an error occurs."""
 alias VersionFn = fn () -> String
 """The function to call when the version flag is passed."""
+alias WriterFn = fn(String) -> None
+"""The function to call when writing output or errors."""
+
+
+fn default_output_writer(arg: String):
+    print(arg)
+
+
+fn default_error_writer(arg: String):
+    print(arg, file=2)
+
 
 # TODO: For now it's locked to False until file scope variables.
 alias ENABLE_TRAVERSE_RUN_HOOKS = False
@@ -186,12 +173,17 @@ struct Command(CollectionElement, Writable, Stringable):
     """Description of the command."""
     var aliases: List[String]
     """Aliases that can be used instead of the first word in name."""
+
     var help: HelpFn
     """Generates help text."""
     var exit: ExitFn
     """Function to call when an error occurs."""
     var version: Optional[VersionFn]
     """Function to call when the version flag is passed."""
+    var output_writer: WriterFn
+    """Function to call when writing output."""
+    var error_writer: WriterFn
+    """Function to call when writing errors."""
 
     var pre_run: Optional[CmdFn]
     """A function to run before the run function is executed."""
@@ -232,13 +224,15 @@ struct Command(CollectionElement, Writable, Stringable):
     """Parent command."""
 
     fn __init__(
-        mut self,
+        out self,
         name: String,
         usage: String,
         *,
         aliases: List[String] = List[String](),
         exit: ExitFn = default_exit,
         version: Optional[VersionFn] = None,
+        output_writer: WriterFn = default_output_writer,
+        error_writer: WriterFn = default_error_writer,
         valid_args: List[String] = List[String](),
         children: List[ArcPointer[Self]] = List[ArcPointer[Self]](),
         run: Optional[CmdFn] = None,
@@ -265,6 +259,8 @@ struct Command(CollectionElement, Writable, Stringable):
             aliases: The aliases for the command.
             exit: The function to call when an error occurs.
             version: The function to call when the version flag is passed.
+            output_writer: The function to call when writing output.
+            error_writer: The function to call when writing errors.
             valid_args: The valid arguments for the command.
             children: The child commands.
             run: The function to run when the command is executed.
@@ -293,6 +289,8 @@ struct Command(CollectionElement, Writable, Stringable):
         self.exit = exit
         self.help = default_help
         self.version = version
+        self.output_writer = output_writer
+        self.error_writer = error_writer
 
         self.pre_run = pre_run
         self.run = run
@@ -335,7 +333,7 @@ struct Command(CollectionElement, Writable, Stringable):
         if self.version:
             self.flags.append(bool_flag(name="version", shorthand="v", usage="Displays the version of the command."))
 
-    fn __moveinit__(mut self, owned existing: Self):
+    fn __moveinit__(out self, owned existing: Self):
         """Initializes a new `Command` by moving the fields from an existing `Command`.
 
         Args:
@@ -348,6 +346,8 @@ struct Command(CollectionElement, Writable, Stringable):
         self.help = existing.help
         self.exit = existing.exit
         self.version = existing.version^
+        self.output_writer = existing.output_writer
+        self.error_writer = existing.error_writer
 
         self.pre_run = existing.pre_run^
         self.run = existing.run^
@@ -516,7 +516,7 @@ struct Command(CollectionElement, Writable, Stringable):
             elif ctx.command[].raising_pre_run:
                 ctx.command[].raising_pre_run.value()(ctx)
         except e:
-            print("Failed to run pre-run hooks for command: " + ctx.command[].name, file=2)
+            self.error_writer("Failed to run pre-run hooks for command: " + ctx.command[].name)
             raise e
 
     fn _execute_post_run_hooks(self, ctx: Context, parents: List[ArcPointer[Self]]) raises -> None:
@@ -552,7 +552,7 @@ struct Command(CollectionElement, Writable, Stringable):
             elif ctx.command[].raising_post_run:
                 ctx.command[].raising_post_run.value()(ctx)
         except e:
-            print("Failed to run post-run hooks for command: " + ctx.command[].name, file=2)
+            self.error_writer("Failed to run post-run hooks for command: " + ctx.command[].name)
             raise e
 
     fn execute(self) -> None:
@@ -592,12 +592,12 @@ struct Command(CollectionElement, Writable, Stringable):
 
             # Check if the help flag was passed
             if command_ptr[].get_bool("help") == True:
-                print(command_ptr[].help(command_ptr))
+                self.output_writer(command_ptr[].help(command_ptr))
                 return
 
             # Check if the help flag was passed
             if self.version and command_ptr[].get_bool("version") == True:
-                print(command_ptr[].version.value()())
+                self.output_writer(command_ptr[].version.value()())
                 return
 
             # Validate individual required flags (eg: flag is required)
@@ -667,7 +667,7 @@ struct Command(CollectionElement, Writable, Stringable):
         self._merge_flags()
         try:
             for name in flag_names:
-                self.flags.set_annotation[annotation](name[], _concat_names(flag_names))
+                self.flags.set_annotation[annotation](name[], " ".join(flag_names))
         except e:
             self.exit(e)
 
@@ -677,7 +677,7 @@ struct Command(CollectionElement, Writable, Stringable):
         Returns:
             True if the command has a parent, False otherwise.
         """
-        return self.parent.__bool__()
+        return Bool(self.parent)
 
     fn visit_parents[func: ParentVisitorFn](self) -> None:
         """Visits all parents of the command and invokes func on each parent.
@@ -715,9 +715,9 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        return string_to_bool(self.flags.lookup["Bool"](name)[].value_or_default())
+        return string_to_bool(self.flags.lookup[FType.Bool](name)[].value_or_default())
 
-    fn get_int[type: String = "Int"](self, name: String) raises -> Int:
+    fn get_int[type: FType = FType.Int](self, name: String) raises -> Int:
         """Returns the value of a flag as an `Int`. If it isn't set, then return the default value.
 
         Parameters:
@@ -732,7 +732,10 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        constrained[type not in FType.IntTypes, "type must be one of `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, or `UInt64`."]()
+        constrained[
+            type.is_int_type(),
+            "type must be one of `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, or `UInt64`. Received: " + type.value
+        ]()
         return atol(self.flags.lookup[type](name)[].value_or_default())
 
     fn get_int8(self, name: String) raises -> Int8:
@@ -861,7 +864,7 @@ struct Command(CollectionElement, Writable, Stringable):
         """
         return UInt64(self.get_int[FType.UInt64](name))
     
-    fn get_float[type: String](self, name: String) raises -> Float64:
+    fn get_float[type: FType](self, name: String) raises -> Float64:
         """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
 
         Parameters:
@@ -876,7 +879,10 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        constrained[type not in FType.FloatTypes, "type must be one of `Float16`, `Float32`, `Float64`"]()
+        constrained[
+            type.is_float_type(),
+            "type must be one of `Float16`, `Float32`, `Float64`. Received: " + type.value
+        ]()
         return atof(self.flags.lookup[type](name)[].value_or_default())
 
     fn get_float16(self, name: String) raises -> Float16:
@@ -921,7 +927,7 @@ struct Command(CollectionElement, Writable, Stringable):
         """
         return self.get_float[FType.Float64](name)
 
-    fn _get_list[type: String](self, name: String) raises -> List[String]:
+    fn _get_list[type: FType](self, name: String) raises -> List[String]:
         """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
 
         Parameters:
@@ -936,7 +942,10 @@ struct Command(CollectionElement, Writable, Stringable):
         Raises:
             Error: If the flag is not found.
         """
-        constrained[type not in FType.ListTypes, "type must be one of `StringList`, `IntList`, or `Float64List`."]()
+        constrained[
+            type.is_list_type(),
+            "type must be one of `StringList`, `IntList`, or `Float64List`. Received: " + type.value
+        ]()
         return self.flags.lookup[type](name)[].value_or_default().split(sep=" ")
 
     fn get_string_list(self, name: String) raises -> List[String]:
@@ -969,7 +978,7 @@ struct Command(CollectionElement, Writable, Stringable):
         var ints = List[Int](capacity=len(values))
         for value in values:
             ints.append(atol(value[]))
-        return ints
+        return ints^
 
     fn get_float64_list(self, name: String) raises -> List[Float64]:
         """Returns the value of a flag as a `List[Float64]`. If it isn't set, then return the default value.
@@ -987,4 +996,4 @@ struct Command(CollectionElement, Writable, Stringable):
         var floats = List[Float64](capacity=len(values))
         for value in values:
             floats.append(atof(value[]))
-        return floats
+        return floats^

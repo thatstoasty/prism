@@ -1,8 +1,7 @@
 import os
 from memory import Span
-from collections import InlineArray
 from collections.string import StaticString
-from prism._flag_set import FlagSet
+from prism._flag_set import FlagSet, FType
 from prism._util import split
 
 
@@ -33,14 +32,14 @@ struct FlagParser:
             Error: If an error occurred while parsing the flag.
         """
         # Flag with value set like "--flag=<value>"
-        if argument.find("=") != -1:
-            var flag = split(argument, "=")
-            var name = flag[0][2:]
-            var value = flag[1]
-
+        var sep_index = argument.find("=")
+        if sep_index != -1:
+            # var flag = split(argument, "=")
+            var name = String(argument[2 : sep_index])
             if name not in flags.names():
-                raise Error("Command does not accept the flag supplied: " + name)
+                raise Error(String("Command does not accept the flag supplied: ", name))
 
+            var value = String(argument[sep_index + 1:])
             return name, value, 1
 
         # Flag with value set like "--flag <value>"
@@ -50,7 +49,7 @@ struct FlagParser:
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
         try:
-            _ = flags.lookup["Bool"](name)
+            _ = flags.lookup[FType.Bool](name)
             return name, String("True"), 1
         except:
             pass
@@ -99,7 +98,7 @@ struct FlagParser:
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
         try:
-            _ = flags.lookup["Bool"](name)
+            _ = flags.lookup[FType.Bool](name)
             return name, String("True"), 1
         except:
             pass
@@ -148,18 +147,14 @@ struct FlagParser:
             elif argument.startswith("-", 0, 1):
                 name, value, increment_by = self.parse_shorthand_flag(argument, arguments, flags)
             else:
-                raise Error("Expected a flag but found: " + String(argument))
+                raise Error(String("Expected a flag but found: ", argument))
 
             # Set the value of the flag.
-            alias list_types = InlineArray[String, 3]("StringList", "IntList", "Float64List")
             var flag = flags.lookup(name)
-            if flag[].type in list_types:
-                if not flag[].changed:
-                    flag[].set(value)
-                else:
-                    flag[].value.value().write(" ", value)
-            else:
+            if not flag[].changed:
                 flag[].set(value)
+            else:
+                flag[].value.value().write(" ", value)
             self.index += increment_by
 
         # If flags are not set, check if they can be set from an environment variable or from a file.

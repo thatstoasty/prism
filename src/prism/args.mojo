@@ -1,7 +1,7 @@
 from memory import ArcPointer
 from collections.optional import Optional
-from .command import ArgValidatorFn, Command
-from .context import Context
+from prism.command import ArgValidatorFn, Command
+from prism.context import Context
 
 
 fn no_args(ctx: Context) raises -> None:
@@ -147,21 +147,3 @@ fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
             validator(ctx)
 
     return match_all_args
-
-
-fn get_args(arguments: List[String]) -> List[String]:
-    """Parses flags and args from the args passed via the command line
-    and adds them to their appropriate collections.
-
-    Args:
-        arguments: The arguments passed via the command line.
-
-    Returns:
-        The arguments that are not flags.
-    """
-    args = List[String](capacity=len(arguments))
-    for argument in arguments:
-        # Argument is not a shorthand or full flag.
-        if not (argument[].startswith("-", 0, 1)):
-            args.append(argument[])
-    return args

@@ -1,4 +1,4 @@
-from collections import Optional, InlineList
+from collections import Optional
 from collections.list import _ListIter
 from collections.dict import Dict, DictEntry
 from collections.string import StaticString
@@ -187,7 +187,26 @@ struct FlagSet(Writable, Stringable, Boolable):
         if len(missing_flag_names) > 0:
             raise Error("Required flag(s): " + missing_flag_names.__str__() + " not set.")
 
-    fn lookup[type: String = ""](ref self, name: String) raises -> Pointer[Flag, __origin_of(self.flags)]:
+    fn lookup(ref self, name: String) raises -> Pointer[Flag, __origin_of(self.flags)]:
+        """Returns an mutable or immutable Pointer to a Flag with the given name.
+        Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
+
+        Args:
+            name: The name of the Flag to lookup.
+
+        Returns:
+            Optional Pointer to the Flag.
+
+        Raises:
+            Error: If the Flag is not found.
+        """
+        for flag in self.flags:
+            if flag[].name == name:
+                return Pointer.address_of(flag[])
+
+        raise Error("FlagNotFoundError: Could not find the following flag: " + name)
+
+    fn lookup[type: FType](ref self, name: String) raises -> Pointer[Flag, __origin_of(self.flags)]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -203,15 +222,9 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the Flag is not found.
         """
-        constrained[type not in FType.ValidTypes, "type must be one of `String`, `Bool`, `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, `UInt64`, `Float16`, `Float32`, `Float64`, `StringList`, `IntList`, `Float64List`."]()
-        if type == "":
-            for i in range(len(self.flags)):
-                if self.flags[i].name == name:
-                    return Pointer.address_of(self.flags[i])
-        else:
-            for i in range(len(self.flags)):
-                if self.flags[i].name == name and self.flags[i].type == type:
-                    return Pointer.address_of(self.flags[i])
+        for flag in self.flags:
+            if flag[].name == name and flag[].type == type:
+                return Pointer.address_of(flag[])
 
         raise Error("FlagNotFoundError: Could not find the following flag: " + name)
 
@@ -233,7 +246,7 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         raise Error("FlagNotFoundError: Could not find the following flag shorthand: " + shorthand)
 
-    fn has_all_flags(self, owned flag_names: List[String]) -> Bool:
+    fn has_all_flags(self, flag_names: List[String]) -> Bool:
         """Checks if all flags are defined in the flag set.
 
         Args:
@@ -247,7 +260,6 @@ struct FlagSet(Writable, Stringable, Boolable):
             if name[] not in names:
                 return False
         return True
-    
 
     fn process_group_annotations[annotation: Annotation](
         self,
