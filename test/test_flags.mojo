@@ -3,7 +3,7 @@ from collections.string import StaticString
 import testing
 import prism
 from prism import Command, Context
-from prism.flag import Flag, string_flag, bool_flag, int_flag, int8_flag, int16_flag, int32_flag, int64_flag, uint_flag, uint8_flag, uint16_flag, uint32_flag, uint64_flag, float16_flag, float32_flag, float64_flag, string_list_flag, int_list_flag, float64_list_flag
+from prism.flag import Flag, FType, string_flag, bool_flag, int_flag, int8_flag, int16_flag, int32_flag, int64_flag, uint_flag, uint8_flag, uint16_flag, uint32_flag, uint64_flag, float16_flag, float32_flag, float64_flag, string_list_flag, int_list_flag, float64_list_flag
 from prism._flag_set import string_to_bool
 from prism._flag_parser import FlagParser
 
@@ -90,8 +90,8 @@ def test_string_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["String"]("key")
-    testing.assert_equal(flag[].type, "String")
+    var flag = cmd.flags.lookup[FType.String]("key")
+    testing.assert_equal(flag[].type.value, FType.String.value)
     testing.assert_equal(cmd.get_string("key"), "default")
 
 
@@ -105,8 +105,8 @@ def test_bool_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["Bool"]("flag")
-    testing.assert_equal(flag[].type, "Bool")
+    var flag = cmd.flags.lookup[FType.Bool]("flag")
+    testing.assert_equal(flag[].type.value, FType.Bool.value)
     testing.assert_equal(cmd.get_bool("flag"), False)
 
 
@@ -120,8 +120,8 @@ def test_int_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["Int"]("num")
-    testing.assert_equal(flag[].type, "Int")
+    var flag = cmd.flags.lookup[FType.Int]("num")
+    testing.assert_equal(flag[].type.value, FType.Int.value)
     testing.assert_equal(cmd.get_int("num"), 0)
 
 
@@ -135,8 +135,8 @@ def test_int8_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["Int8"]("num")
-    testing.assert_equal(flag[].type, "Int8")
+    var flag = cmd.flags.lookup[FType.Int8]("num")
+    testing.assert_equal(flag[].type.value, FType.Int8.value)
     testing.assert_equal(cmd.get_int8("num"), Int8(0))
 
 
@@ -150,8 +150,8 @@ def test_int16_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["Int16"]("num")
-    testing.assert_equal(flag[].type, "Int16")
+    var flag = cmd.flags.lookup[FType.Int16]("num")
+    testing.assert_equal(flag[].type.value, FType.Int16.value)
     testing.assert_equal(cmd.get_int16("num"), Int16(0))
 
 
@@ -165,8 +165,8 @@ def test_int32_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["Int32"]("num")
-    testing.assert_equal(flag[].type, "Int32")
+    var flag = cmd.flags.lookup[FType.Int32]("num")
+    testing.assert_equal(flag[].type.value, FType.Int32.value)
     testing.assert_equal(cmd.get_int32("num"), Int32(0))
 
 
@@ -180,8 +180,8 @@ def test_int64_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["Int64"]("num")
-    testing.assert_equal(flag[].type, "Int64")
+    var flag = cmd.flags.lookup[FType.Int64]("num")
+    testing.assert_equal(flag[].type.value, FType.Int64.value)
     testing.assert_equal(cmd.get_int64("num"), Int64(0))
 
 
@@ -195,8 +195,8 @@ def test_uint_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["UInt"]("num")
-    testing.assert_equal(flag[].type, "UInt")
+    var flag = cmd.flags.lookup[FType.UInt]("num")
+    testing.assert_equal(flag[].type.value, FType.UInt.value)
     testing.assert_equal(cmd.get_uint("num"), UInt(0))
 
 
@@ -210,8 +210,8 @@ def test_uint8_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["UInt8"]("num")
-    testing.assert_equal(flag[].type, "UInt8")
+    var flag = cmd.flags.lookup[FType.UInt8]("num")
+    testing.assert_equal(flag[].type.value, FType.UInt8.value)
     testing.assert_equal(cmd.get_uint8("num"), UInt8(0))
 
 
@@ -225,8 +225,8 @@ def test_uint16_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["UInt16"]("num")
-    testing.assert_equal(flag[].type, "UInt16")
+    var flag = cmd.flags.lookup[FType.UInt16]("num")
+    testing.assert_equal(flag[].type.value, FType.UInt16.value)
     testing.assert_equal(cmd.get_uint16("num"), UInt16(0))
 
 
@@ -240,8 +240,8 @@ def test_uint32_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["UInt32"]("num")
-    testing.assert_equal(flag[].type, "UInt32")
+    var flag = cmd.flags.lookup[FType.UInt32]("num")
+    testing.assert_equal(flag[].type.value, FType.UInt32.value)
     testing.assert_equal(cmd.get_uint32("num"), UInt32(0))
 
 
@@ -255,8 +255,8 @@ def test_uint64_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["UInt64"]("num")
-    testing.assert_equal(flag[].type, "UInt64")
+    var flag = cmd.flags.lookup[FType.UInt64]("num")
+    testing.assert_equal(flag[].type.value, FType.UInt64.value)
     testing.assert_equal(cmd.get_uint64("num"), UInt64(0))
 
 
@@ -270,8 +270,8 @@ def test_float16_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["Float16"]("num")
-    testing.assert_equal(flag[].type, "Float16")
+    var flag = cmd.flags.lookup[FType.Float16]("num")
+    testing.assert_equal(flag[].type.value, FType.Float16.value)
     testing.assert_equal(cmd.get_float16("num"), Float16(0))
 
 
@@ -285,8 +285,8 @@ def test_float32_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["Float32"]("num")
-    testing.assert_equal(flag[].type, "Float32")
+    var flag = cmd.flags.lookup[FType.Float32]("num")
+    testing.assert_equal(flag[].type.value, FType.Float32.value)
     testing.assert_equal(cmd.get_float32("num"), Float32(0))
 
 
@@ -300,8 +300,8 @@ def test_float64_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["Float64"]("num")
-    testing.assert_equal(flag[].type, "Float64")
+    var flag = cmd.flags.lookup[FType.Float64]("num")
+    testing.assert_equal(flag[].type.value, FType.Float64.value)
     testing.assert_equal(cmd.get_float64("num"), Float64(0))
 
 
@@ -315,8 +315,8 @@ def test_string_list_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["StringList"]("num")
-    testing.assert_equal(flag[].type, "StringList")
+    var flag = cmd.flags.lookup[FType.StringList]("num")
+    testing.assert_equal(flag[].type.value, FType.StringList.value)
     testing.assert_equal(cmd.get_string_list("num"), List[String]("a", "b"))
 
 
@@ -330,8 +330,8 @@ def test_int_list_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["IntList"]("num")
-    testing.assert_equal(flag[].type, "IntList")
+    var flag = cmd.flags.lookup[FType.IntList]("num")
+    testing.assert_equal(flag[].type.value, FType.IntList.value)
 
     var result = cmd.get_int_list("num")
     testing.assert_equal(result[0], 0)
@@ -348,8 +348,8 @@ def test_float64_list_flag():
         ),
     )
 
-    var flag = cmd.flags.lookup["Float64List"]("num")
-    testing.assert_equal(flag[].type, "Float64List")
+    var flag = cmd.flags.lookup[FType.Float64List]("num")
+    testing.assert_equal(flag[].type.value, FType.Float64List.value)
 
     var result = cmd.get_float64_list("num")
     testing.assert_equal(result[0], Float64(0))
