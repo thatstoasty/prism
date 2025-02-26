@@ -9,6 +9,5 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
-max = ">=24.6.0"
-mist = ">=0.1.9"
-prism = ">=0.3.0"
+max = "==25.1.0"
+prism = "==25.1.0"
