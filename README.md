@@ -4,7 +4,7 @@ A Budding CLI Library!
 
 Inspired by: `Cobra` and `urfave/cli`!
 
-![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-24.6-orange)
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-25.1-orange)
 ![Build Status](https://github.com/thatstoasty/prism/actions/workflows/build.yml/badge.svg)
 ![Test Status](https://github.com/thatstoasty/prism/actions/workflows/test.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -416,9 +416,11 @@ If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 
 ![Arg Validators](https://github.com/thatstoasty/prism/blob/main/doc/tapes/arg_validators.gif)
 
-## Help Commands
+## Common Flags
 
-Commands are configured to accept a `--help` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed.
+### Help
+
+Commands are configured to accept a `--help` and `-h` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed.
 
 ```mojo
 from memory import ArcPointer
@@ -438,6 +440,94 @@ fn main() -> None:
 ```
 
 ![Help](https://github.com/thatstoasty/prism/blob/main/doc/tapes/help.gif)
+
+### Version
+
+Commands can be configured to accept `--version` and `-v` flag to run a version function. This will print the result of the version function using the output writer that's configured for the command.
+
+```mojo
+from memory import ArcPointer
+from prism import Command, Context
+
+
+fn test(ctx: Context) -> None:
+    print("Pass -v to see the version!")
+
+
+fn version() -> String:
+    return "MyCLI version 0.1.0"
+
+
+fn main() -> None:
+    Command(
+        name="hello",
+        usage="This is a dummy command!",
+        run=test,
+        version=version,
+    ).execute()
+```
+
+## Output Redirection
+
+The standard output and error output behavior can be customized by providing writer functions. By default, the writer is set to `print` to stdout and stderr, but you can provide custom writer functions that satisfy the expected function signatures.
+
+```mojo
+from memory import ArcPointer
+from prism import Command, Context
+
+
+fn my_output_writer(arg: String):
+    print(arg)
+
+
+fn my_error_writer(arg: String):
+    print(arg, file=2)
+
+
+fn test(ctx: Context) -> None:
+    print("Pass -v to see the version!")
+
+
+fn main() -> None:
+    Command(
+        name="hello",
+        usage="This is a dummy command!",
+        run=test,
+        version=version,
+        output_writer=my_output_writer,
+        error_writer=my_error_writer,
+    ).execute()
+```
+
+## Exiting the program
+
+By default, `prism` will exit with a status code of `1` if any `Errors` are raised during the execution of the program. However, the exit behavior can be customized by providing an exit function to the `Command` struct. It's a bit manual with error handling now, but it will be improved in the future.
+
+```mojo
+from memory import ArcPointer
+from prism import Command, Context
+from sys import exit
+
+
+fn test(ctx: Context) raises -> None:
+    raise Error("Error: Exit Code 2")
+
+
+fn my_exit(e: Error) -> None:
+    if String(e) == "Error: Exit Code 2":
+        exit(2)
+    else:
+        exit(1)
+
+
+fn main() -> None:
+    Command(
+        name="hello",
+        usage="This is a dummy command!",
+        raising_run=test,
+        exit=my_exit,
+    ).execute()
+```
 
 ## Notes
 
