@@ -80,7 +80,7 @@ fn to_string[T: WritableCollectionElement](vector: List[ArcPointer[T]]) -> Strin
         if i < vector.size - 1:
             result.write(", ")
     result.write("]")
-    return result
+    return result^
 
 
 fn to_list(flag_names: VariadicListMem[String, _]) -> List[String]:
@@ -95,4 +95,4 @@ fn to_list(flag_names: VariadicListMem[String, _]) -> List[String]:
     var result = List[String](capacity=len(flag_names))
     for name in flag_names:
         result.append(name[])
-    return result
+    return result^
