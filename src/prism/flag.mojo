@@ -1,6 +1,7 @@
 from collections import Optional, Dict, InlineArray
 from prism._flag_set import Annotation
 
+
 alias FlagActionFn = fn (ctx: Context, value: String) raises -> None
 """The type of a function that runs after a flag has been processed."""
 
