@@ -1,6 +1,6 @@
-from .command import Command
-from .args import no_args, valid_args, arbitrary_args, minimum_n_args, maximum_n_args, exact_args, range_args
-from .flag import (
+from prism.command import Command
+from prism.args import no_args, valid_args, arbitrary_args, minimum_n_args, maximum_n_args, exact_args, range_args
+from prism.flag import (
     Flag,
     string_flag,
     bool_flag,
@@ -21,4 +21,4 @@ from .flag import (
     int_list_flag,
     float64_list_flag,
 )
-from .context import Context
+from prism.context import Context
