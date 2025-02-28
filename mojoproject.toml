@@ -3,8 +3,8 @@ authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
 channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://conda.modular.com/max"]
 description = "A Budding CLI Library!"
 name = "prism"
-platforms = ["osx-arm64", "linux-64"]
-version = "25.1.0"
+platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
+version = "25.1.1"
 license = "MIT"
 license-file = "LICENSE"
 homepage = "https://github.com/thatstoasty/prism"
@@ -21,4 +21,4 @@ bp = { depends-on=["build", "publish"] }
 
 [dependencies]
 max = ">=25.1.0,<25.2.0"
-mog = ">=25.1.0"
+mog = ">=25.1.1,<25.2.0"

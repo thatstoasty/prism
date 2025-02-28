@@ -1,4 +1,4 @@
-name: tests
+name: Run Tests
 
 on:
   pull_request:
@@ -10,12 +10,13 @@ permissions:
 
 jobs:
   test:
-    name: with ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
-        # os: ["ubuntu-latest"]
-        os: ["ubuntu-latest", "macos-latest"]
+        include:
+          - { target: linux-64, os: ubuntu-latest }
+          - { target: osx-arm64, os: macos-latest }
+          - { target: linux-aarch64, os: ubuntu-24.04-arm }
+      fail-fast: false
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 5
@@ -30,7 +31,11 @@ jobs:
 
       - name: Install magic
         run: |
-          curl -ssL https://magic.modular.com | bash
+          if [[ ${{ matrix.target }} == "linux-aarch64" ]]; then
+            bash scripts/install_magic_aarch64.sh
+          else
+            curl -ssL https://magic.modular.com | bash
+          fi
 
       - name: Run tests
         run: |
