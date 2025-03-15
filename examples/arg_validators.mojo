@@ -22,7 +22,6 @@ fn hello(ctx: Context) -> None:
 
 fn main() -> None:
     var no_args_command = ArcPointer(Command(name="no_args", usage="This is a dummy command!", run=hello, arg_validator=no_args))
-
     var valid_args_command = ArcPointer(
         Command(name="valid_args", usage="This is a dummy command!", run=hello, valid_args=List[String]("Pineapple"), arg_validator=valid_args)
     )
@@ -31,7 +30,7 @@ fn main() -> None:
     var exact_args_command = ArcPointer(Command(name="exact_args", usage="This is a dummy command!", run=hello, arg_validator=exact_args[1]()))
     var range_args_command = ArcPointer(Command(name="range_args", usage="This is a dummy command!", run=hello, arg_validator=range_args[0, 1]()))
 
-    var root = Command(
+    Command(
         name="hello",
         usage="This is a dummy command!",
         run=test,
@@ -43,6 +42,4 @@ fn main() -> None:
             exact_args_command,
             range_args_command,
         ),
-    )
-
-    root.execute()
+    ).execute()

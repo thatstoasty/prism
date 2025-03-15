@@ -76,12 +76,12 @@ fn main() -> None:
     var goodbye_command = build_goodbye_command()
     var printer_command = build_printer_command()
 
-    var root = Command(
+    Command(
         name="tones",
         usage="This is a dummy command!",
         run=test,
         flags=List[Flag](
-            prism.string_flag(
+            Flag.string(
                 name="env",
                 shorthand="e",
                 usage="Environment.",
@@ -100,6 +100,4 @@ fn main() -> None:
             )),
             printer_command,
         ),
-    )
-
-    root.execute()
+    ).execute()

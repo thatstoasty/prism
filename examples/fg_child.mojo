@@ -1,5 +1,5 @@
 from memory import ArcPointer
-from prism import Command, Context
+from prism import Command, Context, Flag
 import prism
 
 
@@ -12,25 +12,25 @@ fn tool_func(ctx: Context) -> None:
 
 
 fn main() -> None:
-    var root = Command(
+    Command(
         name="my",
         usage="This is a dummy command!",
         run=test,
-        flags=List[prism.Flag](
-            prism.bool_flag(
+        flags=List[Flag](
+            Flag.bool(
                 name="required",
                 shorthand="r",
                 usage="Always required.",
                 required=True,
                 persistent=True,
             ),
-            prism.string_flag(
+            Flag.string(
                 name="host",
                 shorthand="h",
                 usage="Host",
                 persistent=True,
             ),
-            prism.string_flag(
+            Flag.string(
                 name="port",
                 shorthand="p",
                 usage="Port",
@@ -43,14 +43,14 @@ fn main() -> None:
                     name="tool",
                     usage="This is a dummy command!",
                     run=tool_func,
-                    flags=List[prism.Flag](
-                        prism.bool_flag(
+                    flags=List[Flag](
+                        Flag.bool(
                             name="also",
                             shorthand="a",
                             usage="Also always required.",
                             required=True,
                         ),
-                        prism.string_flag(
+                        Flag.string(
                             name="uri",
                             shorthand="u",
                             usage="URI",
@@ -61,6 +61,4 @@ fn main() -> None:
                 )
             )
         ),
-    )
-
-    root.execute()
+    ).execute()

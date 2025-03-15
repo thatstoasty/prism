@@ -25,12 +25,12 @@ fn sum_float(ctx: Context) raises -> None:
 
 
 fn main() -> None:
-    root = Command(
+    Command(
         name="greet",
         usage="Greet a user!",
         raising_run=test,
         flags=List[Flag](
-            prism.string_list_flag(
+            Flag.string_list(
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
@@ -44,7 +44,7 @@ fn main() -> None:
                     usage="Add up the numbers passed in with the -n flag!",
                     raising_run=sum,
                     flags=List[Flag](
-                        prism.int_list_flag(
+                        Flag.int_list(
                             name="number",
                             shorthand="n",
                             usage="A number to include in the sum.",
@@ -59,7 +59,7 @@ fn main() -> None:
                     usage="Add up the numbers passed in with the -n flag!",
                     raising_run=sum_float,
                     flags=List[Flag](
-                        prism.float64_list_flag(
+                        Flag.float64_list(
                             name="number",
                             shorthand="n",
                             usage="A number to include in the sum.",
@@ -69,6 +69,4 @@ fn main() -> None:
                 )
             )
         )
-    )
-
-    root.execute()
+    ).execute()

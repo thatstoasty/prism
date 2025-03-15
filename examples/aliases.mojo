@@ -11,7 +11,7 @@ fn tool_func(ctx: Context) -> None:
 
 
 fn main() -> None:
-    var root = Command(
+    Command(
         name="my",
         usage="This is a dummy command!",
         run=test,
@@ -25,6 +25,5 @@ fn main() -> None:
                 )
             )
         ),
-    )
+    ).execute()
     
-    root.execute()

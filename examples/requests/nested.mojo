@@ -62,13 +62,13 @@ fn main() -> None:
             usage="Get some cat facts!",
             raising_run=get_cat_fact,
             flags=List[Flag](
-                prism.int_flag(
+                Flag.int(
                     name="count",
                     shorthand="c",
                     usage="Number of facts to get.",
                     default=1
                 ),
-                prism.bool_flag(
+                Flag.bool(
                     name="lover",
                     shorthand="l",
                     usage="Are you a cat lover?"

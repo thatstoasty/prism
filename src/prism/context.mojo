@@ -1,4 +1,4 @@
-from memory import ArcPointer
+from memory import ArcPointer, Span
 from collections.string import StaticString
 from prism.command import Command
 
@@ -11,7 +11,7 @@ struct Context:
     var args: List[StaticString]
     """The arguments passed to the command."""
 
-    def __init__(mut self, args: List[StaticString], command: ArcPointer[Command]) -> None:
+    def __init__(out self, args: List[StaticString], command: ArcPointer[Command]):
         """Initializes a new Context.
 
         Args:

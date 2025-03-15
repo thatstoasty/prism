@@ -73,7 +73,7 @@ fn main() -> None:
         usage="Get some cat facts!",
         raising_run=get_cat_fact,
         flags=List[Flag](
-            prism.int_flag(
+            Flag.int(
                 name="count",
                 shorthand="c",
                 usage="Number of facts to get.",
@@ -94,7 +94,7 @@ fn main() -> None:
         persistent_pre_run=pre_hook,
         persistent_post_run=post_hook,
         flags=List[Flag](
-            prism.bool_flag(
+            Flag.bool(
                 name="lover",
                 shorthand="l",
                 usage="Are you an animal lover?",

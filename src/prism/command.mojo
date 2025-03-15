@@ -4,8 +4,8 @@ from collections.string import StaticString
 from memory import ArcPointer
 import mog
 from mog import Position
-from prism._util import to_string, to_list, string_to_bool, panic
-from prism.flag import Flag, FType, bool_flag
+from prism._util import string_to_bool, panic
+from prism.flag import Flag, FType
 from prism._flag_set import Annotation, FlagSet
 from prism.args import arbitrary_args
 from prism.context import Context
@@ -329,9 +329,9 @@ struct Command(CollectionElement, Writable, Stringable):
         if one_required_flags:
             self._mark_flag_group_as[Annotation.ONE_REQUIRED](one_required_flags.value())
 
-        self.flags.append(bool_flag(name="help", shorthand="h", usage="Displays help information about the command."))
+        self.flags.append(Flag.bool(name="help", shorthand="h", usage="Displays help information about the command."))
         if self.version:
-            self.flags.append(bool_flag(name="version", shorthand="v", usage="Displays the version of the command."))
+            self.flags.append(Flag.bool(name="version", shorthand="v", usage="Displays the version of the command."))
 
     fn __moveinit__(out self, owned existing: Self):
         """Initializes a new `Command` by moving the fields from an existing `Command`.
@@ -481,7 +481,7 @@ struct Command(CollectionElement, Writable, Stringable):
         if len(args) >= leftover_start:
             remaining_args = args[leftover_start : len(args)]
 
-        return command, remaining_args
+        return command, remaining_args^
 
     fn _execute_pre_run_hooks(self, ctx: Context, parents: List[ArcPointer[Self]]) raises -> None:
         """Runs the pre-run hooks for the command.
@@ -565,7 +565,7 @@ struct Command(CollectionElement, Writable, Stringable):
         if self.has_parent():
             return self.root()[].execute()
 
-        command, remaining_args = self._parse_command_from_args(_get_args_as_list())
+        command, args = self._parse_command_from_args(_get_args_as_list())
         var command_ptr = ArcPointer(command^) # Give ownership to the pointer, for consistency.
 
         # Merge persistent flags from ancestors.
@@ -588,7 +588,7 @@ struct Command(CollectionElement, Writable, Stringable):
 
         try:
             # Get the flags for the command to be executed.
-            remaining_args = command_ptr[].flags.from_args(remaining_args)
+            var remaining_args = command_ptr[].flags.from_args(args)
 
             # Check if the help flag was passed
             if command_ptr[].get_bool("help") == True:
@@ -607,7 +607,7 @@ struct Command(CollectionElement, Writable, Stringable):
             command_ptr[].flags.validate_flag_groups()
 
             # Run flag actions if they have any
-            var ctx = Context(remaining_args, command_ptr)
+            var ctx = Context(List[StaticString](remaining_args), command_ptr)
 
             @parameter
             fn run_action(flag: Flag) raises -> None:

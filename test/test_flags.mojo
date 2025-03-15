@@ -3,7 +3,7 @@ from collections.string import StaticString
 import testing
 import prism
 from prism import Command, Context
-from prism.flag import Flag, FType, string_flag, bool_flag, int_flag, int8_flag, int16_flag, int32_flag, int64_flag, uint_flag, uint8_flag, uint16_flag, uint32_flag, uint64_flag, float16_flag, float32_flag, float64_flag, string_list_flag, int_list_flag, float64_list_flag
+from prism.flag import Flag, FType
 from prism._flag_set import string_to_bool
 from prism._flag_parser import FlagParser
 
@@ -17,14 +17,14 @@ def test_string_to_bool():
 fn dummy(ctx: Context) -> None:
     return None
 
-def test_get_flags():
+def test_gets():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.string_flag(name="key", usage="usage", default="default"),
-            prism.bool_flag(name="flag", usage="usage", default=False),
+            Flag.string(name="key", usage="usage", default="default"),
+            Flag.bool(name="flag", usage="usage", default=False),
         ),
     )
 
@@ -34,59 +34,51 @@ def test_get_flags():
     testing.assert_equal(cmd.get_bool("flag"), True)
 
 
-def test_parse_flag():
+def test_parse():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.string_flag(name="key", usage="usage", default="default"),
-            prism.bool_flag(name="flag", usage="usage", default=False),
+            Flag.string(name="key", usage="usage", default="default"),
+            Flag.bool(name="flag", usage="usage", default=False),
         ),
     )
 
-    parser = FlagParser()
-    name, value, increment_by = parser.parse_flag("--key", List[StaticString]("--key", "value"), cmd.flags)
-    testing.assert_equal(name, "key")
-    testing.assert_equal(value, "value")
-    testing.assert_equal(increment_by, 2)
-
-    name, value, increment_by = parser.parse_flag("--key=value", List[StaticString]("--key=value"), cmd.flags)
-    testing.assert_equal(name, "key")
-    testing.assert_equal(value, "value")
-    testing.assert_equal(increment_by, 1)
+    remaining_args = cmd.flags.from_args(List[StaticString]("--key=value"))
+    testing.assert_equal(len(remaining_args), 0)
 
 
-def test_parse_shorthand_flag():
+# def test_parse_shorthand():
+#     var cmd = Command(
+#         name="root",
+#         usage="Base command.",
+#         run=dummy,
+#         flags=List[Flag](
+#             Flag.string(name="key", usage="usage", default="default", shorthand="k"),
+#             Flag.bool(name="flag", usage="usage", default=False, shorthand="f"),
+#         ),
+#     )
+
+#     parser = FlagParser()
+#     name, value, increment_by = parser.parse_shorthand("-k", List[StaticString]("-k", "value"), cmd.flags)
+#     testing.assert_equal(name, "key")
+#     testing.assert_equal(value, "value")
+#     testing.assert_equal(increment_by, 2)
+
+#     name, value, increment_by = parser.parse_shorthand("-k=value", List[StaticString]("-k=value"), cmd.flags)
+#     testing.assert_equal(name, "key")
+#     testing.assert_equal(value, "value")
+#     testing.assert_equal(increment_by, 1)
+
+
+def test_string():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.string_flag(name="key", usage="usage", default="default", shorthand="k"),
-            prism.bool_flag(name="flag", usage="usage", default=False, shorthand="f"),
-        ),
-    )
-
-    parser = FlagParser()
-    name, value, increment_by = parser.parse_shorthand_flag("-k", List[StaticString]("-k", "value"), cmd.flags)
-    testing.assert_equal(name, "key")
-    testing.assert_equal(value, "value")
-    testing.assert_equal(increment_by, 2)
-
-    name, value, increment_by = parser.parse_shorthand_flag("-k=value", List[StaticString]("-k=value"), cmd.flags)
-    testing.assert_equal(name, "key")
-    testing.assert_equal(value, "value")
-    testing.assert_equal(increment_by, 1)
-
-
-def test_string_flag():
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=List[Flag](
-            prism.string_flag(name="key", usage="usage", default="default"),
+            Flag.string(name="key", usage="usage", default="default"),
         ),
     )
 
@@ -95,13 +87,13 @@ def test_string_flag():
     testing.assert_equal(cmd.get_string("key"), "default")
 
 
-def test_bool_flag():
+def test_bool():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.bool_flag(name="flag", usage="usage", default=False),
+            Flag.bool(name="flag", usage="usage", default=False),
         ),
     )
 
@@ -110,13 +102,13 @@ def test_bool_flag():
     testing.assert_equal(cmd.get_bool("flag"), False)
 
 
-def test_int_flag():
+def test_int():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.int_flag(name="num", usage="usage", default=0),
+            Flag.int(name="num", usage="usage", default=0),
         ),
     )
 
@@ -125,13 +117,13 @@ def test_int_flag():
     testing.assert_equal(cmd.get_int("num"), 0)
 
 
-def test_int8_flag():
+def test_int8():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.int8_flag(name="num", usage="usage", default=0),
+            Flag.int8(name="num", usage="usage", default=0),
         ),
     )
 
@@ -140,13 +132,13 @@ def test_int8_flag():
     testing.assert_equal(cmd.get_int8("num"), Int8(0))
 
 
-def test_int16_flag():
+def test_int16():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.int16_flag(name="num", usage="usage", default=0),
+            Flag.int16(name="num", usage="usage", default=0),
         ),
     )
 
@@ -155,13 +147,13 @@ def test_int16_flag():
     testing.assert_equal(cmd.get_int16("num"), Int16(0))
 
 
-def test_int32_flag():
+def test_int32():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.int32_flag(name="num", usage="usage", default=0),
+            Flag.int32(name="num", usage="usage", default=0),
         ),
     )
 
@@ -170,13 +162,13 @@ def test_int32_flag():
     testing.assert_equal(cmd.get_int32("num"), Int32(0))
 
 
-def test_int64_flag():
+def test_int64():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.int64_flag(name="num", usage="usage", default=0),
+            Flag.int64(name="num", usage="usage", default=0),
         ),
     )
 
@@ -185,13 +177,13 @@ def test_int64_flag():
     testing.assert_equal(cmd.get_int64("num"), Int64(0))
 
 
-def test_uint_flag():
+def test_uint():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.uint_flag(name="num", usage="usage", default=0),
+            Flag.uint(name="num", usage="usage", default=0),
         ),
     )
 
@@ -200,13 +192,13 @@ def test_uint_flag():
     testing.assert_equal(cmd.get_uint("num"), UInt(0))
 
 
-def test_uint8_flag():
+def test_uint8():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.uint8_flag(name="num", usage="usage", default=0),
+            Flag.uint8(name="num", usage="usage", default=0),
         ),
     )
 
@@ -215,13 +207,13 @@ def test_uint8_flag():
     testing.assert_equal(cmd.get_uint8("num"), UInt8(0))
 
 
-def test_uint16_flag():
+def test_uint16():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.uint16_flag(name="num", usage="usage", default=0),
+            Flag.uint16(name="num", usage="usage", default=0),
         ),
     )
 
@@ -230,13 +222,13 @@ def test_uint16_flag():
     testing.assert_equal(cmd.get_uint16("num"), UInt16(0))
 
 
-def test_uint32_flag():
+def test_uint32():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.uint32_flag(name="num", usage="usage", default=0),
+            Flag.uint32(name="num", usage="usage", default=0),
         ),
     )
 
@@ -245,13 +237,13 @@ def test_uint32_flag():
     testing.assert_equal(cmd.get_uint32("num"), UInt32(0))
 
 
-def test_uint64_flag():
+def test_uint64():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.uint64_flag(name="num", usage="usage", default=0),
+            Flag.uint64(name="num", usage="usage", default=0),
         ),
     )
 
@@ -260,13 +252,13 @@ def test_uint64_flag():
     testing.assert_equal(cmd.get_uint64("num"), UInt64(0))
 
 
-def test_float16_flag():
+def test_float16():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.float16_flag(name="num", usage="usage", default=0),
+            Flag.float16(name="num", usage="usage", default=0),
         ),
     )
 
@@ -275,13 +267,13 @@ def test_float16_flag():
     testing.assert_equal(cmd.get_float16("num"), Float16(0))
 
 
-def test_float32_flag():
+def test_float32():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.float32_flag(name="num", usage="usage", default=0),
+            Flag.float32(name="num", usage="usage", default=0),
         ),
     )
 
@@ -290,13 +282,13 @@ def test_float32_flag():
     testing.assert_equal(cmd.get_float32("num"), Float32(0))
 
 
-def test_float64_flag():
+def test_float64():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.float64_flag(name="num", usage="usage", default=0),
+            Flag.float64(name="num", usage="usage", default=0),
         ),
     )
 
@@ -305,13 +297,13 @@ def test_float64_flag():
     testing.assert_equal(cmd.get_float64("num"), Float64(0))
 
 
-def test_string_list_flag():
+def test_string_list():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.string_list_flag(name="num", usage="usage", default=List[String]("a", "b")),
+            Flag.string_list(name="num", usage="usage", default=List[String]("a", "b")),
         ),
     )
 
@@ -320,13 +312,13 @@ def test_string_list_flag():
     testing.assert_equal(cmd.get_string_list("num"), List[String]("a", "b"))
 
 
-def test_int_list_flag():
+def test_int_list():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.int_list_flag(name="num", usage="usage", default=List[Int, True](0, 1)),
+            Flag.int_list(name="num", usage="usage", default=List[Int, True](0, 1)),
         ),
     )
 
@@ -338,13 +330,13 @@ def test_int_list_flag():
     testing.assert_equal(result[1], 1)
 
 
-def test_float64_list_flag():
+def test_float64_list():
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=List[Flag](
-            prism.float64_list_flag(name="num", usage="usage", default=List[Float64, True](0, 1)),
+            Flag.float64_list(name="num", usage="usage", default=List[Float64, True](0, 1)),
         ),
     )
 

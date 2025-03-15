@@ -11,13 +11,11 @@ fn hello(ctx: Context) -> None:
 
 
 fn main() -> None:
-    var root = Command(
+    Command(
         name="hello",
         usage="This is a dummy command!",
         run=test,
         children=List[ArcPointer[Command]](
             ArcPointer(Command(name="chromeria", usage="This is a dummy command!", run=hello))
         ),
-    )
-
-    root.execute()
+    ).execute()

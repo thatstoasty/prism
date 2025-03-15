@@ -46,7 +46,7 @@ fn minimum_n_args[n: Int]() -> ArgValidatorFn:
     return less_than_n_args
 
 
-fn maximum_n_args[n: Int]() -> ArgValidatorFn:
+fn maximum_n_args[n: UInt]() -> ArgValidatorFn:
     """Returns an error if there are more than n arguments.
 
     Parameters:
@@ -69,7 +69,7 @@ fn maximum_n_args[n: Int]() -> ArgValidatorFn:
     return more_than_n_args
 
 
-fn exact_args[n: Int]() -> ArgValidatorFn:
+fn exact_args[n: UInt]() -> ArgValidatorFn:
     """Returns an error if there are not exactly n arguments.
 
     Parameters:
@@ -104,7 +104,7 @@ fn valid_args(ctx: Context) raises -> None:
                 raise Error("Invalid argument: `{}`, for the command `{}`.".format(arg[], ctx.command[].name))
 
 
-fn range_args[minimum: Int, maximum: Int]() -> ArgValidatorFn:
+fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
     """Returns an error if there are not exactly n arguments.
 
     Parameters:
