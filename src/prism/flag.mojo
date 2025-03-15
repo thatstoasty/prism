@@ -294,687 +294,685 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             The value of the flag or the default value.
         """
         return self.value.or_else(self.default)
+    
+    @staticmethod
+    fn string(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: String = "",
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `String` flag to the flag set.
 
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.String,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
-fn string_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: String = "",
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `String` flag to the flag set.
+    @staticmethod
+    fn bool(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: Bool = False,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `Bool` flag to the flag set.
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.String,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.Bool,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
+    @staticmethod
+    fn int(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: Int = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds an `Int` flag to the flag set.
 
-fn bool_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: Bool = False,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `Bool` flag to the flag set.
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.Int,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.Bool,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+    @staticmethod
+    fn int8(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: Int8 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds an `Int8` flag to the flag set.
 
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.Int8,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
-fn int_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: Int = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds an `Int` flag to the flag set.
+    @staticmethod
+    fn int16(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: Int16 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds an `Int16` flag to the flag set.
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.Int,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.Int16,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
+    @staticmethod
+    fn int32(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: Int32 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds an `Int32` flag to the flag set.
 
-fn int8_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: Int8 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds an `Int8` flag to the flag set.
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.Int32,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.Int8,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+    @staticmethod
+    fn int64(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: Int64 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds an `Int64` flag to the flag set.
 
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.Int64,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
-fn int16_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: Int16 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds an `Int16` flag to the flag set.
+    @staticmethod
+    fn uint(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: UInt8 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `UInt` flag to the flag set.
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.Int16,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.UInt,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
+    @staticmethod
+    fn uint8(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: UInt8 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `UInt8` flag to the flag set.
 
-fn int32_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: Int32 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds an `Int32` flag to the flag set.
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.UInt8,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.Int32,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+    @staticmethod
+    fn uint16(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: UInt16 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `UInt16` flag to the flag set.
 
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.UInt16,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
-fn int64_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: Int64 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds an `Int64` flag to the flag set.
+    @staticmethod
+    fn uint32(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: UInt32 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `UInt32` flag to the flag set.
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.Int64,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.UInt32,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
+    @staticmethod
+    fn uint64(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: UInt64 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `UInt64` flag to the flag set.
 
-fn uint_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: UInt8 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `UInt` flag to the flag set.
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.UInt64,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.UInt,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+    @staticmethod
+    fn float16(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: Float16 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `Float16` flag to the flag set.
 
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.Float16,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
-fn uint8_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: UInt8 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `UInt8` flag to the flag set.
+    @staticmethod
+    fn float32(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: Float32 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `Float32` flag to the flag set.
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.UInt8,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.Float32,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
+    @staticmethod
+    fn float64(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: Float64 = 0,
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `Float64` flag to the flag set.
 
-fn uint16_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: UInt16 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `UInt16` flag to the flag set.
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=String(default),
+            type=FType.Float64,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.UInt16,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+    @staticmethod
+    fn string_list(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: List[String] = List[String](),
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `StringList` flag to the flag set.
 
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=" ".join(default),
+            type=FType.StringList,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
+    @staticmethod
+    fn int_list(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: List[Int, True] = List[Int, True](),
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `IntList` flag to the flag set.
 
-fn uint32_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: UInt32 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `UInt32` flag to the flag set.
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=" ".join(default),
+            type=FType.IntList,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )
+    @staticmethod
+    fn float64_list(
+        name: String,
+        usage: String,
+        shorthand: String = "",
+        default: List[Float64, True] = List[Float64, True](),
+        environment_variable: Optional[String] = None,
+        file_path: Optional[String] = None,
+        action: Optional[FlagActionFn] = None,
+        required: Bool = False,
+        persistent: Bool = False,
+    ) -> Flag:
+        """Adds a `Float64List` flag to the flag set.
 
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.UInt32,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
-
-
-fn uint64_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: UInt64 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `UInt64` flag to the flag set.
-
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.UInt64,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
-
-
-fn float16_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: Float16 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `Float16` flag to the flag set.
-
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.Float16,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
-
-
-fn float32_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: Float32 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `Float32` flag to the flag set.
-
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.Float32,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
-
-
-fn float64_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: Float64 = 0,
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `Float64` flag to the flag set.
-
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=String(default),
-        type=FType.Float64,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
-
-
-fn string_list_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: List[String] = List[String](),
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `StringList` flag to the flag set.
-
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=" ".join(default),
-        type=FType.StringList,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
-
-
-fn int_list_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: List[Int, True] = List[Int, True](),
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `IntList` flag to the flag set.
-
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=" ".join(default),
-        type=FType.IntList,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
-
-
-fn float64_list_flag(
-    name: String,
-    usage: String,
-    shorthand: String = "",
-    default: List[Float64, True] = List[Float64, True](),
-    environment_variable: Optional[String] = None,
-    file_path: Optional[String] = None,
-    action: Optional[FlagActionFn] = None,
-    required: Bool = False,
-    persistent: Bool = False,
-) -> Flag:
-    """Adds a `Float64List` flag to the flag set.
-
-    Args:
-        name: The name of the flag.
-        usage: The usage of the flag.
-        shorthand: The shorthand of the flag.
-        default: The default value of the flag.
-        environment_variable: The environment variable to check for a value.
-        file_path: The file to check for a value.
-        action: Function to run after the flag has been processed.
-        required: If the flag is required.
-        persistent: If the flag should persist to children commands.
-    """
-    return Flag(
-        name=name,
-        shorthand=shorthand,
-        usage=usage,
-        default=" ".join(default),
-        type=FType.Float64List,
-        environment_variable=environment_variable,
-        file_path=file_path,
-        action=action,
-        required=required,
-        persistent=persistent,
-    )
+        Args:
+            name: The name of the flag.
+            usage: The usage of the flag.
+            shorthand: The shorthand of the flag.
+            default: The default value of the flag.
+            environment_variable: The environment variable to check for a value.
+            file_path: The file to check for a value.
+            action: Function to run after the flag has been processed.
+            required: If the flag is required.
+            persistent: If the flag should persist to children commands.
+        """
+        return Flag(
+            name=name,
+            shorthand=shorthand,
+            usage=usage,
+            default=" ".join(default),
+            type=FType.Float64List,
+            environment_variable=environment_variable,
+            file_path=file_path,
+            action=action,
+            required=required,
+            persistent=persistent,
+        )

@@ -60,39 +60,3 @@ fn string_to_bool(value: String) -> Bool:
         The boolean equivalent of the string.
     """
     return value in InlineArray[String, 3]("true", "True", "1")
-
-
-fn to_string[T: WritableCollectionElement](vector: List[ArcPointer[T]]) -> String:
-    """Converts a vector to a string.
-
-    Parameters:
-        T: The type of the vector elements.
-
-    Args:
-        vector: The vector to convert to a string.
-
-    Returns:
-        The string representation of the vector.
-    """
-    var result = String("[")
-    for i in range(vector.size):
-        result.write(vector[i][])
-        if i < vector.size - 1:
-            result.write(", ")
-    result.write("]")
-    return result^
-
-
-fn to_list(flag_names: VariadicListMem[String, _]) -> List[String]:
-    """Converts a variadic list to a list.
-
-    Args:
-        flag_names: The variadic list to convert to a list.
-
-    Returns:
-        The list representation of the variadic list.
-    """
-    var result = List[String](capacity=len(flag_names))
-    for name in flag_names:
-        result.append(name[])
-    return result^

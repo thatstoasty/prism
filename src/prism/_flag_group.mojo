@@ -43,7 +43,7 @@ fn get_set_flags(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:
     for flag in pair.value.items():
         if flag[].value:
             set.append(flag[].key)
-    return set
+    return set^
 
 
 fn extract_keys(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:
@@ -59,7 +59,7 @@ fn extract_keys(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:
     for key in pair.value.keys():
         keys.append(key[])
     sort(keys)
-    return keys
+    return keys^
 
 
 fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:

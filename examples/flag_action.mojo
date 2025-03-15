@@ -4,7 +4,7 @@ import prism
 
 fn test(ctx: Context) raises -> None:
     name = ctx.command[].get_string("name")
-    print(String("Hello {}").format(name))
+    print("Hello {}".format(name))
 
 
 fn validate_name(ctx: Context, value: String) raises -> None:
@@ -13,12 +13,12 @@ fn validate_name(ctx: Context, value: String) raises -> None:
 
 
 fn main() -> None:
-    root = Command(
+    Command(
         name="greet",
         usage="Greet a user!",
         raising_run=test,
         flags=List[Flag](
-            prism.string_flag(
+            Flag.string(
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
@@ -26,6 +26,4 @@ fn main() -> None:
                 action=validate_name,
             )
         ),
-    )
-
-    root.execute()
+    ).execute()

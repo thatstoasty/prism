@@ -51,7 +51,7 @@ fn hello(ctx: Context) -> None:
 
 
 fn main() -> None:
-    root = Command(
+    Command(
         name="hello",
         description="This is a dummy command!",
         run=test,
@@ -62,9 +62,7 @@ fn main() -> None:
                 run=hello
             ))
         ),
-    )
-
-    root.execute()
+    ).execute()
 ```
 
 ![Chromeria](https://github.com/thatstoasty/prism/blob/main/doc/tapes/hello-chromeria.gif)
@@ -93,16 +91,15 @@ fn printer(ctx: Context) raises -> None:
 Commands can also be aliased to enable different ways to call the same command. You can change the command underneath the alias and maintain the same behavior.
 
 ```mojo
-from memory import ArcPointer
 from prism import Command
 
 fn main():
-    print_tool = ArcPointer(Command(
+    Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
         aliases=List[String]("object", "thing")
-    ))
+    ).execute()
 ```
 
 ![Aliases](https://github.com/thatstoasty/prism/blob/main/doc/tapes/aliases.gif)
@@ -121,13 +118,13 @@ fn post_hook(ctx: Context) -> None:
     print("Post-hook executed!")
 
 fn main() -> None:
-    root = Command(
+    Command(
         name="printer",
         description="Base command.",
         run=printer,
         pre_run=pre_hook,
         post_run=post_hook,
-    )
+    ).execute()
 ```
 
 ![Printer](https://github.com/thatstoasty/prism/blob/main/doc/tapes/printer.gif)
@@ -137,23 +134,21 @@ fn main() -> None:
 Commands can have typed flags added to them to enable different behaviors.
 
 ```mojo
-from memory import ArcPointer
 from prism import Command, Flag
-import prism
 
 fn main() -> None:
-    root = Command(
+    Command(
         name="logger",
         description="Base command.",
         run=handler,
         flags=List[Flag](
-            prism.string_flag(
+            Flag.string(
                 name="type",
                 shorthand="t",
                 usage="Formatting type: [json, custom]",
             )
         ),
-    )
+    ).execute()
 ```
 
 ![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
@@ -163,31 +158,26 @@ fn main() -> None:
 Flag values can also be retrieved from environment variables, if a value is not provided as an argument.
 
 ```mojo
-from memory import ArcPointer
-from prism import Command, Flag
-import prism
+from prism import Command, Flag, Context
 
 fn test(ctx: Context) raises -> None:
     name = ctx.command[].get_string("name")
     print("Hello {}".format(name))
 
-
 fn main() -> None:
-    root = Command(
+    Command(
         name="greet",
         usage="Greet a user!",
         raising_run=test,
         flags=List[Flag](
-            prism.string_flag(
+            Flag.string(
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
                 environment_variable="NAME",
             )
         ),
-    )
-
-    root.execute()
+    ).execute()
 ```
 
 ### Default flag values from files
@@ -195,7 +185,6 @@ fn main() -> None:
 Likewise, flag values can also be retrieved from a file as well, if a value is not provided as an argument.
 
 ```mojo
-from memory import ArcPointer
 from prism import Command, Flag
 import prism
 
@@ -209,16 +198,14 @@ fn main() -> None:
         usage="Greet a user!",
         raising_run=test,
         flags=List[Flag](
-            prism.string_flag(
+            Flag.string(
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
                 file_path="~/.myapp/config",
             )
         ),
-    )
-
-    root.execute()
+    ).execute()
 ```
 
 ### Flag Precedence
@@ -235,12 +222,10 @@ The precedence for flag value sources is as follows (highest to lowest):
 Flags and hooks can also be inherited by children commands! This can be useful for setting global flags or hooks that should be applied to all child commands.
 
 ```mojo
-from memory import ArcPointer
 from prism import Command, Flag
-import prism
 
 fn main() -> None:
-    root = Command(
+    Command(
         name="nested",
         description="Base command.",
         run=base,
@@ -254,14 +239,14 @@ fn main() -> None:
             ))
         ),
         flags=List[Flag](
-            prism.bool_flag(
+            Flag.bool(
                 name="lover",
                 shorthand="l",
                 usage="Are you an animal lover?",
                 persistent=True,
             )
         ),
-    )
+    ).execute()
 ```
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/main/doc/tapes/persistent.gif)
@@ -273,25 +258,23 @@ Flags can be grouped together to enable relationships between them. This can be 
 By default flags are considered optional. If you want your command to report an error when a flag has not been set, mark it as required:
 
 ```mojo
-from memory import ArcPointer
-from prism import Command, Flag
-import prism
+from prism import Command, Flag, Context
 
 fn main():
-    print_tool = ArcPointer(Command(
+    Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
         aliases=List[String]("object", "thing"),
         flags=List[Flag](
-            prism.bool_flag(
+            Flag.bool(
                 name="required",
                 shorthand="r",
                 usage="Always required.",
                 required=True,
             )
         ),
-    ))
+    ).execute()
 ```
 
 ### Flag Groups
@@ -299,54 +282,52 @@ fn main():
 If you have different flags that must be provided together (e.g. if they provide the `--color` flag they MUST provide the `--formatting` flag as well) then Prism can enforce that requirement:
 
 ```mojo
-from memory import ArcPointer
 from prism import Command, Flag
 import prism
 
 fn main();:
-    print_tool = ArcPointer(Command(
+    Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
         aliases=List[String]("object", "thing"),
         flags=List[Flag](
-            prism.uint32_flag(
+            Flag.uint32(
                 name="color",
                 shorthand="c",
                 usage="Text color",
                 default=0x3464eb,
             ),
-            prism.string_flag(
+            Flag.string(
                 name="formatting",
                 shorthand="f",
                 usage="Text formatting",
             ),
         ),
         flags_required_together=List[String]("color", "formatting"),
-    ))
+    ).execute()
 ```
 
 You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
 
 ```mojo
-from memory import ArcPointer
 from prism import Command, Flag
 import prism
 
 fn main():
-   print_tool = ArcPointer(Command(
+   Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
         aliases=List[String]("object", "thing"),
         flags=List[Flag](
-            prism.uint32_flag(
+            Flag.uint32(
                 name="color",
                 shorthand="c",
                 usage="Text color",
                 default=0x3464eb,
             ),
-            prism.uint32_flag(
+            Flag.uint32(
                 name="hue",
                 shorthand="x",
                 usage="Text color",
@@ -354,30 +335,28 @@ fn main():
             ),
         ),
         mutually_exclusive_flags=List[String]("color", "hue"),
-    ))
+    ).execute()
 ```
 
 If you want to require at least one flag from a group to be present, you can use `mark_flags_one_required`. This can be combined with `mark_flags_mutually_exclusive` to enforce exactly one flag from a given group:
 
 ```mojo
-from memory import ArcPointer
 from prism import Command, Flag
-import prism
 
 fn main():
-   print_tool = ArcPointer(Command(
+   print_tool = Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
         aliases=List[String]("object", "thing"),
         flags=List[Flag](
-            prism.uint32_flag(
+            Flag.uint32(
                 name="color",
                 shorthand="c",
                 usage="Text color",
                 default=0x3464eb,
             ),
-            prism.string_flag(
+            Flag.string(
                 name="formatting",
                 shorthand="f",
                 usage="Text formatting",
@@ -385,7 +364,7 @@ fn main():
         ),
         one_required_flags=List[String]("color", "formatting"),
         mutually_exclusive_flags=List[String]("color", "formatting"),
-    ))
+    ).execute()
 ```
 
 In these cases:
@@ -425,18 +404,17 @@ Commands are configured to accept a `--help` and `-h` flag by default. This will
 ```mojo
 from memory import ArcPointer
 from prism import Command
-import prism
 
-fn help_func(mut command: ArcPointer[Command]) -> String:
+fn help_func(command: ArcPointer[Command]) -> String:
     return "My help function."
 
 fn main() -> None:
-    root = Command(
+    Command(
         name="hello",
         description="This is a dummy command!",
         run=test,
         help=help_func
-    )
+    ).execute()
 ```
 
 ![Help](https://github.com/thatstoasty/prism/blob/main/doc/tapes/help.gif)
@@ -446,17 +424,13 @@ fn main() -> None:
 Commands can be configured to accept `--version` and `-v` flag to run a version function. This will print the result of the version function using the output writer that's configured for the command.
 
 ```mojo
-from memory import ArcPointer
 from prism import Command, Context
-
 
 fn test(ctx: Context) -> None:
     print("Pass -v to see the version!")
 
-
 fn version() -> String:
     return "MyCLI version 0.1.0"
-
 
 fn main() -> None:
     Command(
@@ -535,23 +509,20 @@ fn main() -> None:
 
 ## TODO
 
-## Features
+### Features
 
 - Add suggestion logic to `Command` struct.
 - Autocomplete generation.
 - Enable usage function to return the results of a usage function upon calling wrong functions or commands.
-- Replace print usage with writers to enable stdout/stderr/file writing.
 - Update default help command to improve available commands and flags section.
 - Add support for combining shorthand flags, like so: `-abc` instead of `-a -b -c`.
 - Try to avoid `Dict` and `try/except` blocks in order to support compile time command building.
 - Add persistent flag mutually exclusive and required together checks back in.
-- Add support for stdout/stderr writer configuration, instead of just using print.
 
-## Improvements
+### Improvements
 
 - Tree traversal improvements.
-- `ArcPointer[Command]` being passed to validators and command functions is marked as `mut` because the compiler complains about forming a reference to a borrowed register value. This is a temporary fix, I will try to get it back to a borrowed reference.
-- For now, help functions and arg validators will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
+- For now, help functions will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
 - Once we have trait objects, use actual typed flags instead of converting values to and from strings.
 
 ## Bugs

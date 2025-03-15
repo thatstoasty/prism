@@ -1,9 +1,10 @@
 from collections import Optional
 from collections.list import _ListIter
 from collections.dict import Dict, DictEntry
-from collections.string import StaticString
+from collections.string import StaticString, StringSlice
 from utils import Variant
-from memory import Pointer
+from memory import Pointer, Span
+import os
 from prism.flag import Flag, FlagActionFn, FType
 from prism._util import string_to_bool, split
 from prism._flag_parser import FlagParser
@@ -111,7 +112,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         except:
             flag[].annotations[annotation.value] = List[String](value)
 
-    fn from_args(mut self, arguments: List[StaticString]) raises -> List[StaticString]:
+    fn from_args[origin: Origin](mut self, arguments: Span[StaticString, origin]) raises -> Span[StaticString, origin]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
@@ -124,7 +125,50 @@ struct FlagSet(Writable, Stringable, Boolable):
             Error: If a flag is not recognized.
         """
         var parser = FlagParser()
-        return parser.parse(self, arguments)
+        # var remaining_args = List[StaticString](capacity=len(arguments))
+        while parser.index < len(arguments):
+            var argument = arguments[parser.index]
+
+            # Positional argument
+            if not argument.startswith("-", 0, 1):
+                # remaining_args.append(argument)
+                parser.index += 1
+                continue
+
+            var name: String
+            var value: String
+            var increment_by = 0
+
+            # Full flag
+            if argument.startswith("--", 0, 2):
+                name, value, increment_by = parser.parse_flag(argument, arguments, self)
+            # Shorthand flag
+            elif argument.startswith("-", 0, 1):
+                name, value, increment_by = parser.parse_shorthand_flag(argument, arguments, self)
+            else:
+                raise Error("Expected a flag but found: ", argument)
+
+            # Set the value of the flag.
+            var flag = self.lookup(name)
+            if not flag[].changed:
+                flag[].set(value)
+            else:
+                flag[].value.value().write(" ", value)
+            parser.index += increment_by
+
+        # If flags are not set, check if they can be set from an environment variable or from a file.
+        # Set it from that value if there is one available.
+        for flag in self:
+            if not flag[].value:
+                if flag[].environment_variable:
+                    value = os.getenv(flag[].environment_variable.value())
+                    if value != "":
+                        flag[].set(value)
+                elif flag[].file_path:
+                    with open(os.path.expanduser(flag[].file_path.value()), "r") as f:
+                        flag[].set(f.read())
+
+        return arguments[parser.index:]
 
     fn names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set.
@@ -204,7 +248,7 @@ struct FlagSet(Writable, Stringable, Boolable):
             if flag[].name == name:
                 return Pointer.address_of(flag[])
 
-        raise Error("FlagNotFoundError: Could not find the following flag: " + name)
+        raise Error("FlagNotFoundError: Could not find the following flag: ", name)
 
     fn lookup[type: FType](ref self, name: String) raises -> Pointer[Flag, __origin_of(self.flags)]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
@@ -226,9 +270,9 @@ struct FlagSet(Writable, Stringable, Boolable):
             if flag[].name == name and flag[].type == type:
                 return Pointer.address_of(flag[])
 
-        raise Error("FlagNotFoundError: Could not find the following flag: " + name)
+        raise Error("FlagNotFoundError: Could not find the following flag: ", name)
 
-    fn lookup_name(self, shorthand: String) raises -> String:
+    fn lookup_name(self, shorthand: StringSlice) raises -> String:
         """Returns the name of a flag given its shorthand.
 
         Args:
@@ -241,10 +285,10 @@ struct FlagSet(Writable, Stringable, Boolable):
             Error: If the flag is not found.
         """
         for flag in self.flags:
-            if flag[].shorthand and flag[].shorthand == shorthand:
+            if flag[].shorthand and flag[].shorthand.as_string_slice() == shorthand:
                 return flag[].name
 
-        raise Error("FlagNotFoundError: Could not find the following flag shorthand: " + shorthand)
+        raise Error("FlagNotFoundError: Could not find the following flag shorthand: ", shorthand)
 
     fn has_all_flags(self, flag_names: List[String]) -> Bool:
         """Checks if all flags are defined in the flag set.
@@ -301,7 +345,7 @@ struct FlagSet(Writable, Stringable, Boolable):
             except e:
                 raise Error(
                     "process_group_annotations: Failed to set group status for annotation {}: {}.".format(
-                        annotation.value, String(e)
+                        annotation.value, e
                     )
                 )
 

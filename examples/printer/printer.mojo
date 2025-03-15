@@ -25,21 +25,18 @@ fn printer(ctx: Context) raises -> None:
         style = style.italic()
 
     print(style.render(ctx.args[0]))
-    return None
 
 
 fn pre_hook(ctx: Context) -> None:
     print("Pre-hook executed!")
-    return None
 
 
 fn post_hook(ctx: Context) -> None:
     print("Post-hook executed!")
-    return None
 
 
 fn main() -> None:
-    var root = Command(
+    Command(
         name="printer",
         usage="Base command.",
         raising_run=printer,
@@ -47,18 +44,16 @@ fn main() -> None:
         post_run=post_hook,
         arg_validator=exact_args[1](),
         flags=List[Flag](
-            prism.uint32_flag(
+            Flag.uint32(
                 name="color",
                 shorthand="c",
                 usage="Text color",
                 default=0x3464EB
             ),
-            prism.string_flag(
+            Flag.string(
                 name="formatting",
                 shorthand="f",
                 usage="Text formatting"
             )
         )
-    )
-
-    root.execute()
+    ).execute()
