@@ -373,3 +373,312 @@ struct FlagSet(Writable, Stringable, Boolable):
         validate_required_flag_group(group_status)
         validate_one_required_flag_group(one_required_group_status)
         validate_mutually_exclusive_flag_group(mutually_exclusive_group_status)
+    
+    fn get_string(self, name: String) raises -> String:
+        """Returns the value of a flag as a `String`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `String`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return self.lookup[FType.String](name)[].value_or_default()
+
+    fn get_bool(self, name: String) raises -> Bool:
+        """Returns the value of a flag as a `Bool`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Bool`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return string_to_bool(self.lookup[FType.Bool](name)[].value_or_default())
+
+    fn get_int[type: FType = FType.Int](self, name: String) raises -> Int:
+        """Returns the value of a flag as an `Int`. If it isn't set, then return the default value.
+
+        Parameters:
+            type: The type of the flag.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as an `Int`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        constrained[
+            type.is_int_type(),
+            "type must be one of `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, or `UInt64`. Received: " + type.value
+        ]()
+        return atol(self.lookup[type](name)[].value_or_default())
+
+    fn get_int8(self, name: String) raises -> Int8:
+        """Returns the value of a flag as a `Int8`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Int8`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return Int8(self.get_int[FType.Int8](name))
+
+    fn get_int16(self, name: String) raises -> Int16:
+        """Returns the value of a flag as a `Int16`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Int16`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return Int16(self.get_int[FType.Int16](name))
+
+    fn get_int32(self, name: String) raises -> Int32:
+        """Returns the value of a flag as a `Int32`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Int32`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return Int32(self.get_int[FType.Int32](name))
+
+    fn get_int64(self, name: String) raises -> Int64:
+        """Returns the value of a flag as a `Int64`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Int64`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return Int64(self.get_int[FType.Int64](name))
+
+    fn get_uint(self, name: String) raises -> UInt:
+        """Returns the value of a flag as a `UInt`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `UInt`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return UInt(self.get_int[FType.UInt](name))
+
+    fn get_uint8(self, name: String) raises -> UInt8:
+        """Returns the value of a flag as a `UInt8`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `UInt8`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return UInt8(self.get_int[FType.UInt8](name))
+
+    fn get_uint16(self, name: String) raises -> UInt16:
+        """Returns the value of a flag as a `UInt16`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `UInt16`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return UInt16(self.get_int[FType.UInt16](name))
+
+    fn get_uint32(self, name: String) raises -> UInt32:
+        """Returns the value of a flag as a `UInt32`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `UInt32`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return UInt32(self.get_int[FType.UInt32](name))
+
+    fn get_uint64(self, name: String) raises -> UInt64:
+        """Returns the value of a flag as a `UInt64`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `UInt64`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return UInt64(self.get_int[FType.UInt64](name))
+    
+    fn get_float[type: FType](self, name: String) raises -> Float64:
+        """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
+
+        Parameters:
+            type: The type of the flag.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Float64`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        constrained[
+            type.is_float_type(),
+            "type must be one of `Float16`, `Float32`, `Float64`. Received: " + type.value
+        ]()
+        return atof(self.lookup[type](name)[].value_or_default())
+
+    fn get_float16(self, name: String) raises -> Float16:
+        """Returns the value of a flag as a `Float16`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Float16`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return self.get_float[FType.Float16](name).cast[DType.float16]()
+
+    fn get_float32(self, name: String) raises -> Float32:
+        """Returns the value of a flag as a `Float32`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Float32`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return self.get_float[FType.Float32](name).cast[DType.float32]()
+
+    fn get_float64(self, name: String) raises -> Float64:
+        """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `Float64`.
+            
+        Raises:
+            Error: If the flag is not found.
+        """
+        return self.get_float[FType.Float64](name)
+
+    fn _get_list[type: FType](self, name: String) raises -> List[String]:
+        """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
+
+        Parameters:
+            type: The type of the flag.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `List[String]`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        constrained[
+            type.is_list_type(),
+            "type must be one of `StringList`, `IntList`, or `Float64List`. Received: " + type.value
+        ]()
+        return self.lookup[type](name)[].value_or_default().split(sep=" ")
+
+    fn get_string_list(self, name: String) raises -> List[String]:
+        """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `List[String]`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        return self._get_list[FType.StringList](name)
+
+    fn get_int_list(self, name: String) raises -> List[Int]:
+        """Returns the value of a flag as a `List[Int]`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `List[Int]`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        var values = self._get_list[FType.IntList](name)
+        var ints = List[Int](capacity=len(values))
+        for value in values:
+            ints.append(atol(value[]))
+        return ints^
+
+    fn get_float64_list(self, name: String) raises -> List[Float64]:
+        """Returns the value of a flag as a `List[Float64]`. If it isn't set, then return the default value.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The value of the flag as a `List[Float64]`.
+
+        Raises:
+            Error: If the flag is not found.
+        """
+        var values = self._get_list[FType.Float64List](name)
+        var floats = List[Float64](capacity=len(values))
+        for value in values:
+            floats.append(atof(value[]))
+        return floats^

@@ -5,7 +5,7 @@ import os
 
 
 fn test(ctx: Context) raises -> None:
-    var name = ctx.command[].get_string("name")
+    var name = ctx.command[].flags.get_string("name")
     print("Hello {}".format(name))
 
 

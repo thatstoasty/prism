@@ -4,9 +4,9 @@ import prism
 
 
 fn test(ctx: Context) raises -> None:
-    var host = ctx.command[].get_string("host")
-    var port = ctx.command[].get_string("port")
-    var uri = ctx.command[].get_string("uri")
+    var host = ctx.command[].flags.get_string("host")
+    var port = ctx.command[].flags.get_string("port")
+    var uri = ctx.command[].flags.get_string("uri")
 
     if uri != "":
         print("URI:", uri)

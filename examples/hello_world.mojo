@@ -59,7 +59,7 @@ fn build_goodbye_command() -> ArcPointer[Command]:
 
 fn test(ctx: Context) -> None:
     try:
-        print(ctx.command[].get_string("env"))
+        print(ctx.command[].flags.get_string("env"))
     except:
         print("No env flag provided.")
     for item in ctx.command[].flags:
