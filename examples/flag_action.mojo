@@ -3,7 +3,7 @@ from prism import Command, Context, Flag
 import prism
 
 fn test(ctx: Context) raises -> None:
-    name = ctx.command[].get_string("name")
+    name = ctx.command[].flags.get_string("name")
     print("Hello {}".format(name))
 
 

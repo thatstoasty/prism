@@ -161,7 +161,7 @@ Flag values can also be retrieved from environment variables, if a value is not 
 from prism import Command, Flag, Context
 
 fn test(ctx: Context) raises -> None:
-    name = ctx.command[].get_string("name")
+    name = ctx.command[].flags.get_string("name")
     print("Hello {}".format(name))
 
 fn main() -> None:
@@ -189,7 +189,7 @@ from prism import Command, Flag
 import prism
 
 fn test(ctx: Context) raises -> None:
-    name = ctx.command[].get_string("name")
+    name = ctx.command[].flags.get_string("name")
     print("Hello {}".format(name))
 
 fn main() -> None:

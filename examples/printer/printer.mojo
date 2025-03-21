@@ -9,8 +9,8 @@ fn printer(ctx: Context) raises -> None:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    var color = ctx.command[].get_uint32("color")
-    var formatting = ctx.command[].get_string("formatting")
+    var color = ctx.command[].flags.get_uint32("color")
+    var formatting = ctx.command[].flags.get_string("formatting")
     var style = mist.Style().foreground(color)
 
     if formatting == "":
