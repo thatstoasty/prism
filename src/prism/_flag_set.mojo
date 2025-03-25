@@ -17,6 +17,21 @@ alias FlagVisitorRaisingFn = fn (Flag) capturing raises -> None
 """Function perform some action while visiting all flags. Can raise."""
 
 
+@value
+@register_passable("trivial")
+struct ParserState:
+    var value: UInt8
+    alias FIND_FLAG = Self(0)
+    alias PARSE_FLAG = Self(1)
+    alias PARSE_SHORTHAND_FLAG = Self(2)
+
+    fn __eq__(self, other: Self) -> Bool:
+        return self.value == other.value
+    
+    fn __ne__(self, other: Self) -> Bool:
+        return self.value != other.value
+
+
 # Flag Group annotations
 @value
 struct Annotation:
@@ -112,7 +127,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         except:
             flag[].annotations[annotation.value] = List[String](value)
 
-    fn from_args[origin: Origin](mut self, arguments: Span[StaticString, origin]) raises -> Span[StaticString, origin]:
+    fn from_args[origin: Origin](mut self, arguments: Span[StaticString, origin]) raises -> List[StaticString]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
@@ -124,37 +139,48 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If a flag is not recognized.
         """
-        var parser = FlagParser()
-        # var remaining_args = List[StaticString](capacity=len(arguments))
-        while parser.index < len(arguments):
-            var argument = arguments[parser.index]
-
-            # Positional argument
-            if not argument.startswith("-", 0, 1):
-                # remaining_args.append(argument)
-                parser.index += 1
-                continue
-
-            var name: String
-            var value: String
-            var increment_by = 0
-
-            # Full flag
-            if argument.startswith("--", 0, 2):
-                name, value, increment_by = parser.parse_flag(argument, arguments, self)
-            # Shorthand flag
-            elif argument.startswith("-", 0, 1):
-                name, value, increment_by = parser.parse_shorthand_flag(argument, arguments, self)
-            else:
-                raise Error("Expected a flag but found: ", argument)
-
+        @parameter
+        fn set_flag_value(name: String, value: String) raises -> None:
             # Set the value of the flag.
             var flag = self.lookup(name)
             if not flag[].changed:
                 flag[].set(value)
             else:
                 flag[].value.value().write(" ", value)
-            parser.index += increment_by
+
+        var remaining_args = List[StaticString](capacity=len(arguments))
+        var state = ParserState.FIND_FLAG
+        var parser = FlagParser()
+        while parser.index < len(arguments):
+            var argument = arguments[parser.index]
+
+            # Find the next flag in the set of arguments.
+            if state == ParserState.FIND_FLAG:
+                # Positional argument
+                if not argument.startswith("-", 0, 1):
+                    remaining_args.append(argument)
+                    parser.index += 1
+                    continue
+
+                if argument.startswith("--", 0, 2):
+                    state = ParserState.PARSE_FLAG
+                else:
+                    state = ParserState.PARSE_SHORTHAND_FLAG
+            
+            # Parse out a flag and set the value on the flag.
+            elif state == ParserState.PARSE_FLAG:
+                name, value, increment_by = parser.parse_flag(argument, arguments, self)
+                set_flag_value(name, value)
+                parser.index += increment_by
+                state = ParserState.FIND_FLAG
+
+            # Parse out shorthand flag(s) and set the value on the flag(s).
+            elif state == ParserState.PARSE_SHORTHAND_FLAG:
+                names, value, increment_by = parser.parse_shorthand_flag(argument, arguments, self)
+                for name in names:
+                    set_flag_value(name[], value)
+                parser.index += increment_by
+                state = ParserState.FIND_FLAG
 
         # If flags are not set, check if they can be set from an environment variable or from a file.
         # Set it from that value if there is one available.
@@ -168,7 +194,7 @@ struct FlagSet(Writable, Stringable, Boolable):
                     with open(os.path.expanduser(flag[].file_path.value()), "r") as f:
                         flag[].set(f.read())
 
-        return arguments[parser.index:]
+        return remaining_args^
 
     fn names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set.
@@ -231,7 +257,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         if len(missing_flag_names) > 0:
             raise Error("Required flag(s): " + missing_flag_names.__str__() + " not set.")
 
-    fn lookup(ref self, name: String) raises -> Pointer[Flag, __origin_of(self.flags)]:
+    fn lookup(ref self, name: StringSlice) raises -> Pointer[Flag, __origin_of(self.flags)]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -245,12 +271,12 @@ struct FlagSet(Writable, Stringable, Boolable):
             Error: If the Flag is not found.
         """
         for flag in self.flags:
-            if flag[].name == name:
+            if flag[].name.as_string_slice() == name:
                 return Pointer.address_of(flag[])
 
         raise Error("FlagNotFoundError: Could not find the following flag: ", name)
 
-    fn lookup[type: FType](ref self, name: String) raises -> Pointer[Flag, __origin_of(self.flags)]:
+    fn lookup[type: FType](ref self, name: StringSlice) raises -> Pointer[Flag, __origin_of(self.flags)]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -267,7 +293,48 @@ struct FlagSet(Writable, Stringable, Boolable):
             Error: If the Flag is not found.
         """
         for flag in self.flags:
-            if flag[].name == name and flag[].type == type:
+            if flag[].name.as_string_slice() == name and flag[].type == type:
+                return Pointer.address_of(flag[])
+
+        raise Error("FlagNotFoundError: Could not find the following flag: ", name)
+    
+    fn lookup_shorthand(ref self, name: StringSlice) raises -> Pointer[Flag, __origin_of(self.flags)]:
+        """Returns an mutable or immutable Pointer to a Flag with the given name.
+        Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
+
+        Args:
+            name: The shorthand name of the Flag to lookup.
+
+        Returns:
+            Optional Pointer to the Flag.
+
+        Raises:
+            Error: If the Flag is not found.
+        """
+        for flag in self.flags:
+            if flag[].shorthand.as_string_slice() == name:
+                return Pointer.address_of(flag[])
+
+        raise Error("FlagNotFoundError: Could not find the following flag: ", name)
+
+    fn lookup_shorthand[type: FType](ref self, name: StringSlice) raises -> Pointer[Flag, __origin_of(self.flags)]:
+        """Returns an mutable or immutable Pointer to a Flag with the given name.
+        Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
+
+        Parameters:
+            type: The type of the Flag to lookup.
+
+        Args:
+            name: The shorthand name of the Flag to lookup.
+
+        Returns:
+            Optional Pointer to the Flag.
+
+        Raises:
+            Error: If the Flag is not found.
+        """
+        for flag in self.flags:
+            if flag[].shorthand.as_string_slice() == name and flag[].type == type:
                 return Pointer.address_of(flag[])
 
         raise Error("FlagNotFoundError: Could not find the following flag: ", name)
