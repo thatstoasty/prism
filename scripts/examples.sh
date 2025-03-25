@@ -17,6 +17,7 @@ magic run mojo build $TEMP_DIR/flag_action.mojo -o $TEMP_DIR/flag_action
 magic run mojo build $TEMP_DIR/list_flags.mojo -o $TEMP_DIR/list_flags
 magic run mojo build $TEMP_DIR/version.mojo -o $TEMP_DIR/version
 magic run mojo build $TEMP_DIR/exit.mojo -o $TEMP_DIR/exit
+magic run mojo build $TEMP_DIR/multiple_bool_flag.mojo -o $TEMP_DIR/multiple_bool_flag
 
 echo "[INFO] Running examples..."
 # Need to run these first examples as part of a mojo project as they have external dependencies.
@@ -61,6 +62,9 @@ $TEMP_DIR/list_flags sum_float -n 1.2 -n 2.3 -n 3.4 -n 4.5 -n 5.6
 $TEMP_DIR/version -v
 $TEMP_DIR/version --version
 $TEMP_DIR/exit || echo "Exit Code: $?"
+$TEMP_DIR/multiple_bool_flag -r0vvas
+$TEMP_DIR/multiple_bool_flag -r0vas
+$TEMP_DIR/multiple_bool_flag -r0a --verbose "Hello Mojo!"
 
 
 echo "[INFO] Cleaning up the example directory."

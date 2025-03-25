@@ -515,7 +515,6 @@ fn main() -> None:
 - Autocomplete generation.
 - Enable usage function to return the results of a usage function upon calling wrong functions or commands.
 - Update default help command to improve available commands and flags section.
-- Add support for combining shorthand flags, like so: `-abc` instead of `-a -b -c`.
 - Try to avoid `Dict` and `try/except` blocks in order to support compile time command building.
 - Add persistent flag mutually exclusive and required together checks back in.
 
