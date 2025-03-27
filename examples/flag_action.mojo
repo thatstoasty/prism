@@ -3,8 +3,11 @@ from prism import Command, Context, Flag
 import prism
 
 fn test(ctx: Context) raises -> None:
-    name = ctx.command[].flags.get_string("name")
-    print("Hello {}".format(name))
+    var name = ctx.command[].flags.get_string("name")
+    if name:
+        print("Hello {}".format(name.value()))
+    else:
+        print("Hello World")
 
 
 fn validate_name(ctx: Context, value: String) raises -> None:
@@ -22,7 +25,7 @@ fn main() -> None:
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
-                default="World",
+                default=String("World"),
                 action=validate_name,
             )
         ),

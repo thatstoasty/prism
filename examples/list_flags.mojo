@@ -4,22 +4,34 @@ import prism
 
 
 fn test(ctx: Context) raises -> None:
-    name = ctx.command[].flags.get_string_list("name")
-    print("Hello {}".format(" ".join(name)))
+    var name = ctx.command[].flags.get_string_list("name")
+    if not name:
+        print("Received no names to print.")
+        return
+    
+    print("Hello {}".format(" ".join(name.value())))
 
 
 fn sum(ctx: Context) raises -> None:
-    numbers = ctx.command[].flags.get_int_list("number")
-    sum = 0
-    for number in numbers:
+    var numbers = ctx.command[].flags.get_int_list("number")
+    if not numbers:
+        print("Received no numbers to add.")
+        return
+
+    var sum = 0
+    for number in numbers.value():
         sum += number[]
     print("The sum is: {}".format(sum))
 
 
 fn sum_float(ctx: Context) raises -> None:
-    numbers = ctx.command[].flags.get_float64_list("number")
-    sum = 0.0
-    for number in numbers:
+    var numbers = ctx.command[].flags.get_float64_list("number")
+    if not numbers:
+        print("Received no numbers to add.")
+        return
+
+    var sum = 0.0
+    for number in numbers.value():
         sum += number[]
     print("The sum is: {}".format(sum))
 

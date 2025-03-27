@@ -4,7 +4,7 @@ channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://co
 description = "A Budding CLI Library!"
 name = "prism"
 platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
-version = "25.1.1"
+version = "25.2.0"
 license = "MIT"
 license-file = "LICENSE"
 homepage = "https://github.com/thatstoasty/prism"
@@ -20,5 +20,5 @@ publish = { cmd = "python scripts/util.py publish", env = { PREFIX_API_KEY = "$P
 bp = { depends-on=["build", "publish"] }
 
 [dependencies]
-max = ">=25.1.0,<25.2.0"
-mog = ">=25.1.1,<25.2.0"
+max = ">=25.2.0,<25.3.0"
+mog = ">=25.2.0,<25.3.0"

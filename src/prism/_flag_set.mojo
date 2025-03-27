@@ -115,17 +115,14 @@ struct FlagSet(Writable, Stringable, Boolable):
         # Annotation value can be a concatenated string of values.
         # Why? Because we can have multiple required groups of flags for example.
         # So each value of the list for the annotation can be a group of flag names.
-        var flag: Pointer[Flag, __origin_of(self.flags)]
-        try:
-            flag = self.lookup(name)
-        except e:
-            print(e, file=2)
+        var flag = self.lookup(name)
+        if not flag:
             raise Error("FlagSet.set_annotation: Failed to set flag, {}, with the following annotation: {}".format(name, annotation.value))
         
         try:
-            flag[].annotations[annotation.value].append(value)
+            flag.value()[].annotations[annotation.value].append(value)
         except:
-            flag[].annotations[annotation.value] = List[String](value)
+            flag.value()[].annotations[annotation.value] = List[String](value)
 
     fn from_args[origin: Origin](mut self, arguments: Span[StaticString, origin]) raises -> List[StaticString]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
@@ -143,10 +140,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         fn set_flag_value(name: String, value: String) raises -> None:
             # Set the value of the flag.
             var flag = self.lookup(name)
-            if not flag[].changed:
-                flag[].set(value)
+            if not flag:
+                raise Error("FlagSet.from_args: Failed to set flag, {}, with value: {}. Flag could not be found.".format(name, value))
+            if not flag.value()[].changed:
+                flag.value()[].set(value)
             else:
-                flag[].value.value().write(" ", value)
+                flag.value()[].value.value().write(" ", value)
 
         var remaining_args = List[StaticString](capacity=len(arguments))
         var state = ParserState.FIND_FLAG
@@ -257,7 +256,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         if len(missing_flag_names) > 0:
             raise Error("Required flag(s): " + missing_flag_names.__str__() + " not set.")
 
-    fn lookup(ref self, name: StringSlice) raises -> Pointer[Flag, __origin_of(self.flags)]:
+    fn lookup(ref self, name: StringSlice) -> Optional[Pointer[Flag, __origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -266,17 +265,14 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         Returns:
             Optional Pointer to the Flag.
-
-        Raises:
-            Error: If the Flag is not found.
         """
         for flag in self.flags:
             if flag[].name.as_string_slice() == name:
                 return Pointer.address_of(flag[])
 
-        raise Error("FlagNotFoundError: Could not find the following flag: ", name)
+        return None
 
-    fn lookup[type: FType](ref self, name: StringSlice) raises -> Pointer[Flag, __origin_of(self.flags)]:
+    fn lookup[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, __origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -288,17 +284,14 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         Returns:
             Optional Pointer to the Flag.
-
-        Raises:
-            Error: If the Flag is not found.
         """
         for flag in self.flags:
             if flag[].name.as_string_slice() == name and flag[].type == type:
                 return Pointer.address_of(flag[])
 
-        raise Error("FlagNotFoundError: Could not find the following flag: ", name)
+        return None
     
-    fn lookup_shorthand(ref self, name: StringSlice) raises -> Pointer[Flag, __origin_of(self.flags)]:
+    fn lookup_shorthand(ref self, name: StringSlice) -> Optional[Pointer[Flag, __origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -307,17 +300,14 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         Returns:
             Optional Pointer to the Flag.
-
-        Raises:
-            Error: If the Flag is not found.
         """
         for flag in self.flags:
             if flag[].shorthand.as_string_slice() == name:
                 return Pointer.address_of(flag[])
 
-        raise Error("FlagNotFoundError: Could not find the following flag: ", name)
+        return None
 
-    fn lookup_shorthand[type: FType](ref self, name: StringSlice) raises -> Pointer[Flag, __origin_of(self.flags)]:
+    fn lookup_shorthand[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, __origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -329,17 +319,14 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         Returns:
             Optional Pointer to the Flag.
-
-        Raises:
-            Error: If the Flag is not found.
         """
         for flag in self.flags:
             if flag[].shorthand.as_string_slice() == name and flag[].type == type:
                 return Pointer.address_of(flag[])
 
-        raise Error("FlagNotFoundError: Could not find the following flag: ", name)
+        return None
 
-    fn lookup_name(self, shorthand: StringSlice) raises -> String:
+    fn lookup_name(self, shorthand: StringSlice) -> Optional[String]:
         """Returns the name of a flag given its shorthand.
 
         Args:
@@ -347,15 +334,12 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         Returns:
             The name of the flag.
-
-        Raises:
-            Error: If the flag is not found.
         """
         for flag in self.flags:
             if flag[].shorthand and flag[].shorthand.as_string_slice() == shorthand:
                 return flag[].name
-
-        raise Error("FlagNotFoundError: Could not find the following flag shorthand: ", shorthand)
+        
+        return None
 
     fn has_all_flags(self, flag_names: List[String]) -> Bool:
         """Checks if all flags are defined in the flag set.
@@ -441,7 +425,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         validate_one_required_flag_group(one_required_group_status)
         validate_mutually_exclusive_flag_group(mutually_exclusive_group_status)
     
-    fn get_string(self, name: String) raises -> String:
+    fn get_string(self, name: String) -> Optional[String]:
         """Returns the value of a flag as a `String`. If it isn't set, then return the default value.
 
         Args:
@@ -449,13 +433,14 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         Returns:
             The value of the flag as a `String`.
-
-        Raises:
-            Error: If the flag is not found.
         """
-        return self.lookup[FType.String](name)[].value_or_default()
+        var flag = self.lookup[FType.String](name)
+        if not flag:
+            return None
+        
+        return flag.value()[].value_or_default()
 
-    fn get_bool(self, name: String) raises -> Bool:
+    fn get_bool(self, name: String) raises -> Optional[Bool]:
         """Returns the value of a flag as a `Bool`. If it isn't set, then return the default value.
 
         Args:
@@ -467,9 +452,17 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return string_to_bool(self.lookup[FType.Bool](name)[].value_or_default())
+        var flag = self.lookup[FType.Bool](name)
+        if not flag:
+            return None
 
-    fn get_int[type: FType = FType.Int](self, name: String) raises -> Int:
+        var result = flag.value()[].value_or_default()
+        if not result:
+            return None
+        
+        return string_to_bool(result.value())
+
+    fn get_int[type: FType = FType.Int](self, name: String) raises -> Optional[Int]:
         """Returns the value of a flag as an `Int`. If it isn't set, then return the default value.
 
         Parameters:
@@ -488,9 +481,16 @@ struct FlagSet(Writable, Stringable, Boolable):
             type.is_int_type(),
             "type must be one of `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, or `UInt64`. Received: " + type.value
         ]()
-        return atol(self.lookup[type](name)[].value_or_default())
+        var flag = self.lookup[type](name)
+        if not flag:
+            return None
+        
+        var result = flag.value()[].value_or_default()
+        if not result:
+            return None
+        return atol(result.value())
 
-    fn get_int8(self, name: String) raises -> Int8:
+    fn get_int8(self, name: String) raises -> Optional[Int8]:
         """Returns the value of a flag as a `Int8`. If it isn't set, then return the default value.
 
         Args:
@@ -502,9 +502,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return Int8(self.get_int[FType.Int8](name))
+        var result = self.get_int[FType.Int8](name)
+        if not result:
+            return None
+        return Int8(result.value())
 
-    fn get_int16(self, name: String) raises -> Int16:
+    fn get_int16(self, name: String) raises -> Optional[Int16]:
         """Returns the value of a flag as a `Int16`. If it isn't set, then return the default value.
 
         Args:
@@ -516,9 +519,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return Int16(self.get_int[FType.Int16](name))
+        var result = self.get_int[FType.Int16](name)
+        if not result:
+            return None
+        return Int16(result.value())
 
-    fn get_int32(self, name: String) raises -> Int32:
+    fn get_int32(self, name: String) raises -> Optional[Int32]:
         """Returns the value of a flag as a `Int32`. If it isn't set, then return the default value.
 
         Args:
@@ -530,9 +536,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return Int32(self.get_int[FType.Int32](name))
+        var result = self.get_int[FType.Int32](name)
+        if not result:
+            return None
+        return Int32(result.value())
 
-    fn get_int64(self, name: String) raises -> Int64:
+    fn get_int64(self, name: String) raises -> Optional[Int64]:
         """Returns the value of a flag as a `Int64`. If it isn't set, then return the default value.
 
         Args:
@@ -544,9 +553,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return Int64(self.get_int[FType.Int64](name))
+        var result = self.get_int[FType.Int64](name)
+        if not result:
+            return None
+        return Int64(result.value())
 
-    fn get_uint(self, name: String) raises -> UInt:
+    fn get_uint(self, name: String) raises -> Optional[UInt]:
         """Returns the value of a flag as a `UInt`. If it isn't set, then return the default value.
 
         Args:
@@ -558,9 +570,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return UInt(self.get_int[FType.UInt](name))
+        var result = self.get_int[FType.UInt](name)
+        if not result:
+            return None
+        return UInt(result.value())
 
-    fn get_uint8(self, name: String) raises -> UInt8:
+    fn get_uint8(self, name: String) raises -> Optional[UInt8]:
         """Returns the value of a flag as a `UInt8`. If it isn't set, then return the default value.
 
         Args:
@@ -572,9 +587,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return UInt8(self.get_int[FType.UInt8](name))
+        var result = self.get_int[FType.UInt8](name)
+        if not result:
+            return None
+        return UInt8(result.value())
 
-    fn get_uint16(self, name: String) raises -> UInt16:
+    fn get_uint16(self, name: String) raises -> Optional[UInt16]:
         """Returns the value of a flag as a `UInt16`. If it isn't set, then return the default value.
 
         Args:
@@ -586,9 +604,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return UInt16(self.get_int[FType.UInt16](name))
+        var result = self.get_int[FType.UInt16](name)
+        if not result:
+            return None
+        return UInt16(result.value())
 
-    fn get_uint32(self, name: String) raises -> UInt32:
+    fn get_uint32(self, name: String) raises -> Optional[UInt32]:
         """Returns the value of a flag as a `UInt32`. If it isn't set, then return the default value.
 
         Args:
@@ -600,9 +621,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return UInt32(self.get_int[FType.UInt32](name))
+        var result = self.get_int[FType.UInt32](name)
+        if not result:
+            return None
+        return UInt32(result.value())
 
-    fn get_uint64(self, name: String) raises -> UInt64:
+    fn get_uint64(self, name: String) raises -> Optional[UInt64]:
         """Returns the value of a flag as a `UInt64`. If it isn't set, then return the default value.
 
         Args:
@@ -614,9 +638,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return UInt64(self.get_int[FType.UInt64](name))
+        var result = self.get_int[FType.UInt64](name)
+        if not result:
+            return None
+        return UInt64(result.value())
     
-    fn get_float[type: FType](self, name: String) raises -> Float64:
+    fn get_float[type: FType](self, name: String) raises -> Optional[Float64]:
         """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
 
         Parameters:
@@ -635,9 +662,16 @@ struct FlagSet(Writable, Stringable, Boolable):
             type.is_float_type(),
             "type must be one of `Float16`, `Float32`, `Float64`. Received: " + type.value
         ]()
-        return atof(self.lookup[type](name)[].value_or_default())
+        var flag = self.lookup[type](name)
+        if not flag:
+            return None
 
-    fn get_float16(self, name: String) raises -> Float16:
+        var result = flag.value()[].value_or_default()
+        if not result:
+            return None
+        return atof(result.value())
+
+    fn get_float16(self, name: String) raises -> Optional[Float16]:
         """Returns the value of a flag as a `Float16`. If it isn't set, then return the default value.
 
         Args:
@@ -649,9 +683,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return self.get_float[FType.Float16](name).cast[DType.float16]()
+        var result = self.get_float[FType.Float16](name)
+        if not result:
+            return None
+        return result.value().cast[DType.float16]()
 
-    fn get_float32(self, name: String) raises -> Float32:
+    fn get_float32(self, name: String) raises -> Optional[Float32]:
         """Returns the value of a flag as a `Float32`. If it isn't set, then return the default value.
 
         Args:
@@ -663,9 +700,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return self.get_float[FType.Float32](name).cast[DType.float32]()
+        var result = self.get_float[FType.Float32](name)
+        if not result:
+            return None
+        return result.value().cast[DType.float32]()
 
-    fn get_float64(self, name: String) raises -> Float64:
+    fn get_float64(self, name: String) raises -> Optional[Float64]:
         """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
 
         Args:
@@ -677,9 +717,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return self.get_float[FType.Float64](name)
+        var result = self.get_float[FType.Float64](name)
+        if not result:
+            return None
+        return result.value()
 
-    fn _get_list[type: FType](self, name: String) raises -> List[String]:
+    fn _get_list[type: FType](self, name: String) raises -> Optional[List[String]]:
         """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
 
         Parameters:
@@ -698,9 +741,16 @@ struct FlagSet(Writable, Stringable, Boolable):
             type.is_list_type(),
             "type must be one of `StringList`, `IntList`, or `Float64List`. Received: " + type.value
         ]()
-        return self.lookup[type](name)[].value_or_default().split(sep=" ")
+        var flag = self.lookup[type](name)
+        if not flag:
+            return None
+        
+        var result = flag.value()[].value_or_default()
+        if not result:
+            return None
+        return result.value().split(sep=" ")
 
-    fn get_string_list(self, name: String) raises -> List[String]:
+    fn get_string_list(self, name: String) raises -> Optional[List[String]]:
         """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
 
         Args:
@@ -712,9 +762,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        return self._get_list[FType.StringList](name)
+        var result = self._get_list[FType.StringList](name)
+        if not result:
+            return None
+        return result.value()
 
-    fn get_int_list(self, name: String) raises -> List[Int]:
+    fn get_int_list(self, name: String) raises -> Optional[List[Int]]:
         """Returns the value of a flag as a `List[Int]`. If it isn't set, then return the default value.
 
         Args:
@@ -726,13 +779,16 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        var values = self._get_list[FType.IntList](name)
-        var ints = List[Int](capacity=len(values))
-        for value in values:
+        var result = self._get_list[FType.IntList](name)
+        if not result:
+            return None
+        
+        var ints = List[Int](capacity=len(result.value()))
+        for value in result.value():
             ints.append(atol(value[]))
         return ints^
 
-    fn get_float64_list(self, name: String) raises -> List[Float64]:
+    fn get_float64_list(self, name: String) raises -> Optional[List[Float64]]:
         """Returns the value of a flag as a `List[Float64]`. If it isn't set, then return the default value.
 
         Args:
@@ -744,8 +800,11 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If the flag is not found.
         """
-        var values = self._get_list[FType.Float64List](name)
-        var floats = List[Float64](capacity=len(values))
-        for value in values:
+        var result = self._get_list[FType.Float64List](name)
+        if not result:
+            return None
+        
+        var floats = List[Float64](capacity=len(result.value()))
+        for value in result.value():
             floats.append(atof(value[]))
         return floats^

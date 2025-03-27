@@ -123,7 +123,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
     """If no value is provided, will optionally check this environment variable for a value."""
     var file_path: Optional[String]
     """If no value is provided, will optionally check read this file for a value. `environment_variable` takes precedence over this option."""
-    var default: String
+    var default: Optional[String]
     """The default value of the flag."""
     var type: FType
     """The type of the flag."""
@@ -148,7 +148,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
-        default: String = "",
+        default: Optional[String] = None,
         required: Bool = False,
         persistent: Bool = False,
     ):
@@ -250,9 +250,10 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         if self.value:
             writer.write(", value=")
             write_optional(self.value)
+        if self.default:
+            writer.write(", default=")
+            write_optional(self.default)
         writer.write(
-            ", default=",
-            self.default,
             ", type=",
             self.type.value,
             ", changed=",
@@ -273,7 +274,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         self.value = value
         self.changed = True
 
-    fn get_with_transform[T: CollectionElement, //, transform: fn (value: String) -> T](self) -> T:
+    fn get_with_transform[T: CollectionElement, //, transform: fn (value: String) -> T](self) -> Optional[T]:
         """Returns the value of the flag with a transformation applied to it.
 
         Parameters:
@@ -285,22 +286,30 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         """
         if self.value:
             return transform(self.value.value())
-        return transform(self.default)
+        elif self.default:
+            return transform(self.default.value())
+        
+        return None
 
-    fn value_or_default(self) -> String:
+    fn value_or_default(self) -> Optional[String]:
         """Returns the value of the flag or the default value if it isn't set.
 
         Returns:
             The value of the flag or the default value.
         """
-        return self.value.or_else(self.default)
+        if self.value:
+            return self.value.value()
+        elif self.default:
+            return self.default.value()
+        
+        return None
     
     @staticmethod
     fn string(
         name: String,
         usage: String,
         shorthand: String = "",
-        default: String = "",
+        default: Optional[String] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -320,11 +329,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.String,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -338,7 +353,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: Bool = False,
+        default: Optional[Bool] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -358,11 +373,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.Bool,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -376,7 +397,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: Int = 0,
+        default: Optional[Int] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -396,11 +417,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+            
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.Int,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -414,7 +441,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: Int8 = 0,
+        default: Optional[Int8] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -434,11 +461,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.Int8,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -452,7 +485,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: Int16 = 0,
+        default: Optional[Int16] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -472,11 +505,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.Int16,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -490,7 +529,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: Int32 = 0,
+        default: Optional[Int32] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -510,11 +549,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.Int32,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -528,7 +573,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: Int64 = 0,
+        default: Optional[Int64] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -548,11 +593,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.Int64,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -566,7 +617,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: UInt8 = 0,
+        default: Optional[UInt8] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -586,11 +637,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.UInt,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -604,7 +661,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: UInt8 = 0,
+        default: Optional[UInt8] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -624,11 +681,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.UInt8,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -642,7 +705,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: UInt16 = 0,
+        default: Optional[UInt16] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -662,11 +725,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.UInt16,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -680,7 +749,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: UInt32 = 0,
+        default: Optional[UInt32] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -700,11 +769,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.UInt32,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -718,7 +793,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: UInt64 = 0,
+        default: Optional[UInt64] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -738,11 +813,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.UInt64,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -756,7 +837,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: Float16 = 0,
+        default: Optional[Float16] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -776,11 +857,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.Float16,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -794,7 +881,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: Float32 = 0,
+        default: Optional[Float32] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -814,11 +901,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.Float32,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -832,7 +925,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: Float64 = 0,
+        default: Optional[Float64] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -852,11 +945,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = String(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=String(default),
+            default=default_value,
             type=FType.Float64,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -870,7 +969,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: List[String] = List[String](),
+        default: Optional[List[String]] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -890,11 +989,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = " ".join(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=" ".join(default),
+            default=default_value,
             type=FType.StringList,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -902,12 +1007,13 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required=required,
             persistent=persistent,
         )
+
     @staticmethod
     fn int_list(
         name: String,
         usage: String,
         shorthand: String = "",
-        default: List[Int, True] = List[Int, True](),
+        default: Optional[List[Int, True]] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -927,11 +1033,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = " ".join(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=" ".join(default),
+            default=default_value,
             type=FType.IntList,
             environment_variable=environment_variable,
             file_path=file_path,
@@ -944,7 +1056,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: List[Float64, True] = List[Float64, True](),
+        default: Optional[List[Float64, True]] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -964,11 +1076,17 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
         """
+        var default_value: Optional[String]
+        if default:
+            default_value = " ".join(default.value())
+        else:
+            default_value = None
+
         return Flag(
             name=name,
             shorthand=shorthand,
             usage=usage,
-            default=" ".join(default),
+            default=default_value,
             type=FType.Float64List,
             environment_variable=environment_variable,
             file_path=file_path,

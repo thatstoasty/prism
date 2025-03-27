@@ -161,8 +161,9 @@ Flag values can also be retrieved from environment variables, if a value is not 
 from prism import Command, Flag, Context
 
 fn test(ctx: Context) raises -> None:
-    name = ctx.command[].flags.get_string("name")
-    print("Hello {}".format(name))
+    var name = ctx.command[].flags.get_string("name")
+    if name:
+        print("Hello {}".format(name.value()))
 
 fn main() -> None:
     Command(
@@ -189,8 +190,9 @@ from prism import Command, Flag
 import prism
 
 fn test(ctx: Context) raises -> None:
-    name = ctx.command[].flags.get_string("name")
-    print("Hello {}".format(name))
+    var name = ctx.command[].flags.get_string("name")
+    if name:
+        print("Hello {}".format(name.value()))
 
 fn main() -> None:
     root = Command(
@@ -285,7 +287,7 @@ If you have different flags that must be provided together (e.g. if they provide
 from prism import Command, Flag
 import prism
 
-fn main();:
+fn main():
     Command(
         name="tool",
         description="This is a dummy command!",
@@ -331,7 +333,7 @@ fn main():
                 name="hue",
                 shorthand="x",
                 usage="Text color",
-                default="#3464eb",
+                default=0x3464eb,
             ),
         ),
         mutually_exclusive_flags=List[String]("color", "hue"),
@@ -515,8 +517,9 @@ fn main() -> None:
 - Autocomplete generation.
 - Enable usage function to return the results of a usage function upon calling wrong functions or commands.
 - Update default help command to improve available commands and flags section.
-- Try to avoid `Dict` and `try/except` blocks in order to support compile time command building.
+- Commands without children can be created at compile time, but those with them cannot. Perhaps I can find a way to make this work.
 - Add persistent flag mutually exclusive and required together checks back in.
+- Clean up `default_help` function formatting.
 
 ### Improvements
 
