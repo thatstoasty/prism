@@ -58,10 +58,12 @@ fn build_goodbye_command() -> ArcPointer[Command]:
 
 
 fn test(ctx: Context) -> None:
-    try:
-        print(ctx.command[].flags.get_string("env"))
-    except:
+    var env = ctx.command[].flags.get_string("env")
+    if not env:
         print("No env flag provided.")
+    else:
+        print("Env:", env.value())
+
     for item in ctx.command[].flags:
         if item[].value:
             print(item[].name, item[].value.value())
@@ -84,8 +86,7 @@ fn main() -> None:
             Flag.string(
                 name="env",
                 shorthand="e",
-                usage="Environment.",
-                default="",
+                usage="Environment."
             )
         ),
         children=List[ArcPointer[Command]](

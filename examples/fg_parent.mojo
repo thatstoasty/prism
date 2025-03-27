@@ -8,10 +8,10 @@ fn test(ctx: Context) raises -> None:
     var port = ctx.command[].flags.get_string("port")
     var uri = ctx.command[].flags.get_string("uri")
 
-    if uri != "":
-        print("URI:", uri)
-    else:
-        print(host + ":" + port)
+    if uri:
+        print("URI:", uri.value())
+    elif host and port:
+        print(host.value() + ":" + port.value())
 
 
 fn tool_func(ctx: Context) -> None:

@@ -61,11 +61,9 @@ struct FlagParser:
             raise Error("Command does not accept the flag supplied: " + name)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-        try:
-            _ = flags.lookup[FType.Bool](name)
+        var flag = flags.lookup[FType.Bool](name)
+        if flag:
             return name^, String("True"), 1
-        except:
-            pass
 
         if self.index + 1 >= len(arguments):
             raise Error("Flag `", name, "` requires a value to be set but reached the end of arguments.")
@@ -98,10 +96,10 @@ struct FlagParser:
             var shorthand = flag[0][1:]
             var value = flag[1]
             var name = flags.lookup_name(shorthand)
-            if name not in flags.names():
-                raise Error("Command does not accept the shorthand flag supplied: " + name)
+            if not name or name.value() not in flags.names():
+                raise Error("Command does not accept the shorthand flag supplied: ", shorthand)
 
-            return List[String](name), value^, 1
+            return List[String](name.value()), value^, 1
 
         # Flag with value set like "-f <value>"
         var state = ShorthandParserState.START
@@ -110,30 +108,32 @@ struct FlagParser:
         var flag_names = List[String]()
         while start != end:
             var shorthand = argument[start:end]
-            var flag: Pointer[Flag, __origin_of(flags.flags)]
 
             # Try to find the flag with the full shorthand flag name.
             # If that doesn't work, then slice off the last character and check again, until we find a match.
             # Shorthand flags can be a combination of multiple bool flags, so we need to check for that.
             if state == ShorthandParserState.START:
-                try:
-                    flag = flags.lookup_shorthand(shorthand)
-                    flag_names.append(flag[].name)
-                    state = ShorthandParserState.CHECK_FLAG
-                except e:
-                    if "FlagNotFoundError" in String(e):
-                        end -= 1
-                        state = ShorthandParserState.MULTIPLE_BOOLS
-                        continue
+                var flag = flags.lookup_shorthand(shorthand)
+                if not flag:
+                    end -= 1
+                    state = ShorthandParserState.MULTIPLE_BOOLS
+                    continue
+
+                flag_names.append(flag.value()[].name)
+                state = ShorthandParserState.CHECK_FLAG
 
             # Found no matches for the full shorthand flag name, so we need to check for a combination of bool flags.
             elif state == ShorthandParserState.MULTIPLE_BOOLS:
                 try:
-                    flag = flags.lookup_shorthand(shorthand)
-                    if flag[].type != FType.Bool:
-                        raise Error("Received an combination of shorthand flags that are not all bool flags. flag received: ", argument, ". Found the following flag which is not a bool flag: ", flag[].name)
+                    var flag = flags.lookup_shorthand(shorthand)
+                    if not flag:
+                        end -= 1
+                        continue
+
+                    if flag.value()[].type != FType.Bool:
+                        raise Error("Received an combination of shorthand flags that are not all bool flags. flag received: ", argument, ". Found the following flag which is not a bool flag: ", flag.value()[].name)
                     
-                    flag_names.append(flag[].name)
+                    flag_names.append(flag.value()[].name)
                     start = end
                     end = len(argument)
                     # Reached the end of the parser, all flags have been matched and will be set to true.
@@ -147,17 +147,20 @@ struct FlagParser:
             # It's a single option
             elif state == ShorthandParserState.CHECK_FLAG:
                 # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-                flag = flags.lookup_shorthand(shorthand) # TODO: Try to lookup only once
-                if flag[].type == FType.Bool:
+                var flag = flags.lookup_shorthand(shorthand) # TODO: Try to lookup only once
+                if not flag:
+                    raise Error("FlagParser._parse_shorthand_flag: Command does not accept the shorthand flag supplied: ", shorthand)
+
+                if flag.value()[].type == FType.Bool:
                     return flag_names^, String("True"), 1
 
                 # Non bool flags expect a value to be set. If the end of the arguments list is reached, raise an error.
                 if self.index + 1 >= len(arguments):
-                    raise Error("Flag `", flag[].name, "` requires a value to be set but reached the end of arguments.")
+                    raise Error("Flag `", flag.value()[].name, "` requires a value to be set but reached the end of arguments.")
 
                 # If the next argument is another flag, raise an error.
                 if arguments[self.index + 1].startswith("-", 0, 1):
-                    raise Error("Flag `", flag[].name, "` requires a value to be set but found another flag instead.")
+                    raise Error("Flag `", flag.value()[].name, "` requires a value to be set but found another flag instead.")
 
                 # Increment index by 2 because 2 args were used (one for name and value).
                 return flag_names^, String(arguments[self.index + 1]), 2
