@@ -13,7 +13,7 @@ def test_command_operations():
         usage="Base command.",
         run=dummy,
         children=List[ArcPointer[Command]](
-            ArcPointer(Command(name="child", usage="Child command.", run=dummy, flags=List[Flag](Flag.uint32(name="color", shorthand="c", usage="Text color", default=0x3464eb))))
+            ArcPointer(Command(name="child", usage="Child command.", run=dummy, flags=List[Flag](Flag.uint32(name="color", shorthand="c", usage="Text color", default=UInt32(0x3464eb)))))
         )
     )
     for flag in cmd.flags.flags:
