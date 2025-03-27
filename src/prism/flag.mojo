@@ -422,7 +422,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             default_value = String(default.value())
         else:
             default_value = None
-            
+
         return Flag(
             name=name,
             shorthand=shorthand,
@@ -617,7 +617,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         name: String,
         usage: String,
         shorthand: String = "",
-        default: Optional[UInt8] = None,
+        default: Optional[UInt] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
