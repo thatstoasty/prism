@@ -1,0 +1,13 @@
+[project]
+authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
+channels = ["https://conda.modular.com/max-nightly", "https://conda.modular.com/max", "https://repo.prefix.dev/mojo-community", "conda-forge"]
+description = "Add a short description here"
+name = "jq"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+max = ">=25.3.0.dev2025032805,<26"
+emberjson = ">=0.1.3,<0.2"
