@@ -6,8 +6,8 @@ fn test(ctx: Context) -> None:
     print("Pass -v to see the version!")
 
 
-fn version() -> String:
-    return "MyCLI version 0.1.0"
+fn version(version: String) -> String:
+    return "MyCLI version: " + version
 
 
 fn main() -> None:
@@ -15,5 +15,6 @@ fn main() -> None:
         name="hello",
         usage="This is a dummy command!",
         run=test,
-        version=version,
+        version=String("0.1.0"),
+        version_writer=version,
     ).execute()

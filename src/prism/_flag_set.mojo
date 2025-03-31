@@ -124,7 +124,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         except:
             flag.value()[].annotations[annotation.value] = List[String](value)
 
-    fn from_args[origin: Origin](mut self, arguments: Span[StaticString, origin]) raises -> List[StaticString]:
+    fn from_args[origin: Origin](mut self, arguments: Span[String, origin]) raises -> List[String]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
@@ -147,7 +147,7 @@ struct FlagSet(Writable, Stringable, Boolable):
             else:
                 flag.value()[].value.value().write(" ", value)
 
-        var remaining_args = List[StaticString](capacity=len(arguments))
+        var remaining_args = List[String](capacity=len(arguments))
         var state = ParserState.FIND_FLAG
         var parser = FlagParser()
         while parser.index < len(arguments):

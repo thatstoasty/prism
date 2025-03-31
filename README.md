@@ -426,20 +426,22 @@ fn main() -> None:
 Commands can be configured to accept `--version` and `-v` flag to run a version function. This will print the result of the version function using the output writer that's configured for the command.
 
 ```mojo
+from memory import ArcPointer
 from prism import Command, Context
 
 fn test(ctx: Context) -> None:
     print("Pass -v to see the version!")
 
-fn version() -> String:
-    return "MyCLI version 0.1.0"
+fn version(version: String) -> String:
+    return "MyCLI version: " + version
 
 fn main() -> None:
     Command(
         name="hello",
         usage="This is a dummy command!",
         run=test,
-        version=version,
+        version=String("0.1.0"),
+        version_writer=version,
     ).execute()
 ```
 
@@ -451,18 +453,14 @@ The standard output and error output behavior can be customized by providing wri
 from memory import ArcPointer
 from prism import Command, Context
 
-
 fn my_output_writer(arg: String):
     print(arg)
-
 
 fn my_error_writer(arg: String):
     print(arg, file=2)
 
-
 fn test(ctx: Context) -> None:
     print("Pass -v to see the version!")
-
 
 fn main() -> None:
     Command(
@@ -472,6 +470,26 @@ fn main() -> None:
         version=version,
         output_writer=my_output_writer,
         error_writer=my_error_writer,
+    ).execute()
+```
+
+## Reading arguments in from stdin
+
+Commands can additionally read arguments in from `stdin`. Set `read_from_stdin` to `True` and `stdin` will also be read and parsed for arguments.
+
+```mojo
+from prism import Command, Context
+
+fn test(ctx: Context) -> None:
+    for arg in ctx.args:
+        print("Received:", arg[])
+
+fn main() -> None:
+    Command(
+        name="hello",
+        usage="This is a dummy command!",
+        run=test,
+        read_from_stdin=True
     ).execute()
 ```
 
@@ -515,11 +533,11 @@ fn main() -> None:
 
 - Add suggestion logic to `Command` struct.
 - Autocomplete generation.
-- Enable usage function to return the results of a usage function upon calling wrong functions or commands.
 - Update default help command to improve available commands and flags section.
 - Commands without children can be created at compile time, but those with them cannot. Perhaps I can find a way to make this work.
 - Add persistent flag mutually exclusive and required together checks back in.
-- Clean up `default_help` function formatting.
+- Typed arguments.
+- Once the stdlib supports reading from stdin (currently only supports readline and read_until_delimiter), reading args from stdin will be updated to support newlines.
 
 ### Improvements
 
