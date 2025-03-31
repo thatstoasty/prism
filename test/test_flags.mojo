@@ -1,5 +1,4 @@
 from memory import ArcPointer
-from collections.string import StaticString
 import testing
 import prism
 from prism import Command, Context
@@ -17,6 +16,7 @@ def test_string_to_bool():
 fn dummy(ctx: Context) -> None:
     return None
 
+
 def test_gets():
     var cmd = Command(
         name="root",
@@ -28,7 +28,7 @@ def test_gets():
         ),
     )
 
-    var args = List[StaticString]("--key=value", "positional", "--flag")
+    var args = List[String]("--key=value", "positional", "--flag")
     _ = cmd.flags.from_args(args)
     testing.assert_equal(cmd.flags.get_string("key").value(), "value")
     testing.assert_equal(cmd.flags.get_bool("flag").value(), True)
@@ -45,7 +45,7 @@ def test_parse():
         ),
     )
 
-    remaining_args = cmd.flags.from_args(List[StaticString]("--key=value"))
+    remaining_args = cmd.flags.from_args(List[String]("--key=value"))
     testing.assert_equal(len(remaining_args), 0)
 
 
@@ -61,12 +61,12 @@ def test_parse():
 #     )
 
 #     parser = FlagParser()
-#     name, value, increment_by = parser.parse_shorthand("-k", List[StaticString]("-k", "value"), cmd.flags)
+#     name, value, increment_by = parser.parse_shorthand("-k", List[String]("-k", "value"), cmd.flags)
 #     testing.assert_equal(name, "key")
 #     testing.assert_equal(value, "value")
 #     testing.assert_equal(increment_by, 2)
 
-#     name, value, increment_by = parser.parse_shorthand("-k=value", List[StaticString]("-k=value"), cmd.flags)
+#     name, value, increment_by = parser.parse_shorthand("-k=value", List[String]("-k=value"), cmd.flags)
 #     testing.assert_equal(name, "key")
 #     testing.assert_equal(value, "value")
 #     testing.assert_equal(increment_by, 1)
