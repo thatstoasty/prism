@@ -3,7 +3,7 @@ from collections import Optional, Dict
 from collections.string import StaticString
 from memory import ArcPointer
 import mog
-from mog import Position
+from mog import Position, get_width
 from prism._util import string_to_bool, panic
 from prism.flag import Flag, FType
 from prism._flag_set import Annotation, FlagSet
@@ -39,46 +39,57 @@ fn default_help(command: ArcPointer[Command]) raises -> String:
     Raises:
         Any error that occurs while generating the help information.
     """
-    var style = mog.Style()
-    var usage_style = style.border(mog.HIDDEN_BORDER)
-    var border_style = style.border(mog.ROUNDED_BORDER).border_foreground(mog.Color(0x383838)).padding(0, 1)
-    var option_style = style.foreground(mog.Color(0x81C8BE))
-    var bold_style = style.bold()
-
-    var builder = String()
-    builder.write(style.bold().foreground(mog.Color(0xE5C890)).render("Usage: "))
-    builder.write(bold_style.render(command[].full_name()))
+    alias style = mog.Style(mog.ASCII)
+    var builder = String("Usage: ", command[].full_name())
 
     if len(command[].flags) > 0:
         builder.write(" [OPTIONS]")
     if len(command[].children) > 0:
         builder.write(" COMMAND")
-    builder.write(" [ARGS]...")
+    builder.write(" [ARGS]...", "\n\n", command[].usage)
 
-    var usage = usage_style.render(mog.join_vertical(Position.LEFT, builder, "\n", command[].usage))
-
-    builder = String()
+    var option_width = 0
     if command[].flags:
-        builder.write(bold_style.render("Options"))
+        var widest_flag = 0
+        var widest_shorthand = 0
         for flag in command[].flags:
-            builder.write(option_style.render("\n-{}, --{}".format(flag[].shorthand, flag[].name)))
-            builder.write("    {}".format(flag[].usage))
-    var options = border_style.render(builder)
+            if len(flag[].name) > widest_flag:
+                widest_flag = len(flag[].name)
+            if len(flag[].shorthand) > widest_shorthand:
+                widest_shorthand = len(flag[].shorthand)
 
-    builder = String()
+        alias USAGE_PADDING = 4
+        option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
+        var options_style = style.width(option_width)
+
+        builder.write("\n\nOptions")
+        for flag in command[].flags:
+            var option = String("\n  ")
+            if flag[].shorthand:
+                option.write("-", flag[].shorthand, ", ")
+            option.write("--", flag[].name)
+            builder.write(options_style.render(option), flag[].usage)
+        
+        builder.write("\n")
+
     if command[].children:
-        builder.write(bold_style.render("Commands"))
+        var options_style = style.width(option_width - 2)
+        builder.write("\nCommands")
         for i in range(len(command[].children)):
-            builder.write("\n{}    {}".format(option_style.render(command[].children[i][].name), command[].children[i][].usage))
+            builder.write("\n  ", options_style.render(command[].children[i][].name), command[].children[i][].usage)
 
-            if i == len(command[].children) - 1:
-                builder.write("\n")
+        builder.write("\n")
 
     if command[].aliases:
-        builder.write(bold_style.render("Aliases"))
-        builder.write("\n{}".format(option_style.render(command[].aliases.__str__())))
+        builder.write("\nAliases\n  ")
+        for i in range(len(command[].aliases)):
+            builder.write(command[].aliases[i])
 
-    return mog.join_vertical(Position.LEFT, usage, options, border_style.render(builder))
+            if i < len(command[].children) - 1:
+                builder.write(", ")
+
+    builder.write("\n")
+    return builder^
 
 
 alias CmdFn = fn (ctx: Context) -> None

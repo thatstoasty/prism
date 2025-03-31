@@ -22,7 +22,7 @@ fn main() -> None:
                 shorthand="r",
                 usage="Always required.",
                 required=True,
-                persistent=True,
+                persistent=True
             ),
             Flag.string(
                 name="host",
