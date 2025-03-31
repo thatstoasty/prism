@@ -26,8 +26,7 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -
             continue
 
         var keys = extract_keys(pair[])
-        alias msg = "If any flags in the group, {}, are set they must all be set; missing {}."
-        raise Error(msg.format(keys.__str__(), unset.__str__()))
+        raise Error("If any flags in the group, ", keys.__str__(), "are set they must all be set; missing ", unset.__str__(), ".")
 
 
 fn get_set_flags(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:

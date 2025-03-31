@@ -1,30 +1,92 @@
 from sys import argv
+from builtin.io import _fdopen
 from collections import Optional, Dict
 from collections.string import StaticString
 from memory import ArcPointer
 import mog
 from mog import Position, get_width
-from prism._util import string_to_bool, panic
-from prism.flag import Flag, FType
+from prism._util import panic
+from prism.flag import Flag
 from prism._flag_set import Annotation, FlagSet
 from prism.args import arbitrary_args
 from prism.context import Context
 
 
-fn _get_args_as_list() -> List[StaticString]:
+fn _parse_args_from_command_line(args: VariadicList[StaticString]) -> List[String]:
     """Returns the arguments passed to the executable as a list of strings.
 
     Returns:
         The arguments passed to the executable as a list of strings.
     """
-    var args = argv()
-    var result = List[StaticString](capacity=len(args))
+    var result = List[String](capacity=len(args))
     var i = 1
     while i < len(args):
-        result.append(args[i])
+        result.append(String(args[i]))
         i += 1
 
     return result^
+
+@value
+@register_passable("trivial")
+struct STDINParserState:
+    var value: UInt8
+    alias FIND_TOKEN = Self(0)
+    alias FIND_ARG = Self(1)
+
+    fn __eq__(self, other: Self) -> Bool:
+        return self.value == other.value
+
+    fn __ne__(self, other: Self) -> Bool:
+        return self.value != other.value
+
+
+fn _parse_args_from_stdin(input: String) -> List[String]:
+    """Reads arguments from stdin and returns them as a list of strings.
+
+    Args:
+        input: The input string to parse.
+
+    Returns:
+        The arguments read from stdin as a list of strings.
+    """
+    var state = STDINParserState.FIND_TOKEN
+    var line_number = 1
+    var token = String("")
+    var args = List[String]()
+
+    for char in input.codepoint_slices():
+        if state == STDINParserState.FIND_TOKEN:
+            if char.isspace() or char == '"':
+                if char == "\n":
+                    line_number += 1
+                if token != "":
+                    if token == "--":
+                        break
+                    args.append(token)
+                    token = ""
+                if char == '"':
+                    state = STDINParserState.FIND_ARG
+                continue
+            token.write(char)
+        else:
+            if char != '"':
+                token.write(char)
+            else:
+                if token != "":
+                    args.append(token)
+                    token = ""
+                state = STDINParserState.FIND_TOKEN
+    
+    if state == STDINParserState.FIND_TOKEN:
+        if token and token != "--":
+            args.append(token)
+    else:
+        # Not an empty string and not a space
+        if token and not token.isspace():
+            args.append(token)
+
+    return args^
+    
 
 
 fn default_help(command: ArcPointer[Command]) raises -> String:
@@ -46,7 +108,10 @@ fn default_help(command: ArcPointer[Command]) raises -> String:
         builder.write(" [OPTIONS]")
     if len(command[].children) > 0:
         builder.write(" COMMAND")
-    builder.write(" [ARGS]...", "\n\n", command[].usage)
+    builder.write(" [ARGS]...", "\n\n", command[].usage, "\n")
+
+    if command[].args_usage:
+        builder.write("\nArguments:\n  ", command[].args_usage.value(), "\n")
 
     var option_width = 0
     if command[].flags:
@@ -62,7 +127,7 @@ fn default_help(command: ArcPointer[Command]) raises -> String:
         option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
         var options_style = style.width(option_width)
 
-        builder.write("\n\nOptions")
+        builder.write("\nOptions:")
         for flag in command[].flags:
             var option = String("\n  ")
             if flag[].shorthand:
@@ -74,21 +139,20 @@ fn default_help(command: ArcPointer[Command]) raises -> String:
 
     if command[].children:
         var options_style = style.width(option_width - 2)
-        builder.write("\nCommands")
+        builder.write("\nCommands:")
         for i in range(len(command[].children)):
             builder.write("\n  ", options_style.render(command[].children[i][].name), command[].children[i][].usage)
-
         builder.write("\n")
 
     if command[].aliases:
-        builder.write("\nAliases\n  ")
+        builder.write("\nAliases:\n  ")
         for i in range(len(command[].aliases)):
             builder.write(command[].aliases[i])
 
-            if i < len(command[].children) - 1:
+            if i < len(command[].aliases) - 1:
                 builder.write(", ")
+        builder.write("\n")
 
-    builder.write("\n")
     return builder^
 
 
@@ -104,7 +168,7 @@ alias ParentVisitorFn = fn (parent: ArcPointer[Command]) capturing -> None
 """The function for visiting parents of a command."""
 alias ExitFn = fn (Error) -> None
 """The function to call when an error occurs."""
-alias VersionFn = fn () -> String
+alias VersionFn = fn (String) -> String
 """The function to call when the version flag is passed."""
 alias WriterFn = fn(String) -> None
 """The function to call when writing output or errors."""
@@ -164,6 +228,8 @@ struct Command(CollectionElement, Writable, Stringable):
     """The name of the command."""
     var usage: String
     """Description of the command."""
+    var args_usage: Optional[String]
+    """The usage of the arguments for the command. This is used to generate help text."""
     var aliases: List[String]
     """Aliases that can be used instead of the first word in name."""
 
@@ -171,7 +237,9 @@ struct Command(CollectionElement, Writable, Stringable):
     """Generates help text."""
     var exit: ExitFn
     """Function to call when an error occurs."""
-    var version: Optional[VersionFn]
+    var version: Optional[String]
+    """The version of the application."""
+    var version_writer: Optional[VersionFn]
     """Function to call when the version flag is passed."""
     var output_writer: WriterFn
     """Function to call when writing output."""
@@ -216,14 +284,19 @@ struct Command(CollectionElement, Writable, Stringable):
     var parent: List[ArcPointer[Self]]
     """Parent command."""
 
+    var read_from_stdin: Bool
+    """If True, the command will read args from stdin as well."""
+
     fn __init__(
         out self,
         name: String,
         usage: String,
         *,
+        args_usage: Optional[String] = None,
         aliases: List[String] = List[String](),
         exit: ExitFn = default_exit,
-        version: Optional[VersionFn] = None,
+        version: Optional[String] = None,
+        version_writer: Optional[VersionFn] = None,
         output_writer: WriterFn = default_output_writer,
         error_writer: WriterFn = default_error_writer,
         valid_args: List[String] = List[String](),
@@ -243,15 +316,18 @@ struct Command(CollectionElement, Writable, Stringable):
         mutually_exclusive_flags: Optional[List[String]] = None,
         one_required_flags: Optional[List[String]] = None,
         arg_validator: Optional[ArgValidatorFn] = None,
+        read_from_stdin: Bool = False,
     ):
         """Constructs a new `Command`.
 
         Args:
             name: The name of the command.
             usage: The usage of the command.
+            args_usage: The usage of the arguments for the command.
             aliases: The aliases for the command.
             exit: The function to call when an error occurs.
             version: The function to call when the version flag is passed.
+            version_writer: The function to call when the version flag is passed.
             output_writer: The function to call when writing output.
             error_writer: The function to call when writing errors.
             valid_args: The valid arguments for the command.
@@ -271,17 +347,20 @@ struct Command(CollectionElement, Writable, Stringable):
             mutually_exclusive_flags: The flags that are mutually exclusive.
             one_required_flags: The flags where at least one is required.
             arg_validator: The function to validate arguments passed to the command.
+            read_from_stdin: If True, the command will read args from stdin as well.
         """
         if not run and not raising_run:
             panic("A command must have a run or raising_run function.")
 
         self.name = name
         self.usage = usage
+        self.args_usage = args_usage
         self.aliases = aliases
 
         self.exit = exit
         self.help = default_help
         self.version = version
+        self.version_writer = version_writer
         self.output_writer = output_writer
         self.error_writer = error_writer
 
@@ -297,6 +376,7 @@ struct Command(CollectionElement, Writable, Stringable):
         self.persistent_post_run = persistent_post_run
         self.persistent_raising_pre_run = persistent_raising_pre_run
         self.persistent_raising_post_run = persistent_raising_post_run
+        self.read_from_stdin = read_from_stdin
 
         if arg_validator:
             self.arg_validator = arg_validator.value()
@@ -334,11 +414,13 @@ struct Command(CollectionElement, Writable, Stringable):
         """
         self.name = existing.name^
         self.usage = existing.usage^
+        self.args_usage = existing.args_usage^
         self.aliases = existing.aliases^
 
         self.help = existing.help
         self.exit = existing.exit
         self.version = existing.version^
+        self.version_writer = existing.version_writer^
         self.output_writer = existing.output_writer
         self.error_writer = existing.error_writer
 
@@ -354,6 +436,8 @@ struct Command(CollectionElement, Writable, Stringable):
         self.persistent_post_run = existing.persistent_post_run^
         self.persistent_raising_pre_run = existing.persistent_raising_pre_run^
         self.persistent_raising_post_run = existing.persistent_raising_post_run^
+
+        self.read_from_stdin = existing.read_from_stdin
 
         self.arg_validator = existing.arg_validator
         self.valid_args = existing.valid_args^
@@ -426,7 +510,7 @@ struct Command(CollectionElement, Writable, Stringable):
         return self
 
     fn _parse_command(
-        self, command: Self, arg: StaticString, children: List[ArcPointer[Self]], mut leftover_start: Int
+        self, command: Self, arg: String, children: List[ArcPointer[Self]], mut leftover_start: Int
     ) -> (Self, List[ArcPointer[Self]]):
         """Traverses the command tree to find the command that matches the given argument.
 
@@ -447,7 +531,7 @@ struct Command(CollectionElement, Writable, Stringable):
 
         return command, children
 
-    fn _parse_command_from_args(self, args: List[StaticString]) -> (Self, List[StaticString]):
+    fn _parse_command_from_args(self, args: List[String]) -> (Self, List[String]):
         """Traverses the command tree to find the command that matches the given arguments.
 
         Args:
@@ -470,7 +554,7 @@ struct Command(CollectionElement, Writable, Stringable):
             return self, args
 
         # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
-        var remaining_args = List[StaticString]()
+        var remaining_args = List[String]()
         if len(args) >= leftover_start:
             remaining_args = args[leftover_start : len(args)]
 
@@ -558,7 +642,20 @@ struct Command(CollectionElement, Writable, Stringable):
         if self.has_parent():
             return self.root()[].execute()
 
-        command, args = self._parse_command_from_args(_get_args_as_list())
+        var input_args = _parse_args_from_command_line(argv())
+        
+        # Read from stdin and parse the arguments.
+        if self.read_from_stdin:
+            try:
+                # TODO: Switch from readline to reading until EOF
+                input_args.extend(_parse_args_from_stdin(_fdopen["r"](0).readline()))
+            except e:
+                # TODO: The compiler doesn't like just having the exit function.
+                # In case the user provided exit function does NOT exit, we return early since we have no input args.
+                self.exit("Failed to read from stdin: " + String(e))
+                return
+
+        command, args = self._parse_command_from_args(input_args)
         var command_ptr = ArcPointer(command^) # Give ownership to the pointer, for consistency.
 
         # Merge persistent flags from ancestors.
@@ -580,7 +677,7 @@ struct Command(CollectionElement, Writable, Stringable):
             parents.reverse()
 
         try:
-            # Get the flags for the command to be executed.
+            # Parse the flags for the command to be executed.
             var remaining_args = command_ptr[].flags.from_args(args)
 
             # Check if the help flag was passed
@@ -590,7 +687,12 @@ struct Command(CollectionElement, Writable, Stringable):
 
             # Check if the help flag was passed
             if self.version and command_ptr[].flags.get_bool("version") == True:
-                self.output_writer(command_ptr[].version.value()())
+                var output: String
+                if command_ptr[].version_writer:
+                    output = command_ptr[].version_writer.value()(command_ptr[].version.value())
+                else:
+                    output = command_ptr[].version.value()
+                self.output_writer(output)
                 return
 
             # Validate individual required flags (eg: flag is required)
@@ -600,7 +702,7 @@ struct Command(CollectionElement, Writable, Stringable):
             command_ptr[].flags.validate_flag_groups()
 
             # Run flag actions if they have any
-            var ctx = Context(List[StaticString](remaining_args), command_ptr)
+            var ctx = Context(remaining_args, command_ptr)
 
             @parameter
             fn run_action(flag: Flag) raises -> None:

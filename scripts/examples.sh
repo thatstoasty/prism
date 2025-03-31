@@ -18,6 +18,8 @@ magic run mojo build $TEMP_DIR/list_flags.mojo -o $TEMP_DIR/list_flags
 magic run mojo build $TEMP_DIR/version.mojo -o $TEMP_DIR/version
 magic run mojo build $TEMP_DIR/exit.mojo -o $TEMP_DIR/exit
 magic run mojo build $TEMP_DIR/multiple_bool_flag.mojo -o $TEMP_DIR/multiple_bool_flag
+magic run mojo build $TEMP_DIR/stdin.mojo -o $TEMP_DIR/stdin
+
 
 echo "[INFO] Running examples..."
 # Need to run these first examples as part of a mojo project as they have external dependencies.
@@ -65,6 +67,7 @@ $TEMP_DIR/exit || echo "Exit Code: $?"
 $TEMP_DIR/multiple_bool_flag -r0vvas
 $TEMP_DIR/multiple_bool_flag -r0vas
 $TEMP_DIR/multiple_bool_flag -r0a --verbose "Hello Mojo!"
+echo "Hello Python!" | $TEMP_DIR/stdin examples/stdin.mojo "Hello Mojo!"
 
 
 echo "[INFO] Cleaning up the example directory."

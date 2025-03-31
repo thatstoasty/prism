@@ -30,7 +30,7 @@ struct FlagParser:
         self.index = 0
 
     fn parse_flag(
-        self, argument: StaticString, arguments: Span[StaticString], flags: FlagSet
+        self, argument: String, arguments: Span[String], flags: FlagSet
     ) raises -> Tuple[String, String, Int]:
         """Parses a flag and returns the name, value, and the index to increment by.
 
@@ -75,7 +75,7 @@ struct FlagParser:
         return name^, String(arguments[self.index + 1]), 2
 
     fn parse_shorthand_flag(
-        self, argument: StaticString, arguments: Span[StaticString], flags: FlagSet
+        self, argument: String, arguments: Span[String], flags: FlagSet
     ) raises -> Tuple[List[String], String, Int]:
         """Parses a shorthand flag and returns the name, value, and the index to increment by.
 
