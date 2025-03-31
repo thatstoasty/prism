@@ -9,7 +9,9 @@ alias FlagActionFn = fn (ctx: Context, value: String) raises -> None
 @value
 struct FType(EqualityComparableCollectionElement):
     """Flag types enum helper."""
+
     var value: String
+    """The value of the flag type."""
     alias String = Self("String")
     alias Bool = Self("Bool")
     alias Int = Self("Int")
@@ -57,7 +59,7 @@ struct FType(EqualityComparableCollectionElement):
         """
         alias float_types = InlineArray[String, 3]("Float16", "Float32", "Float64")
         return self.value in float_types
-    
+
     fn is_list_type(self) -> Bool:
         """Returns if the type is a list type.
 
@@ -66,7 +68,7 @@ struct FType(EqualityComparableCollectionElement):
         """
         alias list_types = InlineArray[String, 3]("StringList", "IntList", "Float64List")
         return self.value in list_types
-    
+
     fn is_valid(self) -> Bool:
         """Returns if the type is a valid type.
 
@@ -95,11 +97,27 @@ struct FType(EqualityComparableCollectionElement):
         )
 
         return self.value in valid_types
-    
+
     fn __eq__(self, other: Self) -> Bool:
+        """Compares two FType objects for equality.
+
+        Args:
+            other: The other FType to compare against.
+
+        Returns:
+            True if the FTypes are equal, False otherwise.
+        """
         return self.value == other.value
-    
+
     fn __ne__(self, other: Self) -> Bool:
+        """Compares two FType objects for inequality.
+
+        Args:
+            other: The other FType to compare against.
+
+        Returns:
+            True if the FTypes are not equal, False otherwise.
+        """
         return self.value != other.value
 
 
@@ -288,7 +306,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             return transform(self.value.value())
         elif self.default:
             return transform(self.default.value())
-        
+
         return None
 
     fn value_or_default(self) -> Optional[String]:
@@ -301,9 +319,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             return self.value.value()
         elif self.default:
             return self.default.value()
-        
+
         return None
-    
+
     @staticmethod
     fn string(
         name: String,
@@ -328,6 +346,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -372,6 +393,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -416,6 +440,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -460,6 +487,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -504,6 +534,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -548,6 +581,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -592,6 +628,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -636,6 +675,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -680,6 +722,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -724,6 +769,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -768,6 +816,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -812,6 +863,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -856,6 +910,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -900,6 +957,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -944,6 +1004,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -988,6 +1051,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -1032,6 +1098,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
@@ -1051,6 +1120,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             required=required,
             persistent=persistent,
         )
+
     @staticmethod
     fn float64_list(
         name: String,
@@ -1075,6 +1145,9 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
             action: Function to run after the flag has been processed.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+
+        Returns:
+            Flag: The flag object.
         """
         var default_value: Optional[String]
         if default:
