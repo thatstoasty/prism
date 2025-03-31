@@ -26,17 +26,38 @@ fn _parse_args_from_command_line(args: VariadicList[StaticString]) -> List[Strin
 
     return result^
 
+
 @value
 @register_passable("trivial")
 struct STDINParserState:
+    """State of the parser when reading from stdin."""
+
     var value: UInt8
+    """State of the parser when reading from stdin."""
+
     alias FIND_TOKEN = Self(0)
     alias FIND_ARG = Self(1)
 
     fn __eq__(self, other: Self) -> Bool:
+        """Compares two `STDINParserState` instances for equality.
+
+        Args:
+            other: The other `STDINParserState` instance to compare to.
+
+        Returns:
+            True if the two instances are equal, False otherwise.
+        """
         return self.value == other.value
 
     fn __ne__(self, other: Self) -> Bool:
+        """Compares two `STDINParserState` instances for inequality.
+
+        Args:
+            other: The other `STDINParserState` instance to compare to.
+
+        Returns:
+            True if the two instances are not equal, False otherwise.
+        """
         return self.value != other.value
 
 
@@ -76,7 +97,7 @@ fn _parse_args_from_stdin(input: String) -> List[String]:
                     args.append(token)
                     token = ""
                 state = STDINParserState.FIND_TOKEN
-    
+
     if state == STDINParserState.FIND_TOKEN:
         if token and token != "--":
             args.append(token)
@@ -86,7 +107,6 @@ fn _parse_args_from_stdin(input: String) -> List[String]:
             args.append(token)
 
     return args^
-    
 
 
 fn default_help(command: ArcPointer[Command]) raises -> String:
@@ -134,7 +154,7 @@ fn default_help(command: ArcPointer[Command]) raises -> String:
                 option.write("-", flag[].shorthand, ", ")
             option.write("--", flag[].name)
             builder.write(options_style.render(option), flag[].usage)
-        
+
         builder.write("\n")
 
     if command[].children:
@@ -170,15 +190,25 @@ alias ExitFn = fn (Error) -> None
 """The function to call when an error occurs."""
 alias VersionFn = fn (String) -> String
 """The function to call when the version flag is passed."""
-alias WriterFn = fn(String) -> None
+alias WriterFn = fn (String) -> None
 """The function to call when writing output or errors."""
 
 
-fn default_output_writer(arg: String):
+fn default_output_writer(arg: String) -> None:
+    """Writes an output message to stdout.
+
+    Args:
+        arg: The output message to write.
+    """
     print(arg)
 
 
-fn default_error_writer(arg: String):
+fn default_error_writer(arg: String) -> None:
+    """Writes an error message to stderr.
+
+    Args:
+        arg: The error message to write.
+    """
     print(arg, file=2)
 
 
@@ -643,7 +673,7 @@ struct Command(CollectionElement, Writable, Stringable):
             return self.root()[].execute()
 
         var input_args = _parse_args_from_command_line(argv())
-        
+
         # Read from stdin and parse the arguments.
         if self.read_from_stdin:
             try:
@@ -656,7 +686,7 @@ struct Command(CollectionElement, Writable, Stringable):
                 return
 
         command, args = self._parse_command_from_args(input_args)
-        var command_ptr = ArcPointer(command^) # Give ownership to the pointer, for consistency.
+        var command_ptr = ArcPointer(command^)  # Give ownership to the pointer, for consistency.
 
         # Merge persistent flags from ancestors.
         command_ptr[]._merge_flags()
@@ -753,7 +783,7 @@ struct Command(CollectionElement, Writable, Stringable):
 
         Args:
             flag_names: The names of the flags to mark as required together.
-        
+
         #### Notes:
         - If the annotation is `REQUIRED_AS_GROUP`, then all the flags in the group must be set.
         - If the annotation is `ONE_REQUIRED`, then at least one flag in the group must be set.
@@ -783,4 +813,3 @@ struct Command(CollectionElement, Writable, Stringable):
         if self.has_parent():
             func(self.parent[0][])
             self.parent[0][].visit_parents[func]()
-
