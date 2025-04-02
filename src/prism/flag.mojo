@@ -322,6 +322,16 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
 
         return None
 
+    fn names(self) -> List[String]:
+        """Returns the names of the flag.
+
+        Returns:
+            The names of the flag.
+        """
+        var names = List[String](self.name, self.shorthand)
+        # TODO: Add aliases to list when flags support them.
+        return names^
+
     @staticmethod
     fn string(
         name: String,

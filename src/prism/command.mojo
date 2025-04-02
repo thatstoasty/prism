@@ -1,4 +1,5 @@
 from sys import argv
+from sys.param_env import env_get_bool
 from builtin.io import _fdopen
 from collections import Optional, Dict
 from collections.string import StaticString
@@ -10,6 +11,7 @@ from prism.flag import Flag
 from prism._flag_set import Annotation, FlagSet
 from prism.args import arbitrary_args
 from prism.context import Context
+from prism.suggest import suggest_flag, flag_from_error
 
 
 fn _parse_args_from_command_line(args: VariadicList[StaticString]) -> List[String]:
@@ -212,8 +214,7 @@ fn default_error_writer(arg: String) -> None:
     print(arg, file=2)
 
 
-# TODO: For now it's locked to False until file scope variables.
-alias ENABLE_TRAVERSE_RUN_HOOKS = False
+alias ENABLE_TRAVERSE_RUN_HOOKS = env_get_bool["PRISM_TRAVERSE_RUN_HOOKS", False]()
 """Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
 
@@ -316,6 +317,8 @@ struct Command(CollectionElement, Writable, Stringable):
 
     var read_from_stdin: Bool
     """If True, the command will read args from stdin as well."""
+    var suggest: Bool
+    """If True, the command will suggest flags when an unknown flag is passed."""
 
     fn __init__(
         out self,
@@ -347,6 +350,7 @@ struct Command(CollectionElement, Writable, Stringable):
         one_required_flags: Optional[List[String]] = None,
         arg_validator: Optional[ArgValidatorFn] = None,
         read_from_stdin: Bool = False,
+        suggest: Bool = False,
     ):
         """Constructs a new `Command`.
 
@@ -378,6 +382,7 @@ struct Command(CollectionElement, Writable, Stringable):
             one_required_flags: The flags where at least one is required.
             arg_validator: The function to validate arguments passed to the command.
             read_from_stdin: If True, the command will read args from stdin as well.
+            suggest: If True, the command will suggest flags when an unknown flag is passed.
         """
         if not run and not raising_run:
             panic("A command must have a run or raising_run function.")
@@ -407,6 +412,7 @@ struct Command(CollectionElement, Writable, Stringable):
         self.persistent_raising_pre_run = persistent_raising_pre_run
         self.persistent_raising_post_run = persistent_raising_post_run
         self.read_from_stdin = read_from_stdin
+        self.suggest = suggest
 
         if arg_validator:
             self.arg_validator = arg_validator.value()
@@ -468,6 +474,7 @@ struct Command(CollectionElement, Writable, Stringable):
         self.persistent_raising_post_run = existing.persistent_raising_post_run^
 
         self.read_from_stdin = existing.read_from_stdin
+        self.suggest = existing.suggest
 
         self.arg_validator = existing.arg_validator
         self.valid_args = existing.valid_args^
@@ -706,23 +713,40 @@ struct Command(CollectionElement, Writable, Stringable):
         if ENABLE_TRAVERSE_RUN_HOOKS:
             parents.reverse()
 
+        var remaining_args: List[String]
         try:
             # Parse the flags for the command to be executed.
-            var remaining_args = command_ptr[].flags.from_args(args)
+            remaining_args = command_ptr[].flags.from_args(args)
+        except e:
+            if not self.suggest:
+                self.exit(e)
+                return
 
+            var flag_name = flag_from_error(e)
+            if not flag_name:
+                self.exit(e)
+                return
+
+            var suggestion = suggest_flag(command_ptr[].flags.flags, flag_name.value())
+            if suggestion == "":
+                self.exit(e)
+                return
+
+            self.error_writer(String("Unknown flag: ", flag_name.value(), "\nDid you mean: ", suggestion))
+            return
+
+        try:
             # Check if the help flag was passed
-            if command_ptr[].flags.get_bool("help") == True:
+            if command_ptr[].flags.get_bool("help"):
                 self.output_writer(command_ptr[].help(command_ptr))
                 return
 
             # Check if the help flag was passed
-            if self.version and command_ptr[].flags.get_bool("version") == True:
-                var output: String
+            if self.version and command_ptr[].flags.get_bool("version").value():
                 if command_ptr[].version_writer:
-                    output = command_ptr[].version_writer.value()(command_ptr[].version.value())
+                    self.output_writer(command_ptr[].version_writer.value()(command_ptr[].version.value()))
                 else:
-                    output = command_ptr[].version.value()
-                self.output_writer(output)
+                    self.output_writer(command_ptr[].version.value())
                 return
 
             # Validate individual required flags (eg: flag is required)
