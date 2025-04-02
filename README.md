@@ -531,9 +531,8 @@ fn main() -> None:
 
 ### Features
 
-- Add suggestion logic to `Command` struct.
+- Add suggestion logic for commands.
 - Autocomplete generation.
-- Update default help command to improve available commands and flags section.
 - Commands without children can be created at compile time, but those with them cannot. Perhaps I can find a way to make this work.
 - Add persistent flag mutually exclusive and required together checks back in.
 - Typed arguments.
@@ -544,5 +543,6 @@ fn main() -> None:
 - Tree traversal improvements.
 - For now, help functions will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
 - Once we have trait objects, use actual typed flags instead of converting values to and from strings.
+- - Update default help command to improve available commands and flags section.
 
 ## Bugs

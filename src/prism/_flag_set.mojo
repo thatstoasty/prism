@@ -8,7 +8,11 @@ import os
 from prism.flag import Flag, FlagActionFn, FType
 from prism._util import string_to_bool, split
 from prism._flag_parser import FlagParser
-from prism._flag_group import validate_required_flag_group, validate_one_required_flag_group, validate_mutually_exclusive_flag_group
+from prism._flag_group import (
+    validate_required_flag_group,
+    validate_one_required_flag_group,
+    validate_mutually_exclusive_flag_group,
+)
 
 
 alias FlagVisitorFn = fn (Flag) capturing -> None
@@ -27,7 +31,7 @@ struct ParserState:
 
     fn __eq__(self, other: Self) -> Bool:
         return self.value == other.value
-    
+
     fn __ne__(self, other: Self) -> Bool:
         return self.value != other.value
 
@@ -47,7 +51,7 @@ struct Annotation:
 
     fn __eq__(self, other: Self) -> Bool:
         return self.value == other.value
-    
+
     fn __ne__(self, other: Self) -> Bool:
         return self.value != other.value
 
@@ -63,16 +67,16 @@ struct FlagSet(Writable, Stringable, Boolable):
     fn __init__(out self, flags: List[Flag] = List[Flag]()):
         """Initializes a new FlagSet."""
         self.flags = flags
-    
+
     fn __bool__(self) -> Bool:
         return Bool(self.flags)
-    
+
     fn __len__(self) -> Int:
         return len(self.flags)
-    
+
     fn __iter__(ref self) -> _ListIter[Flag, False, __origin_of(self.flags)]:
         return self.flags.__iter__()
-    
+
     fn append(mut self, flag: Flag):
         """Adds a flag to the flag set.
 
@@ -81,7 +85,7 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         """
         self.flags.append(flag)
-    
+
     fn extend(mut self, other: FlagSet):
         """Adds a flag to the flag set.
 
@@ -90,10 +94,10 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         """
         self.flags.extend(other.flags)
-    
+
     fn __str__(self) -> String:
         return String.write(self)
-    
+
     fn write_to[W: Writer, //](self, mut writer: W) -> None:
         """Writes the flag set to a writer.
 
@@ -117,14 +121,18 @@ struct FlagSet(Writable, Stringable, Boolable):
         # So each value of the list for the annotation can be a group of flag names.
         var flag = self.lookup(name)
         if not flag:
-            raise Error("FlagSet.set_annotation: Failed to set flag, {}, with the following annotation: {}".format(name, annotation.value))
-        
+            raise Error(
+                "FlagSet.set_annotation: Failed to set flag, {}, with the following annotation: {}".format(
+                    name, annotation.value
+                )
+            )
+
         try:
             flag.value()[].annotations[annotation.value].append(value)
         except:
             flag.value()[].annotations[annotation.value] = List[String](value)
 
-    fn from_args[origin: Origin](mut self, arguments: Span[String, origin]) raises -> List[String]:
+    fn from_args(mut self, arguments: Span[String]) raises -> List[String]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
@@ -136,12 +144,17 @@ struct FlagSet(Writable, Stringable, Boolable):
         Raises:
             Error: If a flag is not recognized.
         """
+
         @parameter
         fn set_flag_value(name: String, value: String) raises -> None:
             # Set the value of the flag.
             var flag = self.lookup(name)
             if not flag:
-                raise Error("FlagSet.from_args: Failed to set flag, {}, with value: {}. Flag could not be found.".format(name, value))
+                raise Error(
+                    "FlagSet.from_args: Failed to set flag, {}, with value: {}. Flag could not be found.".format(
+                        name, value
+                    )
+                )
             if not flag.value()[].changed:
                 flag.value()[].set(value)
             else:
@@ -165,7 +178,7 @@ struct FlagSet(Writable, Stringable, Boolable):
                     state = ParserState.PARSE_FLAG
                 else:
                     state = ParserState.PARSE_SHORTHAND_FLAG
-            
+
             # Parse out a flag and set the value on the flag.
             elif state == ParserState.PARSE_FLAG:
                 name, value, increment_by = parser.parse_flag(argument, arguments, self)
@@ -290,7 +303,7 @@ struct FlagSet(Writable, Stringable, Boolable):
                 return Pointer.address_of(flag[])
 
         return None
-    
+
     fn lookup_shorthand(ref self, name: StringSlice) -> Optional[Pointer[Flag, __origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
@@ -338,7 +351,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         for flag in self.flags:
             if flag[].shorthand and flag[].shorthand.as_string_slice() == shorthand:
                 return flag[].name
-        
+
         return None
 
     fn has_all_flags(self, flag_names: List[String]) -> Bool:
@@ -356,11 +369,9 @@ struct FlagSet(Writable, Stringable, Boolable):
                 return False
         return True
 
-    fn process_group_annotations[annotation: Annotation](
-        self,
-        flag: Flag,
-        mut group_status: Dict[String, Dict[String, Bool]],
-    ) raises -> None:
+    fn process_group_annotations[
+        annotation: Annotation
+    ](self, flag: Flag, mut group_status: Dict[String, Dict[String, Bool]],) raises -> None:
         """Processes a flag for a group annotation.
 
         Parameters:
@@ -424,7 +435,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         validate_required_flag_group(group_status)
         validate_one_required_flag_group(one_required_group_status)
         validate_mutually_exclusive_flag_group(mutually_exclusive_group_status)
-    
+
     fn get_string(self, name: String) -> Optional[String]:
         """Returns the value of a flag as a `String`. If it isn't set, then return the default value.
 
@@ -437,7 +448,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         var flag = self.lookup[FType.String](name)
         if not flag:
             return None
-        
+
         return flag.value()[].value_or_default()
 
     fn get_bool(self, name: String) raises -> Optional[Bool]:
@@ -459,7 +470,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         var result = flag.value()[].value_or_default()
         if not result:
             return None
-        
+
         return string_to_bool(result.value())
 
     fn get_int[type: FType = FType.Int](self, name: String) raises -> Optional[Int]:
@@ -479,12 +490,14 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
         constrained[
             type.is_int_type(),
-            "type must be one of `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, or `UInt64`. Received: " + type.value
+            "type must be one of `Int`, `Int8`, `Int16`, `Int32`, `Int64`, `UInt`, `UInt8`, `UInt16`, `UInt32`, or"
+            " `UInt64`. Received: "
+            + type.value,
         ]()
         var flag = self.lookup[type](name)
         if not flag:
             return None
-        
+
         var result = flag.value()[].value_or_default()
         if not result:
             return None
@@ -642,7 +655,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         if not result:
             return None
         return UInt64(result.value())
-    
+
     fn get_float[type: FType](self, name: String) raises -> Optional[Float64]:
         """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
 
@@ -659,8 +672,7 @@ struct FlagSet(Writable, Stringable, Boolable):
             Error: If the flag is not found.
         """
         constrained[
-            type.is_float_type(),
-            "type must be one of `Float16`, `Float32`, `Float64`. Received: " + type.value
+            type.is_float_type(), "type must be one of `Float16`, `Float32`, `Float64`. Received: " + type.value
         ]()
         var flag = self.lookup[type](name)
         if not flag:
@@ -713,7 +725,7 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         Returns:
             The value of the flag as a `Float64`.
-            
+
         Raises:
             Error: If the flag is not found.
         """
@@ -739,12 +751,12 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
         constrained[
             type.is_list_type(),
-            "type must be one of `StringList`, `IntList`, or `Float64List`. Received: " + type.value
+            "type must be one of `StringList`, `IntList`, or `Float64List`. Received: " + type.value,
         ]()
         var flag = self.lookup[type](name)
         if not flag:
             return None
-        
+
         var result = flag.value()[].value_or_default()
         if not result:
             return None
@@ -765,7 +777,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         var result = self._get_list[FType.StringList](name)
         if not result:
             return None
-        return result.value()
+        return result^
 
     fn get_int_list(self, name: String) raises -> Optional[List[Int]]:
         """Returns the value of a flag as a `List[Int]`. If it isn't set, then return the default value.
@@ -782,7 +794,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         var result = self._get_list[FType.IntList](name)
         if not result:
             return None
-        
+
         var ints = List[Int](capacity=len(result.value()))
         for value in result.value():
             ints.append(atol(value[]))
@@ -803,7 +815,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         var result = self._get_list[FType.Float64List](name)
         if not result:
             return None
-        
+
         var floats = List[Float64](capacity=len(result.value()))
         for value in result.value():
             floats.append(atof(value[]))

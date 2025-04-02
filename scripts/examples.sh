@@ -19,6 +19,7 @@ magic run mojo build $TEMP_DIR/version.mojo -o $TEMP_DIR/version
 magic run mojo build $TEMP_DIR/exit.mojo -o $TEMP_DIR/exit
 magic run mojo build $TEMP_DIR/multiple_bool_flag.mojo -o $TEMP_DIR/multiple_bool_flag
 magic run mojo build $TEMP_DIR/stdin.mojo -o $TEMP_DIR/stdin
+magic run mojo build $TEMP_DIR/suggest.mojo -o $TEMP_DIR/suggest
 
 
 echo "[INFO] Running examples..."
@@ -57,7 +58,7 @@ $TEMP_DIR/alt_flag_values -n Mojo
 $TEMP_DIR/alt_flag_values
 $TEMP_DIR/flag_action
 $TEMP_DIR/flag_action -n Mojo
-$TEMP_DIR/list_flags 
+$TEMP_DIR/list_flags
 $TEMP_DIR/list_flags -n My -n Mojo
 $TEMP_DIR/list_flags sum -n 1 -n 2 -n 3 -n 4 -n 5
 $TEMP_DIR/list_flags sum_float -n 1.2 -n 2.3 -n 3.4 -n 4.5 -n 5.6
@@ -68,6 +69,7 @@ $TEMP_DIR/multiple_bool_flag -r0vvas
 $TEMP_DIR/multiple_bool_flag -r0vas
 $TEMP_DIR/multiple_bool_flag -r0a --verbose "Hello Mojo!"
 echo "Hello Python!" | $TEMP_DIR/stdin examples/stdin.mojo "Hello Mojo!"
+$TEMP_DIR/suggest --gelp
 
 
 echo "[INFO] Cleaning up the example directory."
