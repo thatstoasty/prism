@@ -26,6 +26,7 @@ struct FlagParser[origin: ImmutableOrigin]:
     var index: Int
     """The current index in the arguments list."""
     var arguments: Span[String, origin]
+    """The arguments passed to the command."""
 
     fn __init__(out self, arguments: Span[String, origin]):
         """Initializes the FlagParser."""
@@ -37,7 +38,7 @@ struct FlagParser[origin: ImmutableOrigin]:
 
         Args:
             argument: The argument to parse.
-            flags: The flags passed via the command line.
+            flags: The flags passed to the command.
 
         Returns:
             The name, value, the index to increment by, and an error if one occurred.
@@ -78,7 +79,7 @@ struct FlagParser[origin: ImmutableOrigin]:
 
         Args:
             argument: The argument to parse.
-            flags: The flags passed via the command line.
+            flags: The flags passed to the command.
 
         Returns:
             The name, value, the index to increment by, and an error if one occurred.
