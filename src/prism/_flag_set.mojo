@@ -122,9 +122,10 @@ struct FlagSet(Writable, Stringable, Boolable):
         var flag = self.lookup(name)
         if not flag:
             raise Error(
-                "FlagSet.set_annotation: Failed to set flag, {}, with the following annotation: {}".format(
-                    name, annotation.value
-                )
+                "FlagSet.set_annotation: Failed to set flag, ",
+                name,
+                ", with the following annotation: ",
+                annotation.value,
             )
 
         try:
@@ -162,7 +163,7 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         var remaining_args = List[String](capacity=len(arguments))
         var state = ParserState.FIND_FLAG
-        var parser = FlagParser()
+        var parser = FlagParser(arguments.get_immutable())
         while parser.index < len(arguments):
             var argument = arguments[parser.index]
 
@@ -181,14 +182,14 @@ struct FlagSet(Writable, Stringable, Boolable):
 
             # Parse out a flag and set the value on the flag.
             elif state == ParserState.PARSE_FLAG:
-                name, value, increment_by = parser.parse_flag(argument, arguments, self)
+                name, value, increment_by = parser.parse_flag(argument, self)
                 set_flag_value(name, value)
                 parser.index += increment_by
                 state = ParserState.FIND_FLAG
 
             # Parse out shorthand flag(s) and set the value on the flag(s).
             elif state == ParserState.PARSE_SHORTHAND_FLAG:
-                names, value, increment_by = parser.parse_shorthand_flag(argument, arguments, self)
+                names, value, increment_by = parser.parse_shorthand_flag(argument, self)
                 for name in names:
                     set_flag_value(name[], value)
                 parser.index += increment_by
@@ -371,7 +372,7 @@ struct FlagSet(Writable, Stringable, Boolable):
 
     fn process_group_annotations[
         annotation: Annotation
-    ](self, flag: Flag, mut group_status: Dict[String, Dict[String, Bool]],) raises -> None:
+    ](self, flag: Flag, mut group_status: Dict[String, Dict[String, Bool]]) raises -> None:
         """Processes a flag for a group annotation.
 
         Parameters:
@@ -406,9 +407,7 @@ struct FlagSet(Writable, Stringable, Boolable):
                 group_status[group[]][flag.name] = flag.changed
             except e:
                 raise Error(
-                    "process_group_annotations: Failed to set group status for annotation {}: {}.".format(
-                        annotation.value, e
-                    )
+                    "process_group_annotations: Failed to set group status for annotation ", annotation.value, ": ", e
                 )
 
     fn validate_flag_groups(self) raises -> None:

@@ -174,3 +174,15 @@ fn test_suggest_flag() raises:
             test_case[].expected,
             String("Expected: ", test_case[].expected, ", got: ", result, " for ", test_case[].provided),
         )
+
+
+fn test_flag_from_error() raises:
+    var error = Error("An Error Occurred. Name: unknown")
+    var result = flag_from_error(error)
+    testing.assert_equal(result.value(), String("unknown"))
+
+
+fn test_flag_from_error_wrong_error() raises:
+    var error = Error("Some other error.")
+    result = flag_from_error(error)
+    testing.assert_false(Bool(result))

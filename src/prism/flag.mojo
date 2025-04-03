@@ -1,4 +1,5 @@
 from collections import Optional, Dict, InlineArray
+from collections.string import StringSlice
 from prism._flag_set import Annotation
 
 

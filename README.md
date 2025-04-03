@@ -377,6 +377,50 @@ In these cases:
 
 ![Flag Groups](https://github.com/thatstoasty/prism/blob/main/doc/tapes/flag_groups.gif)
 
+### Suggesting alternative flags
+
+If a flag is not provided, you can suggest an alternative flag to the user. This can be useful for providing hints to the user about what they may have meant to type.
+
+```mojo
+from prism import Command, Flag
+import prism
+
+fn main():
+    Command(
+        name="tool",
+        description="This is a dummy command!",
+        run=tool_func,
+        aliases=List[String]("object", "thing"),
+        flags=List[Flag](
+            Flag.string(
+                name="color",
+                shorthand="c",
+                usage="Text color",
+                default=0x3464eb,
+            ),
+            Flag.string(
+                name="formatting",
+                shorthand="f",
+                usage="Text formatting",
+            ),
+        ),
+        suggest=True,
+    ).execute()
+```
+
+If you run the command with an invalid flag, it will suggest the closest match to the flag you provided.
+
+```bash
+mojo cli.mojo --volor
+```
+
+will suggest:
+
+```txt
+Unknown flag: volor
+Did you mean: --color
+```
+
 ## Positional and Custom Arguments
 
 Validation of positional arguments can be specified using the `arg_validator` field of `Command`. The following validators are built in:
@@ -533,16 +577,16 @@ fn main() -> None:
 
 - Add suggestion logic for commands.
 - Autocomplete generation.
-- Commands without children can be created at compile time, but those with them cannot. Perhaps I can find a way to make this work.
 - Add persistent flag mutually exclusive and required together checks back in.
 - Typed arguments.
-- Once the stdlib supports reading from stdin (currently only supports readline and read_until_delimiter), reading args from stdin will be updated to support newlines.
+- Once the stdlib supports reading from stdin (currently only supports `readline` and `read_until_delimiter`), reading args from stdin will be updated to support newlines.
 
 ### Improvements
 
 - Tree traversal improvements.
 - For now, help functions will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
 - Once we have trait objects, use actual typed flags instead of converting values to and from strings.
-- - Update default help command to improve available commands and flags section.
+- Update default help command to improve available commands and flags section.
+   Commands without children can be created at compile time, but those with them cannot. Perhaps I can find a way to make this work.
 
 ## Bugs
