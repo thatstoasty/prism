@@ -6,7 +6,7 @@ from utils import Variant
 from memory import Pointer, Span
 import os
 from prism.flag import Flag, FlagActionFn, FType
-from prism._util import string_to_bool, split
+from prism._util import string_to_bool
 from prism._flag_parser import FlagParser
 from prism._flag_group import (
     validate_required_flag_group,

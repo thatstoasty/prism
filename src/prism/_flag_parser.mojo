@@ -2,7 +2,6 @@ import os
 from memory import Span
 from collections.string import StringSlice
 from prism._flag_set import FlagSet, FType
-from prism._util import split
 
 
 @value
