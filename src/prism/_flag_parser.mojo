@@ -1,6 +1,6 @@
 import os
 from memory import Span
-from collections.string import StaticString
+from collections.string import StringSlice
 from prism._flag_set import FlagSet, FType
 from prism._util import split
 
@@ -20,22 +20,23 @@ struct ShorthandParserState:
         return self.value != other.value
 
 
-struct FlagParser:
+struct FlagParser[origin: ImmutableOrigin]:
     """Parses flags from the command line arguments."""
 
     var index: Int
     """The current index in the arguments list."""
+    var arguments: Span[String, origin]
 
-    fn __init__(mut self) -> None:
+    fn __init__(out self, arguments: Span[String, origin]):
         """Initializes the FlagParser."""
         self.index = 0
+        self.arguments = arguments
 
-    fn parse_flag(self, argument: String, arguments: Span[String], flags: FlagSet) raises -> Tuple[String, String, Int]:
+    fn parse_flag(self, argument: StringSlice, flags: FlagSet) raises -> Tuple[String, String, Int]:
         """Parses a flag and returns the name, value, and the index to increment by.
 
         Args:
             argument: The argument to parse.
-            arguments: The list of arguments passed via the command line.
             flags: The flags passed via the command line.
 
         Returns:
@@ -56,31 +57,27 @@ struct FlagParser:
 
         # Flag with value set like "--flag <value>"
         var name = String(argument[2:])
-        if String(name) not in flags.names():
+        if name not in flags.names():
             raise Error("Command does not accept the flag supplied. Name: ", name)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-        var flag = flags.lookup[FType.Bool](name)
-        if flag:
+        if flags.lookup[FType.Bool](name):
             return name^, String("True"), 1
 
-        if self.index + 1 >= len(arguments):
+        if self.index + 1 >= len(self.arguments):
             raise Error("Flag requires a value to be set but reached the end of arguments. Name: ", name)
 
-        if arguments[self.index + 1].startswith("-", 0, 1):
+        if self.arguments[self.index + 1].startswith("-", 0, 1):
             raise Error("Flag requires a value to be set but found another flag instead. Name: ", name)
 
         # Increment index by 2 because 2 args were used (one for name and value).
-        return name^, String(arguments[self.index + 1]), 2
+        return name^, String(self.arguments[self.index + 1]), 2
 
-    fn parse_shorthand_flag(
-        self, argument: String, arguments: Span[String], flags: FlagSet
-    ) raises -> Tuple[List[String], String, Int]:
+    fn parse_shorthand_flag(self, argument: StringSlice, flags: FlagSet) raises -> Tuple[List[String], String, Int]:
         """Parses a shorthand flag and returns the name, value, and the index to increment by.
 
         Args:
             argument: The argument to parse.
-            arguments: The list of arguments passed via the command line.
             flags: The flags passed via the command line.
 
         Returns:
@@ -90,15 +87,15 @@ struct FlagParser:
             Error: If an error occurred while parsing the shorthand flag.
         """
         # Flag with value set like "-f=<value>"
-        if argument.find("=") != -1:
-            var flag = split(argument, "=")
-            var shorthand = flag[0][1:]
-            var value = flag[1]
+        var sep_index = argument.find("=")
+        if sep_index != -1:
+            var shorthand = argument[1:sep_index]
+            var value = argument[sep_index:]
             var name = flags.lookup_name(shorthand)
             if not name or name.value() not in flags.names():
                 raise Error("Command does not accept the shorthand flag supplied: ", shorthand)
 
-            return List[String](name.value()), value^, 1
+            return List[String](name.value()), String(value), 1
 
         # Flag with value set like "-f <value>"
         var state = ShorthandParserState.START
@@ -162,19 +159,19 @@ struct FlagParser:
                     return flag_names^, String("True"), 1
 
                 # Non bool flags expect a value to be set. If the end of the arguments list is reached, raise an error.
-                if self.index + 1 >= len(arguments):
+                if self.index + 1 >= len(self.arguments):
                     raise Error(
                         "Flag `", flag.value()[].name, "` requires a value to be set but reached the end of arguments."
                     )
 
                 # If the next argument is another flag, raise an error.
-                if arguments[self.index + 1].startswith("-", 0, 1):
+                if self.arguments[self.index + 1].startswith("-", 0, 1):
                     raise Error(
                         "Flag `", flag.value()[].name, "` requires a value to be set but found another flag instead."
                     )
 
                 # Increment index by 2 because 2 args were used (one for name and value).
-                return flag_names^, String(arguments[self.index + 1]), 2
+                return flag_names^, String(self.arguments[self.index + 1]), 2
 
         raise Error(
             "FlagParser._parse_shorthand_flag: Parsed out the following flag: ",

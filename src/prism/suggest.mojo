@@ -96,12 +96,12 @@ fn jaro_winkler(a: String, b: String) -> Float64:
     return jaro_dist + 0.1 * prefix_match * (1.0 - jaro_dist)
 
 
-fn suggest_flag(flags: List[Flag], provided: String, hide_help: Bool = False) -> String:
+fn suggest_flag(flags: List[Flag], flag_name: String, hide_help: Bool = False) -> String:
     """Suggests a flag based on the provided string.
 
     Args:
         flags: The list of flags to suggest from.
-        provided: The string to suggest from.
+        flag_name: The flag name to suggest from.
         hide_help: Whether to hide the help flag.
 
     Returns:
@@ -117,7 +117,7 @@ fn suggest_flag(flags: List[Flag], provided: String, hide_help: Bool = False) ->
         #     flag_names.append(Flag.help_flag().names())
 
         for name in flag_names:
-            var new_distance = jaro_winkler(name[], provided)
+            var new_distance = jaro_winkler(name[], flag_name)
             if new_distance > distance:
                 distance = new_distance
                 suggestion = name[]
