@@ -20,6 +20,7 @@ magic run mojo build $TEMP_DIR/exit.mojo -o $TEMP_DIR/exit
 magic run mojo build $TEMP_DIR/multiple_bool_flag.mojo -o $TEMP_DIR/multiple_bool_flag
 magic run mojo build $TEMP_DIR/stdin.mojo -o $TEMP_DIR/stdin
 magic run mojo build $TEMP_DIR/suggest.mojo -o $TEMP_DIR/suggest
+magic run mojo build $TEMP_DIR/full_api.mojo -o $TEMP_DIR/full_api
 
 
 echo "[INFO] Running examples..."
@@ -70,6 +71,12 @@ $TEMP_DIR/multiple_bool_flag -r0vas
 $TEMP_DIR/multiple_bool_flag -r0a --verbose "Hello Mojo!"
 echo "Hello Python!" | $TEMP_DIR/stdin examples/stdin.mojo "Hello Mojo!"
 $TEMP_DIR/suggest --gelp
+$TEMP_DIR/full_api
+$TEMP_DIR/full_api connect -r0a --verbose --host 192.168.1.1
+$TEMP_DIR/full_api --gelp
+$TEMP_DIR/full_api allow -r0
+$TEMP_DIR/full_api allow -hl localhost -hl 192.168.1.1 -r0
+$TEMP_DIR/full_api allow -hl localhost -hl 192.168.1.2 -r0
 
 
 echo "[INFO] Cleaning up the example directory."
