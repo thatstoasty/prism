@@ -39,10 +39,15 @@ fn version(version: String) -> String:
 
 fn validate_hosts(ctx: Context, value: String) raises -> None:
     alias approved_hosts = List[String]("localhost", "0.0.0.0", "192.168.1.1")
-    if value not in approved_hosts:
-        raise Error(
-            "ValueError: Host provided is not permitted.\nReceived: ", value, " Approved: ", approved_hosts.__str__()
-        )
+    var hosts = value.split(" ")
+    for host in hosts:
+        if host[] not in approved_hosts:
+            raise Error(
+                "ValueError: Host provided is not permitted.\nReceived: ",
+                host[],
+                " Approved: ",
+                approved_hosts.__str__(),
+            )
 
 
 fn main() -> None:
