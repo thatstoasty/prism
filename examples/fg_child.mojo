@@ -17,13 +17,7 @@ fn main() -> None:
         usage="This is a dummy command!",
         run=test,
         flags=List[Flag](
-            Flag.bool(
-                name="required",
-                shorthand="r",
-                usage="Always required.",
-                required=True,
-                persistent=True
-            ),
+            Flag.bool(name="required", shorthand="r", usage="Always required.", required=True, persistent=True),
             Flag.string(
                 name="host",
                 shorthand="h",
@@ -56,7 +50,7 @@ fn main() -> None:
                             usage="URI",
                         ),
                     ),
-                    # mutally_exclusive_flags=List[String]("host", "uri"),
+                    # mutually_exclusive_flags=List[String]("host", "uri"),
                     # flags_required_together=List[String]("host", "port"),
                 )
             )

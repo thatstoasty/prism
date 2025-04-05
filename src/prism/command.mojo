@@ -718,6 +718,7 @@ struct Command(CollectionElement, Writable, Stringable):
             # Parse the flags for the command to be executed.
             remaining_args = command_ptr[].flags.from_args(args)
         except e:
+            # TODO: Move the suggestion checking into a separate function.
             if not self.suggest:
                 self.exit(e)
                 return
@@ -741,13 +742,16 @@ struct Command(CollectionElement, Writable, Stringable):
                 self.output_writer(command_ptr[].help(command_ptr))
                 return
 
-            # Check if the help flag was passed
-            if self.version and command_ptr[].flags.get_bool("version").value():
-                if command_ptr[].version_writer:
-                    self.output_writer(command_ptr[].version_writer.value()(command_ptr[].version.value()))
-                else:
-                    self.output_writer(command_ptr[].version.value())
-                return
+            # Check if the version flag was passed
+            if self.version:
+                # Check if version is set (not None) and if so, the value must be True.
+                var version_flag_passed = command_ptr[].flags.get_bool("version")
+                if version_flag_passed and version_flag_passed.value() == True:
+                    if command_ptr[].version_writer:
+                        self.output_writer(command_ptr[].version_writer.value()(command_ptr[].version.value()))
+                    else:
+                        self.output_writer(command_ptr[].version.value())
+                    return
 
             # Validate individual required flags (eg: flag is required)
             command_ptr[].flags.validate_required_flags()

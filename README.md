@@ -575,6 +575,8 @@ fn main() -> None:
 
 ### Features
 
+- Enable configuration of the help and version flags, so they can be disabled or changed. At the moment they take the -h and -v shorthand flags.
+- Add support for configurable delimiter (default: `--`) to indicate the end of flags.
 - Add suggestion logic for commands.
 - Autocomplete generation.
 - Add persistent flag mutually exclusive and required together checks back in.

@@ -34,7 +34,7 @@ def test_bool():
 
     var flag = cmd.flags.lookup[FType.Bool]("flag")
     testing.assert_equal(flag.value()[].type.value, FType.Bool.value)
-    testing.assert_equal(cmd.flags.get_bool("flag").value(), False)
+    testing.assert_equal(cmd.flags.get_bool("fmlag").value(), False)
 
 
 def test_int():
