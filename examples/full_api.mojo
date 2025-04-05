@@ -37,6 +37,14 @@ fn version(version: String) -> String:
     return String("MyCLI version: ", version)
 
 
+fn validate_hosts(ctx: Context, value: String) raises -> None:
+    alias approved_hosts = List[String]("localhost", "0.0.0.0", "192.168.1.1")
+    if value not in approved_hosts:
+        raise Error(
+            "ValueError: Host provided is not permitted.\nReceived: ", value, " Approved: ", approved_hosts.__str__()
+        )
+
+
 fn main() -> None:
     Command(
         name="connector",
@@ -108,6 +116,7 @@ fn main() -> None:
                         shorthand="hl",
                         usage="Hosts to add to the allowlist.",
                         default=List[String]("localhost", "0.0.0.0"),
+                        action=validate_hosts,
                     )
                 ),
                 read_from_stdin=True,
