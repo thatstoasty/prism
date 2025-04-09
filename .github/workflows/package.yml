@@ -1,0 +1,22 @@
+name: Create package
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout code
+          uses: actions/checkout@v4
+        - name: Run the package command
+          run: |
+            curl -ssL https://magic.modular.com | bash
+            source $HOME/.bash_profile
+            magic run mojo package src/prism
