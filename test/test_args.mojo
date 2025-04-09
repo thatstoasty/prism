@@ -76,10 +76,6 @@ def test_range_args():
 
 
 def test_match_all():
-    ctx = Context(
-        command=Command(name="root", usage="Base command.", run=dummy, valid_args=List[String]("Pineapple")),
-        args=List[String]("abc", "123"),
-    )
     with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2"):
         match_all[range_args[0, 1](), valid_args]()(
             Context(
