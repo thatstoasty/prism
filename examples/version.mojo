@@ -1,13 +1,13 @@
 from memory import ArcPointer
-from prism import Command, Context
+from prism import Command, Context, Version, Flag
 
 
 fn test(ctx: Context) -> None:
     print("Pass -v to see the version!")
 
 
-fn version(version: String) -> String:
-    return "MyCLI version: " + version
+fn version(ctx: Context) -> String:
+    return "MyCLI version: " + ctx.command[].version.value().value
 
 
 fn main() -> None:
@@ -15,6 +15,5 @@ fn main() -> None:
         name="hello",
         usage="This is a dummy command!",
         run=test,
-        version=String("0.1.0"),
-        version_writer=version,
+        version=Version("0.1.0", action=version),
     ).execute()

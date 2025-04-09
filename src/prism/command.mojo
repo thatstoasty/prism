@@ -7,7 +7,7 @@ from memory import ArcPointer
 import mog
 from mog import Position, get_width
 from prism._util import panic
-from prism.flag import Flag
+from prism.flag import Flag, FType
 from prism._flag_set import Annotation, FlagSet
 from prism.args import arbitrary_args
 from prism.context import Context
@@ -111,11 +111,11 @@ fn _parse_args_from_stdin(input: String) -> List[String]:
     return args^
 
 
-fn default_help(command: ArcPointer[Command]) raises -> String:
+fn default_help(ctx: Context) raises -> String:
     """Prints the help information for the command.
 
     Args:
-        command: The command to generate help information for.
+        ctx: The context of the command to generate help information for.
 
     Returns:
         The help information for the command.
@@ -123,23 +123,24 @@ fn default_help(command: ArcPointer[Command]) raises -> String:
     Raises:
         Any error that occurs while generating the help information.
     """
+    var cmd = ctx.command[]
     alias style = mog.Style(mog.ASCII)
-    var builder = String("Usage: ", command[].full_name())
+    var builder = String("Usage: ", cmd.full_name())
 
-    if len(command[].flags) > 0:
+    if len(cmd.flags) > 0:
         builder.write(" [OPTIONS]")
-    if len(command[].children) > 0:
+    if len(cmd.children) > 0:
         builder.write(" COMMAND")
-    builder.write(" [ARGS]...", "\n\n", command[].usage, "\n")
+    builder.write(" [ARGS]...", "\n\n", cmd.usage, "\n")
 
-    if command[].args_usage:
-        builder.write("\nArguments:\n  ", command[].args_usage.value(), "\n")
+    if cmd.args_usage:
+        builder.write("\nArguments:\n  ", cmd.args_usage.value(), "\n")
 
     var option_width = 0
-    if command[].flags:
+    if cmd.flags:
         var widest_flag = 0
         var widest_shorthand = 0
-        for flag in command[].flags:
+        for flag in cmd.flags:
             if len(flag[].name) > widest_flag:
                 widest_flag = len(flag[].name)
             if len(flag[].shorthand) > widest_shorthand:
@@ -150,7 +151,7 @@ fn default_help(command: ArcPointer[Command]) raises -> String:
         var options_style = style.width(option_width)
 
         builder.write("\nOptions:")
-        for flag in command[].flags:
+        for flag in cmd.flags:
             var option = String("\n  ")
             if flag[].shorthand:
                 option.write("-", flag[].shorthand, ", ")
@@ -159,19 +160,19 @@ fn default_help(command: ArcPointer[Command]) raises -> String:
 
         builder.write("\n")
 
-    if command[].children:
+    if cmd.children:
         var options_style = style.width(option_width - 2)
         builder.write("\nCommands:")
-        for i in range(len(command[].children)):
-            builder.write("\n  ", options_style.render(command[].children[i][].name), command[].children[i][].usage)
+        for i in range(len(cmd.children)):
+            builder.write("\n  ", options_style.render(cmd.children[i][].name), cmd.children[i][].usage)
         builder.write("\n")
 
-    if command[].aliases:
+    if cmd.aliases:
         builder.write("\nAliases:\n  ")
-        for i in range(len(command[].aliases)):
-            builder.write(command[].aliases[i])
+        for i in range(len(cmd.aliases)):
+            builder.write(cmd.aliases[i])
 
-            if i < len(command[].aliases) - 1:
+            if i < len(cmd.aliases) - 1:
                 builder.write(", ")
         builder.write("\n")
 
@@ -182,7 +183,7 @@ alias CmdFn = fn (ctx: Context) -> None
 """The function for a command to run."""
 alias RaisingCmdFn = fn (ctx: Context) raises -> None
 """The function for a command to run that can error."""
-alias HelpFn = fn (command: ArcPointer[Command]) raises -> String
+alias HelpFn = fn (ctx: Context) raises -> String
 """The function to generate help output."""
 alias ArgValidatorFn = fn (ctx: Context) raises -> None
 """The function for an argument validator."""
@@ -190,7 +191,7 @@ alias ParentVisitorFn = fn (parent: ArcPointer[Command]) capturing -> None
 """The function for visiting parents of a command."""
 alias ExitFn = fn (Error) -> None
 """The function to call when an error occurs."""
-alias VersionFn = fn (String) -> String
+alias VersionFn = fn (Context) -> String
 """The function to call when the version flag is passed."""
 alias WriterFn = fn (String) -> None
 """The function to call when writing output or errors."""
@@ -214,6 +215,18 @@ fn default_error_writer(arg: String) -> None:
     print(arg, file=2)
 
 
+fn default_version_writer(ctx: Context) -> String:
+    """Writes the version information for the command.
+
+    Args:
+        ctx: The context of the command to generate version information for.
+
+    Returns:
+        The version information for the command.
+    """
+    return String(ctx.command[].name, ": ", ctx.command[].version.value().value)
+
+
 alias ENABLE_TRAVERSE_RUN_HOOKS = env_get_bool["PRISM_TRAVERSE_RUN_HOOKS", False]()
 """Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
@@ -226,6 +239,61 @@ fn default_exit(e: Error) -> None:
         e: The error that occurred.
     """
     panic(e)
+
+
+@value
+struct Help(CollectionElement):
+    """A struct representing the help information for a command."""
+
+    var flag: Flag
+    """The flag to use for the help command."""
+    var action: HelpFn
+    """The function to call when the help flag is passed."""
+
+    fn __init__(
+        out self,
+        *,
+        flag: Flag = Flag.bool(name="help", shorthand="h", usage="Displays help information about the command."),
+        action: HelpFn = default_help,
+    ):
+        """Constructs a new `Help` configuration.
+
+        Args:
+            flag: The flag to use for the help command.
+            action: The function to call when the help flag is passed.
+        """
+        self.flag = flag
+        self.action = action
+
+
+@value
+struct Version(CollectionElement):
+    """A struct representing the version of a command."""
+
+    var value: String
+    """The version of the command."""
+    var flag: Flag
+    """The flag to use for the version command."""
+    var action: VersionFn
+    """The function to call when the version flag is passed."""
+
+    fn __init__(
+        out self,
+        version: String,
+        *,
+        flag: Flag = Flag.bool(name="version", shorthand="v", usage="Displays the version of the command."),
+        action: VersionFn = default_version_writer,
+    ):
+        """Constructs a new `Version` configuration.
+
+        Args:
+            version: The version of the command.
+            flag: The flag to use for the version command.
+            action: The function to call when the version flag is passed.
+        """
+        self.value = version
+        self.flag = flag
+        self.action = action
 
 
 @value
@@ -264,14 +332,12 @@ struct Command(CollectionElement, Writable, Stringable):
     var aliases: List[String]
     """Aliases that can be used instead of the first word in name."""
 
-    var help: HelpFn
-    """Generates help text."""
+    var help: Optional[Help]
+    """Help information for the command."""
+    var version: Optional[Version]
+    """Version information for the command."""
     var exit: ExitFn
     """Function to call when an error occurs."""
-    var version: Optional[String]
-    """The version of the application."""
-    var version_writer: Optional[VersionFn]
-    """Function to call when the version flag is passed."""
     var output_writer: WriterFn
     """Function to call when writing output."""
     var error_writer: WriterFn
@@ -327,9 +393,9 @@ struct Command(CollectionElement, Writable, Stringable):
         *,
         args_usage: Optional[String] = None,
         aliases: List[String] = List[String](),
+        help: Optional[Help] = Help(),
+        version: Optional[Version] = None,
         exit: ExitFn = default_exit,
-        version: Optional[String] = None,
-        version_writer: Optional[VersionFn] = None,
         output_writer: WriterFn = default_output_writer,
         error_writer: WriterFn = default_error_writer,
         valid_args: List[String] = List[String](),
@@ -359,9 +425,9 @@ struct Command(CollectionElement, Writable, Stringable):
             usage: The usage of the command.
             args_usage: The usage of the arguments for the command.
             aliases: The aliases for the command.
+            help: The help information for the command.
+            version: The version of the command.
             exit: The function to call when an error occurs.
-            version: The function to call when the version flag is passed.
-            version_writer: The function to call when the version flag is passed.
             output_writer: The function to call when writing output.
             error_writer: The function to call when writing errors.
             valid_args: The valid arguments for the command.
@@ -384,6 +450,7 @@ struct Command(CollectionElement, Writable, Stringable):
             read_from_stdin: If True, the command will read args from stdin as well.
             suggest: If True, the command will suggest flags when an unknown flag is passed.
         """
+        # TODO: Maybe this should just raise instead of exiting, but it's not really a recoverable error?
         if not run and not raising_run:
             panic("A command must have a run or raising_run function.")
 
@@ -393,9 +460,8 @@ struct Command(CollectionElement, Writable, Stringable):
         self.aliases = aliases
 
         self.exit = exit
-        self.help = default_help
+        self.help = help
         self.version = version
-        self.version_writer = version_writer
         self.output_writer = output_writer
         self.error_writer = error_writer
 
@@ -423,6 +489,16 @@ struct Command(CollectionElement, Writable, Stringable):
 
         self.flags = flags
 
+        # TODO: Again, panic is not ideal. I may need to change the constructor to be raising instead of exiting.
+        if help:
+            if help.value().flag.type != FType.Bool:
+                panic("Help flag must be a Boolean flag.")
+            self.flags.append(help.value().flag)
+        if version:
+            if version.value().flag.type != FType.Bool:
+                panic("Version flag must be a Boolean flag.")
+            self.flags.append(version.value().flag)
+
         self.parent = List[ArcPointer[Self]](capacity=1)
         self.children = children
         for command in children:
@@ -438,10 +514,6 @@ struct Command(CollectionElement, Writable, Stringable):
         if one_required_flags:
             self._mark_flag_group_as[Annotation.ONE_REQUIRED](one_required_flags.value())
 
-        self.flags.append(Flag.bool(name="help", shorthand="h", usage="Displays help information about the command."))
-        if self.version:
-            self.flags.append(Flag.bool(name="version", shorthand="v", usage="Displays the version of the command."))
-
     fn __moveinit__(out self, owned existing: Self):
         """Initializes a new `Command` by moving the fields from an existing `Command`.
 
@@ -456,7 +528,6 @@ struct Command(CollectionElement, Writable, Stringable):
         self.help = existing.help
         self.exit = existing.exit
         self.version = existing.version^
-        self.version_writer = existing.version_writer^
         self.output_writer = existing.output_writer
         self.error_writer = existing.error_writer
 
@@ -737,20 +808,20 @@ struct Command(CollectionElement, Writable, Stringable):
             return
 
         try:
+            var ctx = Context(remaining_args, command_ptr)
+
             # Check if the help flag was passed
-            if command_ptr[].flags.get_bool("help"):
-                self.output_writer(command_ptr[].help(command_ptr))
-                return
+            if self.help:
+                if command_ptr[].flags.get_bool(self.help.value().flag.name):
+                    self.output_writer(self.help.value().action(ctx))
+                    return
 
             # Check if the version flag was passed
             if self.version:
                 # Check if version is set (not None) and if so, the value must be True.
-                var version_flag_passed = command_ptr[].flags.get_bool("version")
+                var version_flag_passed = command_ptr[].flags.get_bool(self.version.value().flag.name)
                 if version_flag_passed and version_flag_passed.value() == True:
-                    if command_ptr[].version_writer:
-                        self.output_writer(command_ptr[].version_writer.value()(command_ptr[].version.value()))
-                    else:
-                        self.output_writer(command_ptr[].version.value())
+                    self.output_writer(self.version.value().action(ctx))
                     return
 
             # Validate individual required flags (eg: flag is required)
@@ -760,8 +831,6 @@ struct Command(CollectionElement, Writable, Stringable):
             command_ptr[].flags.validate_flag_groups()
 
             # Run flag actions if they have any
-            var ctx = Context(remaining_args, command_ptr)
-
             @parameter
             fn run_action(flag: Flag) raises -> None:
                 if flag.action and flag.value:

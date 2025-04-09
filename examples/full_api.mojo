@@ -1,6 +1,6 @@
 from memory import ArcPointer
 from sys import exit
-from prism import Command, Context, Flag, no_args
+from prism import Command, Context, Flag, no_args, Version
 
 
 fn base(ctx: Context) -> None:
@@ -33,8 +33,8 @@ fn allow_hosts(ctx: Context) raises -> None:
     print("Allowing: ", hosts.value().__str__())
 
 
-fn version(version: String) -> String:
-    return String("MyCLI version: ", version)
+fn version(ctx: Context) -> String:
+    return "MyCLI version: " + ctx.command[].version.value().value
 
 
 fn validate_hosts(ctx: Context, value: String) raises -> None:
@@ -56,8 +56,8 @@ fn main() -> None:
         usage="Base Command.",
         run=base,
         exit=my_exit,
-        version=String("0.1.0"),
-        version_writer=version,
+        version=Version("0.1.0", action=version),
+        suggest=True,
         flags=List[Flag](
             Flag.bool(name="required", shorthand="r0", usage="Always required.", required=True, persistent=True),
             Flag.string(
@@ -125,7 +125,6 @@ fn main() -> None:
                     )
                 ),
                 read_from_stdin=True,
-                suggest=True,
             ),
         ),
     ).execute()

@@ -445,13 +445,12 @@ If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 
 ### Help
 
-Commands are configured to accept a `--help` and `-h` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed.
+Commands are configured to accept a `--help` and `-h` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed. You can use the `help` argument of the `Command` constructor to configure the help function, and the help flag itself.
 
 ```mojo
-from memory import ArcPointer
-from prism import Command
+from prism import Command, Context, Flag, Help
 
-fn help_func(command: ArcPointer[Command]) -> String:
+fn help_func(ctx: Context) -> String:
     return "My help function."
 
 fn main() -> None:
@@ -459,7 +458,10 @@ fn main() -> None:
         name="hello",
         description="This is a dummy command!",
         run=test,
-        help=help_func
+        help=Help(
+            flag=Flag.bool(name="custom-help", shorthand="ch", usage="My Cool Help Flag."),
+            action=help_func,
+        ),
     ).execute()
 ```
 
@@ -467,25 +469,27 @@ fn main() -> None:
 
 ### Version
 
-Commands can be configured to accept `--version` and `-v` flag to run a version function. This will print the result of the version function using the output writer that's configured for the command.
+Commands can be configured to accept `--version` and `-v` flag to run a version function. This will print the result of the version function using the output writer that's configured for the command. You can also configure the flag and function to run when the version flag is passed by using the `version` argument of the `Command` constructor.
 
 ```mojo
-from memory import ArcPointer
-from prism import Command, Context
+from prism import Command, Context, Version, Flag
 
 fn test(ctx: Context) -> None:
     print("Pass -v to see the version!")
 
-fn version(version: String) -> String:
-    return "MyCLI version: " + version
+fn version(ctx: Context) -> String:
+    return "MyCLI version: " + ctx.command[].version.value().value
 
 fn main() -> None:
     Command(
         name="hello",
         usage="This is a dummy command!",
         run=test,
-        version=String("0.1.0"),
-        version_writer=version,
+        version=Version(
+            "0.1.0",
+            flag=Flag.bool(name="custom-version", shorthand="cv", usage="My Cool Version Flag."),
+            action=version
+        ),
     ).execute()
 ```
 
@@ -575,7 +579,6 @@ fn main() -> None:
 
 ### Features
 
-- Enable configuration of the help and version flags, so they can be disabled or changed. At the moment they take the -h and -v shorthand flags.
 - Add support for configurable delimiter (default: `--`) to indicate the end of flags.
 - Add suggestion logic for commands.
 - Autocomplete generation.
@@ -586,9 +589,7 @@ fn main() -> None:
 ### Improvements
 
 - Tree traversal improvements.
-- For now, help functions will need to be set after the command is constructed. This is to help reduce cyclical dependencies, but I will work on a way to set these values in the constructor as the type system matures.
 - Once we have trait objects, use actual typed flags instead of converting values to and from strings.
-- Update default help command to improve available commands and flags section.
-   Commands without children can be created at compile time, but those with them cannot. Perhaps I can find a way to make this work.
+- Commands without children can be created at compile time, but those with them cannot. Perhaps I can find a way to make this work.
 
 ## Bugs
