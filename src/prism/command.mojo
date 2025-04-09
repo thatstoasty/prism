@@ -5,295 +5,30 @@ from collections import Optional, Dict
 from collections.string import StaticString
 from memory import ArcPointer
 import mog
-from mog import Position, get_width
 from prism._util import panic
+from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
 from prism.flag import Flag, FType
 from prism._flag_set import Annotation, FlagSet
-from prism.args import arbitrary_args
+from prism.args import arbitrary_args, ArgValidatorFn
 from prism.context import Context
 from prism.suggest import suggest_flag, flag_from_error
-
-
-fn _parse_args_from_command_line(args: VariadicList[StaticString]) -> List[String]:
-    """Returns the arguments passed to the executable as a list of strings.
-
-    Returns:
-        The arguments passed to the executable as a list of strings.
-    """
-    var result = List[String](capacity=len(args))
-    var i = 1
-    while i < len(args):
-        result.append(String(args[i]))
-        i += 1
-
-    return result^
-
-
-@value
-@register_passable("trivial")
-struct STDINParserState:
-    """State of the parser when reading from stdin."""
-
-    var value: UInt8
-    """State of the parser when reading from stdin."""
-
-    alias FIND_TOKEN = Self(0)
-    alias FIND_ARG = Self(1)
-
-    fn __eq__(self, other: Self) -> Bool:
-        """Compares two `STDINParserState` instances for equality.
-
-        Args:
-            other: The other `STDINParserState` instance to compare to.
-
-        Returns:
-            True if the two instances are equal, False otherwise.
-        """
-        return self.value == other.value
-
-    fn __ne__(self, other: Self) -> Bool:
-        """Compares two `STDINParserState` instances for inequality.
-
-        Args:
-            other: The other `STDINParserState` instance to compare to.
-
-        Returns:
-            True if the two instances are not equal, False otherwise.
-        """
-        return self.value != other.value
-
-
-fn _parse_args_from_stdin(input: String) -> List[String]:
-    """Reads arguments from stdin and returns them as a list of strings.
-
-    Args:
-        input: The input string to parse.
-
-    Returns:
-        The arguments read from stdin as a list of strings.
-    """
-    var state = STDINParserState.FIND_TOKEN
-    var line_number = 1
-    var token = String("")
-    var args = List[String]()
-
-    for char in input.codepoint_slices():
-        if state == STDINParserState.FIND_TOKEN:
-            if char.isspace() or char == '"':
-                if char == "\n":
-                    line_number += 1
-                if token != "":
-                    if token == "--":
-                        break
-                    args.append(token)
-                    token = ""
-                if char == '"':
-                    state = STDINParserState.FIND_ARG
-                continue
-            token.write(char)
-        else:
-            if char != '"':
-                token.write(char)
-            else:
-                if token != "":
-                    args.append(token)
-                    token = ""
-                state = STDINParserState.FIND_TOKEN
-
-    if state == STDINParserState.FIND_TOKEN:
-        if token and token != "--":
-            args.append(token)
-    else:
-        # Not an empty string and not a space
-        if token and not token.isspace():
-            args.append(token)
-
-    return args^
-
-
-fn default_help(ctx: Context) raises -> String:
-    """Prints the help information for the command.
-
-    Args:
-        ctx: The context of the command to generate help information for.
-
-    Returns:
-        The help information for the command.
-
-    Raises:
-        Any error that occurs while generating the help information.
-    """
-    var cmd = ctx.command[]
-    alias style = mog.Style(mog.ASCII)
-    var builder = String("Usage: ", cmd.full_name())
-
-    if len(cmd.flags) > 0:
-        builder.write(" [OPTIONS]")
-    if len(cmd.children) > 0:
-        builder.write(" COMMAND")
-    builder.write(" [ARGS]...", "\n\n", cmd.usage, "\n")
-
-    if cmd.args_usage:
-        builder.write("\nArguments:\n  ", cmd.args_usage.value(), "\n")
-
-    var option_width = 0
-    if cmd.flags:
-        var widest_flag = 0
-        var widest_shorthand = 0
-        for flag in cmd.flags:
-            if len(flag[].name) > widest_flag:
-                widest_flag = len(flag[].name)
-            if len(flag[].shorthand) > widest_shorthand:
-                widest_shorthand = len(flag[].shorthand)
-
-        alias USAGE_PADDING = 4
-        option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
-        var options_style = style.width(option_width)
-
-        builder.write("\nOptions:")
-        for flag in cmd.flags:
-            var option = String("\n  ")
-            if flag[].shorthand:
-                option.write("-", flag[].shorthand, ", ")
-            option.write("--", flag[].name)
-            builder.write(options_style.render(option), flag[].usage)
-
-        builder.write("\n")
-
-    if cmd.children:
-        var options_style = style.width(option_width - 2)
-        builder.write("\nCommands:")
-        for i in range(len(cmd.children)):
-            builder.write("\n  ", options_style.render(cmd.children[i][].name), cmd.children[i][].usage)
-        builder.write("\n")
-
-    if cmd.aliases:
-        builder.write("\nAliases:\n  ")
-        for i in range(len(cmd.aliases)):
-            builder.write(cmd.aliases[i])
-
-            if i < len(cmd.aliases) - 1:
-                builder.write(", ")
-        builder.write("\n")
-
-    return builder^
+from prism.help import Help
+from prism.version import Version
+from prism.exit import ExitFn, default_exit
+from prism.writer import WriterFn, default_error_writer, default_output_writer
 
 
 alias CmdFn = fn (ctx: Context) -> None
 """The function for a command to run."""
 alias RaisingCmdFn = fn (ctx: Context) raises -> None
 """The function for a command to run that can error."""
-alias HelpFn = fn (ctx: Context) raises -> String
-"""The function to generate help output."""
-alias ArgValidatorFn = fn (ctx: Context) raises -> None
-"""The function for an argument validator."""
 alias ParentVisitorFn = fn (parent: ArcPointer[Command]) capturing -> None
 """The function for visiting parents of a command."""
-alias ExitFn = fn (Error) -> None
-"""The function to call when an error occurs."""
-alias VersionFn = fn (Context) -> String
-"""The function to call when the version flag is passed."""
-alias WriterFn = fn (String) -> None
-"""The function to call when writing output or errors."""
-
-
-fn default_output_writer(arg: String) -> None:
-    """Writes an output message to stdout.
-
-    Args:
-        arg: The output message to write.
-    """
-    print(arg)
-
-
-fn default_error_writer(arg: String) -> None:
-    """Writes an error message to stderr.
-
-    Args:
-        arg: The error message to write.
-    """
-    print(arg, file=2)
-
-
-fn default_version_writer(ctx: Context) -> String:
-    """Writes the version information for the command.
-
-    Args:
-        ctx: The context of the command to generate version information for.
-
-    Returns:
-        The version information for the command.
-    """
-    return String(ctx.command[].name, ": ", ctx.command[].version.value().value)
 
 
 alias ENABLE_TRAVERSE_RUN_HOOKS = env_get_bool["PRISM_TRAVERSE_RUN_HOOKS", False]()
 """Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
-
-
-fn default_exit(e: Error) -> None:
-    """The default function to call when an error occurs.
-
-    Args:
-        e: The error that occurred.
-    """
-    panic(e)
-
-
-@value
-struct Help(CollectionElement):
-    """A struct representing the help information for a command."""
-
-    var flag: Flag
-    """The flag to use for the help command."""
-    var action: HelpFn
-    """The function to call when the help flag is passed."""
-
-    fn __init__(
-        out self,
-        *,
-        flag: Flag = Flag.bool(name="help", shorthand="h", usage="Displays help information about the command."),
-        action: HelpFn = default_help,
-    ):
-        """Constructs a new `Help` configuration.
-
-        Args:
-            flag: The flag to use for the help command.
-            action: The function to call when the help flag is passed.
-        """
-        self.flag = flag
-        self.action = action
-
-
-@value
-struct Version(CollectionElement):
-    """A struct representing the version of a command."""
-
-    var value: String
-    """The version of the command."""
-    var flag: Flag
-    """The flag to use for the version command."""
-    var action: VersionFn
-    """The function to call when the version flag is passed."""
-
-    fn __init__(
-        out self,
-        version: String,
-        *,
-        flag: Flag = Flag.bool(name="version", shorthand="v", usage="Displays the version of the command."),
-        action: VersionFn = default_version_writer,
-    ):
-        """Constructs a new `Version` configuration.
-
-        Args:
-            version: The version of the command.
-            flag: The flag to use for the version command.
-            action: The function to call when the version flag is passed.
-        """
-        self.value = version
-        self.flag = flag
-        self.action = action
 
 
 @value
@@ -750,13 +485,13 @@ struct Command(CollectionElement, Writable, Stringable):
         if self.has_parent():
             return self.root()[].execute()
 
-        var input_args = _parse_args_from_command_line(argv())
+        var input_args = parse_args_from_command_line(argv())
 
         # Read from stdin and parse the arguments.
         if self.read_from_stdin:
             try:
                 # TODO: Switch from readline to reading until EOF
-                input_args.extend(_parse_args_from_stdin(_fdopen["r"](0).readline()))
+                input_args.extend(parse_args_from_stdin(_fdopen["r"](0).readline()))
             except e:
                 # TODO: The compiler doesn't like just having the exit function.
                 # In case the user provided exit function does NOT exit, we return early since we have no input args.
