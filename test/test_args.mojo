@@ -29,64 +29,61 @@ def test_no_args():
 
 
 def test_valid_args():
-    ctx = Context(
-        args=List[String]("abc"),
-        command=Command(name="root", usage="Base command.", run=dummy, valid_args=List[String]("Pineapple")),
-    )
     with testing.assert_raises(contains="Invalid argument: `abc`"):
-        valid_args(ctx)
+        valid_args(
+            Context(
+                args=List[String]("abc"),
+                command=Command(name="root", usage="Base command.", run=dummy, valid_args=List[String]("Pineapple")),
+            )
+        )
 
 
 def test_arbitrary_args():
-    ctx = Context(
-        command=Command(name="root", usage="Base command.", run=dummy),
-        args=List[String]("abc", "blah", "blah")
-    )
-
     # It should not raise an error, ever.
-    arbitrary_args(ctx)
+    arbitrary_args(
+        Context(
+            command=Command(name="root", usage="Base command.", run=dummy), args=List[String]("abc", "blah", "blah")
+        )
+    )
 
 
 def test_minimum_n_args():
-    ctx = Context(
-        command=Command(name="root", usage="Base command.", run=dummy),
-        args=List[String]("abc", "123")
-    )
-    with testing.assert_raises(contains="accepts at least 3 argument(s). Received: 2."):
-        minimum_n_args[3]()(ctx)
+    with testing.assert_raises(contains="accepts at least 3 argument(s). Received: 2"):
+        minimum_n_args[3]()(
+            Context(command=Command(name="root", usage="Base command.", run=dummy), args=List[String]("abc", "123"))
+        )
 
 
 def test_maximum_n_args():
-    ctx = Context(
-        command=Command(name="root", usage="Base command.", run=dummy),
-        args=List[String]("abc", "123")
-    )
-    with testing.assert_raises(contains="accepts at most 1 argument(s). Received: 2."):
-        maximum_n_args[1]()(ctx)
+    with testing.assert_raises(contains="accepts at most 1 argument(s). Received: 2"):
+        maximum_n_args[1]()(
+            Context(command=Command(name="root", usage="Base command.", run=dummy), args=List[String]("abc", "123"))
+        )
 
 
 def test_exact_args():
-    ctx = Context(
-        command=Command(name="root", usage="Base command.", run=dummy),
-        args=List[String]("abc", "123")
-    )
-    with testing.assert_raises(contains="accepts exactly 1 argument(s). Received: 2."):
-        exact_args[1]()(ctx)
+    with testing.assert_raises(contains="accepts exactly 1 argument(s). Received: 2"):
+        exact_args[1]()(
+            Context(command=Command(name="root", usage="Base command.", run=dummy), args=List[String]("abc", "123"))
+        )
 
 
 def test_range_args():
-    ctx = Context(
-        command=Command(name="root", usage="Base command.", run=dummy),
-        args=List[String]("abc", "123")
-    )
-    with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2."):
-        range_args[0, 1]()(ctx)
+    with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2"):
+        range_args[0, 1]()(
+            Context(command=Command(name="root", usage="Base command.", run=dummy), args=List[String]("abc", "123"))
+        )
 
 
 def test_match_all():
     ctx = Context(
         command=Command(name="root", usage="Base command.", run=dummy, valid_args=List[String]("Pineapple")),
-        args=List[String]("abc", "123")
+        args=List[String]("abc", "123"),
     )
-    with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2."):
-        match_all[range_args[0, 1](), valid_args]()(ctx)
+    with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2"):
+        match_all[range_args[0, 1](), valid_args]()(
+            Context(
+                command=Command(name="root", usage="Base command.", run=dummy, valid_args=List[String]("Pineapple")),
+                args=List[String]("abc", "123"),
+            )
+        )

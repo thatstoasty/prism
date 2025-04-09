@@ -122,7 +122,7 @@ fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
                 minimum,
                 " to ",
                 maximum,
-                "argument(s). Received: ",
+                " argument(s). Received: ",
                 len(ctx.args),
             )
 
