@@ -345,7 +345,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `String` flag to the flag set.
+        """Constructs a `String` flag.
 
         Args:
             name: The name of the flag.
@@ -392,7 +392,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `Bool` flag to the flag set.
+        """Constructs a `Bool` flag.
 
         Args:
             name: The name of the flag.
@@ -439,7 +439,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds an `Int` flag to the flag set.
+        """Adds an `Int` flag.
 
         Args:
             name: The name of the flag.
@@ -486,7 +486,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds an `Int8` flag to the flag set.
+        """Adds an `Int8` flag.
 
         Args:
             name: The name of the flag.
@@ -533,7 +533,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds an `Int16` flag to the flag set.
+        """Adds an `Int16` flag.
 
         Args:
             name: The name of the flag.
@@ -580,7 +580,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds an `Int32` flag to the flag set.
+        """Adds an `Int32` flag.
 
         Args:
             name: The name of the flag.
@@ -627,7 +627,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds an `Int64` flag to the flag set.
+        """Adds an `Int64` flag.
 
         Args:
             name: The name of the flag.
@@ -674,7 +674,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `UInt` flag to the flag set.
+        """Constructs a `UInt` flag.
 
         Args:
             name: The name of the flag.
@@ -721,7 +721,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `UInt8` flag to the flag set.
+        """Constructs a `UInt8` flag.
 
         Args:
             name: The name of the flag.
@@ -768,7 +768,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `UInt16` flag to the flag set.
+        """Constructs a `UInt16` flag.
 
         Args:
             name: The name of the flag.
@@ -815,7 +815,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `UInt32` flag to the flag set.
+        """Constructs a `UInt32` flag.
 
         Args:
             name: The name of the flag.
@@ -862,7 +862,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `UInt64` flag to the flag set.
+        """Constructs a `UInt64` flag.
 
         Args:
             name: The name of the flag.
@@ -909,7 +909,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `Float16` flag to the flag set.
+        """Constructs a `Float16` flag.
 
         Args:
             name: The name of the flag.
@@ -956,7 +956,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `Float32` flag to the flag set.
+        """Constructs a `Float32` flag.
 
         Args:
             name: The name of the flag.
@@ -1003,7 +1003,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `Float64` flag to the flag set.
+        """Constructs a `Float64` flag.
 
         Args:
             name: The name of the flag.
@@ -1050,7 +1050,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `StringList` flag to the flag set.
+        """Constructs a `StringList` flag.
 
         Args:
             name: The name of the flag.
@@ -1097,7 +1097,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `IntList` flag to the flag set.
+        """Constructs a `IntList` flag.
 
         Args:
             name: The name of the flag.
@@ -1144,7 +1144,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Flag:
-        """Adds a `Float64List` flag to the flag set.
+        """Constructs a `Float64List` flag.
 
         Args:
             name: The name of the flag.

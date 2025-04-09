@@ -1,7 +1,8 @@
-from memory import ArcPointer
-from collections.optional import Optional
-from prism.command import ArgValidatorFn, Command
 from prism.context import Context
+
+
+alias ArgValidatorFn = fn (ctx: Context) raises -> None
+"""The function for an argument validator."""
 
 
 fn no_args(ctx: Context) raises -> None:
@@ -11,7 +12,7 @@ fn no_args(ctx: Context) raises -> None:
         ctx: The context of the command being executed.
     """
     if len(ctx.args) > 0:
-        raise Error("The command `{}` does not take any arguments.".format(ctx.command[].name))
+        raise Error("The command `", ctx.command[].name, "` does not take any arguments.")
 
 
 fn arbitrary_args(ctx: Context) raises -> None:
@@ -36,11 +37,12 @@ fn minimum_n_args[n: Int]() -> ArgValidatorFn:
     fn less_than_n_args(ctx: Context) raises -> None:
         if len(ctx.args) < n:
             raise Error(
-                "The command `{}` accepts at least {} argument(s). Received: {}.".format(
-                    ctx.command[].name,
-                    n,
-                    len(ctx.args),
-                )
+                "The command `",
+                ctx.command[].name,
+                "` accepts at least ",
+                n,
+                " argument(s). Received: ",
+                len(ctx.args),
             )
 
     return less_than_n_args
@@ -59,11 +61,7 @@ fn maximum_n_args[n: UInt]() -> ArgValidatorFn:
     fn more_than_n_args(ctx: Context) raises -> None:
         if len(ctx.args) > n:
             raise Error(
-                "The command `{}` accepts at most {} argument(s). Received: {}.".format(
-                    ctx.command[].name,
-                    n,
-                    len(ctx.args),
-                )
+                "The command `", ctx.command[].name, "` accepts at most ", n, " argument(s). Received: ", len(ctx.args)
             )
 
     return more_than_n_args
@@ -100,8 +98,8 @@ fn valid_args(ctx: Context) raises -> None:
     """
     if ctx.command[].valid_args:
         for arg in ctx.args:
-            if String(arg[]) not in ctx.command[].valid_args:
-                raise Error("Invalid argument: `{}`, for the command `{}`.".format(arg[], ctx.command[].name))
+            if arg[] not in ctx.command[].valid_args:
+                raise Error("Invalid argument: `", arg[], "`, for the command `", ctx.command[].name, "`.")
 
 
 fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
@@ -118,19 +116,19 @@ fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
     fn range_n_args(ctx: Context) raises -> None:
         if len(ctx.args) < minimum or len(ctx.args) > maximum:
             raise Error(
-                "The command `{}`, accepts between {} to {} argument(s). Received: {}.".format(
-                    ctx.command[].name,
-                    minimum,
-                    maximum,
-                    len(ctx.args),
-                )
+                "The command `",
+                ctx.command[].name,
+                "`, accepts between ",
+                minimum,
+                " to ",
+                maximum,
+                "argument(s). Received: ",
+                len(ctx.args),
             )
 
     return range_n_args
 
 
-# TODO: Having some issues with varadic list of functions, so using List for now.
-# Broken until alias list of functions is fixed. Pointer to function incorrectly points to 0x0.
 fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
     """Returns an error if any of the arg_validators return an error.
 
