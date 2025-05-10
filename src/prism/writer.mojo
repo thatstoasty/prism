@@ -1,3 +1,6 @@
+from sys import stderr
+
+
 alias WriterFn = fn (String) -> None
 """The function to call when writing output or errors."""
 
@@ -17,4 +20,4 @@ fn default_error_writer(arg: String) -> None:
     Args:
         arg: The error message to write.
     """
-    print(arg, file=2)
+    print(arg, file=stderr)

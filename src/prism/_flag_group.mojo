@@ -1,5 +1,4 @@
 from collections.dict import Dict, DictEntry
-from collections.string import StaticString
 from prism.flag import Flag
 from prism._flag_set import FlagSet, Annotation
 
@@ -26,7 +25,13 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -
             continue
 
         var keys = extract_keys(pair[])
-        raise Error("If any flags in the group, ", keys.__str__(), "are set they must all be set; missing ", unset.__str__(), ".")
+        raise Error(
+            "If any flags in the group, ",
+            keys.__str__(),
+            "are set they must all be set; missing ",
+            unset.__str__(),
+            ".",
+        )
 
 
 fn get_set_flags(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:
@@ -50,7 +55,7 @@ fn extract_keys(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:
 
     Args:
         pair: The key value pair to extract the keys from.
-    
+
     Returns:
         A list of keys.
     """
@@ -78,7 +83,7 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) rais
             continue
 
         var keys = extract_keys(pair[])
-        raise Error("At least one of the flags in the group {} is required.".format(keys.__str__()))
+        raise Error(StaticString("At least one of the flags in the group {} is required.").format(keys.__str__()))
 
 
 fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
@@ -98,6 +103,5 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
             continue
 
         var keys = extract_keys(pair[])
-        alias msg = "If any flags in the group {} are set none of the others can be; {} were all set."
+        alias msg = StaticString("If any flags in the group {} are set none of the others can be; {} were all set.")
         raise Error(msg.format(keys.__str__(), set.__str__()))
-

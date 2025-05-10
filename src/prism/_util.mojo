@@ -1,5 +1,4 @@
-from sys import exit
-from collections import InlineArray
+from sys import exit, stderr
 
 
 fn panic[W: Writable, //](message: W, code: Int = 1) -> None:
@@ -9,7 +8,7 @@ fn panic[W: Writable, //](message: W, code: Int = 1) -> None:
         message: The message to panic with.
         code: The exit code to use.
     """
-    print(message, file=2)
+    print(message, file=stderr)
     exit(code)
 
 

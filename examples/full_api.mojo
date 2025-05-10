@@ -1,5 +1,5 @@
 from memory import ArcPointer
-from sys import exit
+from sys import exit, stderr
 from prism import Command, Context, Flag, no_args, Version
 
 
@@ -16,7 +16,7 @@ fn connect(ctx: Context) raises -> None:
 
 
 fn my_exit(e: Error) -> None:
-    print(e, file=2)
+    print(e, file=stderr)
     if String(e) == "Error: Exit Code 2":
         print("Exiting with code 2")
         exit(2)

@@ -1,9 +1,6 @@
-from collections import Optional
 from collections.list import _ListIter
 from collections.dict import Dict, DictEntry
-from collections.string import StaticString, StringSlice
 from utils import Variant
-from memory import Pointer, Span
 import os
 from prism.flag import Flag, FlagActionFn, FType
 from prism._util import string_to_bool
@@ -151,11 +148,10 @@ struct FlagSet(Writable, Stringable, Boolable):
             # Set the value of the flag.
             var flag = self.lookup(name)
             if not flag:
-                raise Error(
-                    "FlagSet.from_args: Failed to set flag, {}, with value: {}. Flag could not be found.".format(
-                        name, value
-                    )
+                alias msg = StaticString(
+                    "FlagSet.from_args: Failed to set flag, {}, with value: {}. Flag could not be found."
                 )
+                raise Error(msg.format(name, value))
             if not flag.value()[].changed:
                 flag.value()[].set(value)
             else:
@@ -282,7 +278,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
         for flag in self.flags:
             if flag[].name.as_string_slice() == name:
-                return Pointer.address_of(flag[])
+                return Pointer(to=flag[])
 
         return None
 
@@ -301,7 +297,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
         for flag in self.flags:
             if flag[].name.as_string_slice() == name and flag[].type == type:
-                return Pointer.address_of(flag[])
+                return Pointer(to=flag[])
 
         return None
 
@@ -317,7 +313,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
         for flag in self.flags:
             if flag[].shorthand.as_string_slice() == name:
-                return Pointer.address_of(flag[])
+                return Pointer(to=flag[])
 
         return None
 
@@ -336,7 +332,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
         for flag in self.flags:
             if flag[].shorthand.as_string_slice() == name and flag[].type == type:
-                return Pointer.address_of(flag[])
+                return Pointer(to=flag[])
 
         return None
 
