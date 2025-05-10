@@ -8,8 +8,8 @@ fn test(ctx: Context) raises -> None:
     if not name:
         print("Received no names to print.")
         return
-    
-    print("Hello {}".format(" ".join(name.value())))
+
+    print("Hello", StaticString(" ").join(name.value()))
 
 
 fn sum(ctx: Context) raises -> None:
@@ -21,7 +21,7 @@ fn sum(ctx: Context) raises -> None:
     var sum = 0
     for number in numbers.value():
         sum += number[]
-    print("The sum is: {}".format(sum))
+    print("The sum is:", sum)
 
 
 fn sum_float(ctx: Context) raises -> None:
@@ -33,7 +33,7 @@ fn sum_float(ctx: Context) raises -> None:
     var sum = 0.0
     for number in numbers.value():
         sum += number[]
-    print("The sum is: {}".format(sum))
+    print("The sum is:", sum)
 
 
 fn main() -> None:
@@ -46,7 +46,7 @@ fn main() -> None:
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
-                default=List[String]("Mikhail", "Tavarez")
+                default=List[String]("Mikhail", "Tavarez"),
             )
         ),
         children=List[ArcPointer[Command]](
@@ -60,9 +60,9 @@ fn main() -> None:
                             name="number",
                             shorthand="n",
                             usage="A number to include in the sum.",
-                            default=List[Int, True](1, 2)
+                            default=List[Int, True](1, 2),
                         )
-                    )
+                    ),
                 )
             ),
             ArcPointer(
@@ -75,10 +75,10 @@ fn main() -> None:
                             name="number",
                             shorthand="n",
                             usage="A number to include in the sum.",
-                            default=List[Float64, True](1, 2)
+                            default=List[Float64, True](1, 2),
                         )
-                    )
+                    ),
                 )
-            )
-        )
+            ),
+        ),
     ).execute()

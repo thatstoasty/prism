@@ -1,6 +1,3 @@
-from collections.string import StaticString
-
-
 fn parse_args_from_command_line(args: VariadicList[StaticString]) -> List[String]:
     """Returns the arguments passed to the executable as a list of strings.
 

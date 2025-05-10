@@ -79,13 +79,8 @@ fn exact_args[n: UInt]() -> ArgValidatorFn:
 
     fn exactly_n_args(ctx: Context) raises -> None:
         if len(ctx.args) != n:
-            raise Error(
-                "The command `{}` accepts exactly {} argument(s). Received: {}.".format(
-                    ctx.command[].name,
-                    n,
-                    len(ctx.args),
-                )
-            )
+            alias msg = StaticString("The command `{}` accepts exactly {} argument(s). Received: {}.")
+            raise Error(msg.format(ctx.command[].name, n, len(ctx.args)))
 
     return exactly_n_args
 

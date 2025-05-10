@@ -1,8 +1,6 @@
-from sys import argv
+from sys import argv, stdin
 from sys.param_env import env_get_bool
 from builtin.io import _fdopen
-from collections import Optional, Dict
-from collections.string import StaticString
 from memory import ArcPointer
 import mog
 from prism._util import panic
@@ -491,7 +489,7 @@ struct Command(CollectionElement, Writable, Stringable):
         if self.read_from_stdin:
             try:
                 # TODO: Switch from readline to reading until EOF
-                input_args.extend(parse_args_from_stdin(_fdopen["r"](0).readline()))
+                input_args.extend(parse_args_from_stdin(_fdopen["r"](stdin).readline()))
             except e:
                 # TODO: The compiler doesn't like just having the exit function.
                 # In case the user provided exit function does NOT exit, we return early since we have no input args.
@@ -624,7 +622,7 @@ struct Command(CollectionElement, Writable, Stringable):
         self._merge_flags()
         try:
             for name in flag_names:
-                self.flags.set_annotation[annotation](name[], " ".join(flag_names))
+                self.flags.set_annotation[annotation](name[], StaticString(" ").join(flag_names))
         except e:
             self.exit(e)
 

@@ -29,7 +29,7 @@ fn get_cat_fact(ctx: Context) raises -> None:
     if not count:
         raise Error("Count flag was not found.")
 
-    for _ in range(count):
+    for _ in range(count.value()):
         var response = requests.get(url)
 
         # Check if the request was successful (status code 200)
@@ -68,52 +68,48 @@ fn post_hook(ctx: Context) -> None:
 
 
 fn main() -> None:
-    var cat_command = ArcPointer(Command(
-        name="cat",
-        usage="Get some cat facts!",
-        raising_run=get_cat_fact,
-        flags=List[Flag](
-            Flag.int(
-                name="count",
-                shorthand="c",
-                usage="Number of facts to get.",
-            )
-        )
-    ))
-
-    var dog_command = ArcPointer(Command(
-        name="dog",
-        usage="Get some dog breeds!",
-        raising_run=get_dog_breeds,
-    ))
-
-    var get_command = ArcPointer(Command(
-        name="get",
-        usage="Base command for getting some data.",
-        run=print_information,
-        persistent_pre_run=pre_hook,
-        persistent_post_run=post_hook,
-        flags=List[Flag](
-            Flag.bool(
-                name="lover",
-                shorthand="l",
-                usage="Are you an animal lover?",
-                persistent=True,
-            )
-        ),
-        children=List[ArcPointer[Command]](
-            cat_command,
-            dog_command
-        )
-    ))
-
-    var root = Command(
-        name="nested",
-        usage="Base command.",
-        run=base,
-        children=List[ArcPointer[Command]](
-            get_command
+    var cat_command = ArcPointer(
+        Command(
+            name="cat",
+            usage="Get some cat facts!",
+            raising_run=get_cat_fact,
+            flags=List[Flag](
+                Flag.int(
+                    name="count",
+                    shorthand="c",
+                    usage="Number of facts to get.",
+                )
+            ),
         )
     )
+
+    var dog_command = ArcPointer(
+        Command(
+            name="dog",
+            usage="Get some dog breeds!",
+            raising_run=get_dog_breeds,
+        )
+    )
+
+    var get_command = ArcPointer(
+        Command(
+            name="get",
+            usage="Base command for getting some data.",
+            run=print_information,
+            persistent_pre_run=pre_hook,
+            persistent_post_run=post_hook,
+            flags=List[Flag](
+                Flag.bool(
+                    name="lover",
+                    shorthand="l",
+                    usage="Are you an animal lover?",
+                    persistent=True,
+                )
+            ),
+            children=List[ArcPointer[Command]](cat_command, dog_command),
+        )
+    )
+
+    var root = Command(name="nested", usage="Base command.", run=base, children=List[ArcPointer[Command]](get_command))
 
     root.execute()

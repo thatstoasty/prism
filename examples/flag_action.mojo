@@ -2,10 +2,11 @@ from memory import ArcPointer
 from prism import Command, Context, Flag
 import prism
 
+
 fn test(ctx: Context) raises -> None:
     var name = ctx.command[].flags.get_string("name")
     if name:
-        print("Hello {}".format(name.value()))
+        print("Hello", name.value())
     else:
         print("Hello World")
 

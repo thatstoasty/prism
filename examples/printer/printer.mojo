@@ -11,17 +11,18 @@ fn printer(ctx: Context) raises -> None:
 
     var color = ctx.command[].flags.get_uint32("color")
     var formatting = ctx.command[].flags.get_string("formatting")
-    var style = mist.Style().foreground(color)
+    var style = mist.Style().foreground(color.value())
 
-    if formatting == "":
+    if not formatting:
         print(style.render(ctx.args[0]))
         return None
 
-    if formatting == "bold":
+    var format = formatting.value()
+    if format == "bold":
         style = style.bold()
-    elif formatting == "underline":
+    elif format == "underline":
         style = style.underline()
-    elif formatting == "italic":
+    elif format == "italic":
         style = style.italic()
 
     print(style.render(ctx.args[0]))
@@ -44,16 +45,7 @@ fn main() -> None:
         post_run=post_hook,
         arg_validator=exact_args[1](),
         flags=List[Flag](
-            Flag.uint32(
-                name="color",
-                shorthand="c",
-                usage="Text color",
-                default=0x3464EB
-            ),
-            Flag.string(
-                name="formatting",
-                shorthand="f",
-                usage="Text formatting"
-            )
-        )
+            Flag.uint32(name="color", shorthand="c", usage="Text color", default=UInt32(0x3464EB)),
+            Flag.string(name="formatting", shorthand="f", usage="Text formatting"),
+        ),
     ).execute()

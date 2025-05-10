@@ -1,5 +1,4 @@
-from collections import Optional, Dict, InlineArray
-from collections.string import StringSlice
+from collections import Dict
 from prism._flag_set import Annotation
 
 
@@ -8,7 +7,7 @@ alias FlagActionFn = fn (ctx: Context, value: String) raises -> None
 
 
 @value
-struct FType(EqualityComparableCollectionElement):
+struct FType(EqualityComparable, Movable, Copyable, ExplicitlyCopyable):
     """Flag types enum helper."""
 
     var value: String
@@ -125,7 +124,7 @@ struct FType(EqualityComparableCollectionElement):
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
 # needing to cast values to and from string.
 @value
-struct Flag(RepresentableCollectionElement, Stringable, Writable):
+struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Writable):
     """Represents a flag that can be passed via the command line.
     Flags are passed in via `--name` or `-shorthand` and can have a value associated with them.
     """
@@ -1068,7 +1067,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         """
         var default_value: Optional[String]
         if default:
-            default_value = " ".join(default.value())
+            default_value = StaticString(" ").join(default.value())
         else:
             default_value = None
 
@@ -1115,7 +1114,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         """
         var default_value: Optional[String]
         if default:
-            default_value = " ".join(default.value())
+            default_value = StaticString(" ").join(default.value())
         else:
             default_value = None
 
@@ -1162,7 +1161,7 @@ struct Flag(RepresentableCollectionElement, Stringable, Writable):
         """
         var default_value: Optional[String]
         if default:
-            default_value = " ".join(default.value())
+            default_value = StaticString(" ").join(default.value())
         else:
             default_value = None
 

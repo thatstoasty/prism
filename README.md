@@ -4,7 +4,7 @@ A Budding CLI Library!
 
 Inspired by: `Cobra` and `urfave/cli`!
 
-![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-25.2-orange)
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-25.3-orange)
 ![Build Status](https://github.com/thatstoasty/prism/actions/workflows/build.yml/badge.svg)
 ![Test Status](https://github.com/thatstoasty/prism/actions/workflows/test.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -500,12 +500,13 @@ The standard output and error output behavior can be customized by providing wri
 ```mojo
 from memory import ArcPointer
 from prism import Command, Context
+from sys import stderr
 
 fn my_output_writer(arg: String):
     print(arg)
 
 fn my_error_writer(arg: String):
-    print(arg, file=2)
+    print(arg, file=stderr)
 
 fn test(ctx: Context) -> None:
     print("Pass -v to see the version!")
@@ -576,6 +577,8 @@ fn main() -> None:
 - Flags can have values passed by using the `=` operator. Like `--count=5` OR like `--count 5`.
 
 ## TODO
+
+I am considering restructuring the code to make use of a top level `CLI` or `App` struct that can be used to manage the commands and subcommands. There are some command configurations which only make sense at the top level, such as the `read_from_stdin` flag, and we always make sure to execute from the top level command when `command.execute()` is called.
 
 ### Features
 

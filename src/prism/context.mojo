@@ -1,4 +1,4 @@
-from memory import ArcPointer, Span
+from memory import ArcPointer
 from prism.command import Command
 
 

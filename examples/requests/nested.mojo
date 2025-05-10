@@ -29,7 +29,7 @@ fn get_cat_fact(ctx: Context) raises -> None:
     if not count:
         raise Error("Count flag was not found.")
 
-    for _ in range(count):
+    for _ in range(count.value()):
         var response = requests.get(url)
 
         # Check if the request was successful (status code 200)
@@ -58,23 +58,14 @@ fn get_dog_breeds(ctx: Context) raises -> None:
 
 fn main() -> None:
     var cat_command = Command(
-            name="cat",
-            usage="Get some cat facts!",
-            raising_run=get_cat_fact,
-            flags=List[Flag](
-                Flag.int(
-                    name="count",
-                    shorthand="c",
-                    usage="Number of facts to get.",
-                    default=1
-                ),
-                Flag.bool(
-                    name="lover",
-                    shorthand="l",
-                    usage="Are you a cat lover?"
-                )
-            )
-        )
+        name="cat",
+        usage="Get some cat facts!",
+        raising_run=get_cat_fact,
+        flags=List[Flag](
+            Flag.int(name="count", shorthand="c", usage="Number of facts to get.", default=1),
+            Flag.bool(name="lover", shorthand="l", usage="Are you a cat lover?"),
+        ),
+    )
 
     var dog_command = Command(
         name="dog",
@@ -91,12 +82,9 @@ fn main() -> None:
                 name="get",
                 usage="Base command for getting some data.",
                 run=print_information,
-                children=List[ArcPointer[Command]](
-                    cat_command,
-                    dog_command
-                )
+                children=List[ArcPointer[Command]](cat_command, dog_command),
             )
-        )
+        ),
     )
 
     root.execute()
