@@ -29,15 +29,12 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install magic
-        run: |
-          if [[ ${{ matrix.target }} == "linux-aarch64" ]]; then
-            bash scripts/install_magic_aarch64.sh
-          else
-            curl -ssL https://magic.modular.com | bash
-          fi
+      - uses: prefix-dev/setup-pixi@v0.8.10
+        with:
+          pixi-version: v0.47.0
 
       - name: Run tests
+        shell: bash
         run: |
-          source $HOME/.bash_profile
-          magic run tests
+          pixi run -e util tests
+          pixi run -e util examples

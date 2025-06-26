@@ -1,29 +1,19 @@
-from memory import ArcPointer
-from prism import Context, Command
+from prism import Command, Flag, FlagSet
 
 
-fn test(ctx: Context) -> None:
+fn test(args: List[String], flags: FlagSet) -> None:
     print("Pass tool, object, or thing as a subcommand!")
 
 
-fn tool_func(ctx: Context) -> None:
+fn tool_func(args: List[String], flags: FlagSet) -> None:
     print("My tool!")
 
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="my",
         usage="This is a dummy command!",
         run=test,
-        children=List[ArcPointer[Command]](
-            ArcPointer(
-                Command(
-                    name="tool",
-                    usage="This is a dummy command!",
-                    run=tool_func,
-                    aliases=List[String]("object", "thing")
-                )
-            )
-        ),
-    ).execute()
-    
+        children=[Command(name="tool", usage="This is a dummy command!", run=tool_func, aliases=["object", "thing"])],
+    )
+    cli.execute()

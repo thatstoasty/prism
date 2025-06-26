@@ -1,25 +1,26 @@
-from prism.context import Context
+from memory import OwnedPointer
 
-
-alias ArgValidatorFn = fn (ctx: Context) raises -> None
+alias ArgValidatorFn = fn (cmd: OwnedPointer[Command], args: List[String]) raises -> None
 """The function for an argument validator."""
 
 
-fn no_args(ctx: Context) raises -> None:
+fn no_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
     """Returns an error if the command has any arguments.
 
     Args:
-        ctx: The context of the command being executed.
+        cmd: The command being executed.
+        args: The arguments passed to the command.
     """
-    if len(ctx.args) > 0:
-        raise Error("The command `", ctx.command[].name, "` does not take any arguments.")
+    if len(args) > 0:
+        raise Error("The command `", cmd[].name, "` does not take any arguments.")
 
 
-fn arbitrary_args(ctx: Context) raises -> None:
+fn arbitrary_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
     """Never returns an error.
 
     Args:
-        ctx: The context of the command being executed.
+        cmd: The command being executed.
+        args: The arguments passed to the command.
     """
     return None
 
@@ -34,15 +35,15 @@ fn minimum_n_args[n: Int]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    fn less_than_n_args(ctx: Context) raises -> None:
-        if len(ctx.args) < n:
+    fn less_than_n_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
+        if len(args) < n:
             raise Error(
                 "The command `",
-                ctx.command[].name,
+                cmd[].name,
                 "` accepts at least ",
                 n,
                 " argument(s). Received: ",
-                len(ctx.args),
+                len(args),
             )
 
     return less_than_n_args
@@ -58,11 +59,9 @@ fn maximum_n_args[n: UInt]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    fn more_than_n_args(ctx: Context) raises -> None:
-        if len(ctx.args) > n:
-            raise Error(
-                "The command `", ctx.command[].name, "` accepts at most ", n, " argument(s). Received: ", len(ctx.args)
-            )
+    fn more_than_n_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
+        if len(args) > n:
+            raise Error("The command `", cmd[].name, "` accepts at most ", n, " argument(s). Received: ", len(args))
 
     return more_than_n_args
 
@@ -77,24 +76,25 @@ fn exact_args[n: UInt]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    fn exactly_n_args(ctx: Context) raises -> None:
-        if len(ctx.args) != n:
+    fn exactly_n_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
+        if len(args) != n:
             alias msg = StaticString("The command `{}` accepts exactly {} argument(s). Received: {}.")
-            raise Error(msg.format(ctx.command[].name, n, len(ctx.args)))
+            raise Error(msg.format(cmd[].name, n, len(args)))
 
     return exactly_n_args
 
 
-fn valid_args(ctx: Context) raises -> None:
+fn valid_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
     """Returns an error if threre are any positional args that are not in the command's `valid_args`.
 
     Args:
-        ctx: The context of the command being executed.
+        cmd: The command being executed.
+        args: The arguments passed to the command.
     """
-    if ctx.command[].valid_args:
-        for arg in ctx.args:
-            if arg[] not in ctx.command[].valid_args:
-                raise Error("Invalid argument: `", arg[], "`, for the command `", ctx.command[].name, "`.")
+    if cmd[].valid_args:
+        for arg in args:
+            if arg not in cmd[].valid_args:
+                raise Error("Invalid argument: `", arg, "`, for the command `", cmd[].name, "`.")
 
 
 fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
@@ -108,35 +108,36 @@ fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    fn range_n_args(ctx: Context) raises -> None:
-        if len(ctx.args) < minimum or len(ctx.args) > maximum:
+    fn range_n_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
+        if len(args) < minimum or len(args) > maximum:
             raise Error(
                 "The command `",
-                ctx.command[].name,
+                cmd[].name,
                 "`, accepts between ",
                 minimum,
                 " to ",
                 maximum,
                 " argument(s). Received: ",
-                len(ctx.args),
+                len(args),
             )
 
     return range_n_args
 
 
-fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
-    """Returns an error if any of the arg_validators return an error.
+# fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
+#     """Returns an error if any of the arg_validators return an error.
 
-    Parameters:
-        arg_validators: A list of ArgValidatorFn functions that check the arguments.
+#     Parameters:
+#         arg_validators: A list of ArgValidatorFn functions that check the arguments.
 
-    Returns:
-        A function that checks all the arguments using the arg_validators list..
-    """
+#     Returns:
+#         A function that checks all the arguments using the arg_validators list..
+#     """
+#     fn match_all_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
+#         # alias validators = VariadicList(arg_validators)
+#         @parameter
+#         for i in range(len(arg_validators)):
+#             print(i)
+#             arg_validators[i](cmd, args)
 
-    fn match_all_args(ctx: Context) raises -> None:
-        alias validators = VariadicList(arg_validators)
-        for validator in validators:
-            validator(ctx)
-
-    return match_all_args
+#     return match_all_args

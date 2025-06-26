@@ -1,104 +1,68 @@
-from memory import ArcPointer
-from prism import Command, Context, Flag
-import prism
+from prism import Command, FlagSet, Flag
 
 
-fn printer(ctx: Context) -> None:
-    if len(ctx.args) == 0:
+fn printer(args: List[String], flags: FlagSet) -> None:
+    if len(args) == 0:
         print("No args provided.")
         return
 
-    print(ctx.args[0])
-    return
+    print(args[0])
 
 
-fn build_printer_command() -> ArcPointer[Command]:
-    var cmd = ArcPointer(
-        Command(
-            name="printer",
-            usage="Print the first arg.",
-            run=printer,
-        )
-    )
-    return cmd
-
-
-fn say(ctx: Context) -> None:
+fn say(args: List[String], flags: FlagSet) -> None:
     print("Shouldn't be here!")
 
 
-fn say_hello(ctx: Context) -> None:
+fn say_hello(args: List[String], flags: FlagSet) -> None:
     print("Hello World!")
 
 
-fn say_goodbye(ctx: Context) -> None:
+fn say_goodbye(args: List[String], flags: FlagSet) -> None:
     print("Goodbye World!")
 
 
-fn build_hello_command() -> ArcPointer[Command]:
-    var cmd = ArcPointer(
-        Command(
-            name="hello",
-            usage="Say hello to someone",
-            run=say_hello,
-        )
-    )
-    return cmd
-
-
-fn build_goodbye_command() -> ArcPointer[Command]:
-    var cmd = ArcPointer(
-        Command(
-            name="goodbye",
-            usage="Say goodbye to someone",
-            run=say_goodbye,
-        )
-    )
-    return cmd
-
-
-fn test(ctx: Context) -> None:
-    var env = ctx.command[].flags.get_string("env")
-    if not env:
-        print("No env flag provided.")
-    else:
+fn test(args: List[String], flags: FlagSet) -> None:
+    if env := flags.get_string("env"):
         print("Env:", env.value())
+    else:
+        print("No env flag provided.")
 
-    for item in ctx.command[].flags:
-        if item[].value:
-            print(item[].name, item[].value.value())
+    for item in flags:
+        if item.value:
+            print(item.name, item.value.value())
         else:
-            print(item[].name, "N/A")
-
-    return None
+            print(item.name, "N/A")
 
 
 fn main() -> None:
-    var hello_command = build_hello_command()
-    var goodbye_command = build_goodbye_command()
-    var printer_command = build_printer_command()
-
-    Command(
+    var cli = Command(
         name="tones",
         usage="This is a dummy command!",
         run=test,
-        flags=List[Flag](
-            Flag.string(
-                name="env",
-                shorthand="e",
-                usage="Environment."
-            )
-        ),
-        children=List[ArcPointer[Command]](
-            ArcPointer(Command(
+        flags=[Flag.string(name="env", shorthand="e", usage="Environment.")],
+        children=[
+            Command(
+                name="printer",
+                usage="Print the first arg.",
+                run=printer,
+            ),
+            Command(
                 name="say",
                 usage="Say something to someone",
                 run=say,
-                children=List[ArcPointer[Command]](
-                    hello_command,
-                    goodbye_command,
-                ),
-            )),
-            printer_command,
-        ),
-    ).execute()
+                children=[
+                    Command(
+                        name="hello",
+                        usage="Say hello to someone",
+                        run=say_hello,
+                    ),
+                    Command(
+                        name="goodbye",
+                        usage="Say goodbye to someone",
+                        run=say_goodbye,
+                    ),
+                ],
+            ),
+        ],
+    )
+    cli.execute()

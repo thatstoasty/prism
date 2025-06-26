@@ -2,67 +2,48 @@
 
 A Budding CLI Library!
 
+Prism is a Mojo library designed to help you build command-line interfaces (CLI) with ease. It provides a simple and intuitive way to define commands, subcommands, flags, and hooks, making it easier to create powerful CLI applications. This is primarily a pet project of mine, so expect it to be a bit rough around the edges. I plan to add more features and polish it up as I go along!
+
 Inspired by: `Cobra` and `urfave/cli`!
 
-![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-25.3-orange)
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-25.4-orange)
 ![Build Status](https://github.com/thatstoasty/prism/actions/workflows/build.yml/badge.svg)
 ![Test Status](https://github.com/thatstoasty/prism/actions/workflows/test.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## New to Mojo?
-
-If you haven't created a project before you can follow these steps to create your project!
-
-1. Install Modular's CLI tool, `Magic`: <https://docs.modular.com/magic/>.
-2. Run `magic init my-mojo-project --format mojoproject` to create a `Mojo` project directory.
-3. Change directory into your project directory with `cd my-mojo-project`.
-
-Now you're ready to add `prism` to your project!
-
-**NOTE**: Keep in mind that `Mojo` is intended to run either in an activated `Magic` shell or through a `Magic` command. Personally, I like to run my code via `Magic` commands like so:
-
-```bash
-magic run mojo path/to/hello_world.mojo
-```
-
-`Magic` will ensure that `mojo` is executing using the version defined in your `mojoproject.toml` as well as any dependencies defined. I would advise against trying to set up a global `Mojo` installation until you're comfortable with the project based pattern.
-
 ## Installation
 
 1. First, you'll need to configure your `mojoproject.toml` file to include my Conda channel. Add `"https://repo.prefix.dev/mojo-community"` to the list of channels.
-2. Next, add `prism` to your project's dependencies by running `magic add prism`.
-3. Finally, run `magic install` to install in `prism` and its dependencies. You should see the `.mojopkg` files in `$CONDA_PREFIX/lib/mojo/` (usually resolves to `.magic/envs/default/lib/mojo`).
+2. Next, add `prism` to your project's dependencies by running `pixi add prism`.
+3. Finally, run `pixi install` to install in `prism` and its dependencies. You should see the `.mojopkg` files in `$CONDA_PREFIX/lib/mojo/` (usually resolves to `.pixi/envs/default/lib/mojo`).
 
 ## Basic Command and Subcommand
 
 Here's an example of a basic command and subcommand!
 
 ```mojo
-from memory import ArcPointer
-from prism import Command, Context
+from prism import Command, Context, FlagSet
 
-
-fn test(ctx: Context) -> None:
+fn test(args: List[String], flags: FlagSet) -> None:
     print("Pass chromeria as a subcommand!")
 
-
-fn hello(ctx: Context) -> None:
+fn hello(args: List[String], flags: FlagSet) -> None:
     print("Hello from Chromeria!")
 
-
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="hello",
         description="This is a dummy command!",
         run=test,
-        children=List[ArcPointer[Command]](
-            ArcPointer(Command(
+        children=[
+            Command(
                 name="chromeria",
                 description="This is a dummy command!",
                 run=hello
-            ))
-        ),
-    ).execute()
+            )
+        ],
+    )
+    cli.execute()
 ```
 
 ![Chromeria](https://github.com/thatstoasty/prism/blob/main/doc/tapes/hello-chromeria.gif)
@@ -76,14 +57,14 @@ Due to the nature of self-referential structs, we need to use a smart pointer to
 `prism` provides the parsed arguments as part of the `ctx` argument.
 
 ```mojo
-from prism import Context
+from prism import FlagSet
 
-fn printer(ctx: Context) raises -> None:
-    if len(ctx.args) == 0:
+fn printer(args: List[String], flags: FlagSet) raises -> None:
+    if len(args) == 0:
         raise Error("No args provided.")
 
-    for arg in ctx.args:
-        print(arg[])
+    for arg in args:
+        print(arg)
 ```
 
 ## Command Aliases
@@ -94,12 +75,13 @@ Commands can also be aliased to enable different ways to call the same command. 
 from prism import Command
 
 fn main():
-    Command(
+    var cli = Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
-        aliases=List[String]("object", "thing")
-    ).execute()
+        aliases=["object", "thing"]
+    )
+    cli.execute()
 ```
 
 ![Aliases](https://github.com/thatstoasty/prism/blob/main/doc/tapes/aliases.gif)
@@ -109,22 +91,23 @@ fn main():
 Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
 
 ```mojo
-from prism import Command, Context
+from prism import Command, FlagSet
 
-fn pre_hook(ctx: Context) -> None:
+fn pre_hook(args: List[String], flags: FlagSet) -> None:
     print("Pre-hook executed!")
 
-fn post_hook(ctx: Context) -> None:
+fn post_hook(args: List[String], flags: FlagSet) -> None:
     print("Post-hook executed!")
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="printer",
         description="Base command.",
         run=printer,
         pre_run=pre_hook,
         post_run=post_hook,
-    ).execute()
+    )
+    cli.execute()
 ```
 
 ![Printer](https://github.com/thatstoasty/prism/blob/main/doc/tapes/printer.gif)
@@ -137,18 +120,19 @@ Commands can have typed flags added to them to enable different behaviors.
 from prism import Command, Flag
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="logger",
         description="Base command.",
         run=handler,
-        flags=List[Flag](
+        flags=[
             Flag.string(
                 name="type",
                 shorthand="t",
                 usage="Formatting type: [json, custom]",
             )
-        ),
-    ).execute()
+        ],
+    )
+    cli.execute()
 ```
 
 ![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
@@ -158,27 +142,27 @@ fn main() -> None:
 Flag values can also be retrieved from environment variables, if a value is not provided as an argument.
 
 ```mojo
-from prism import Command, Flag, Context
+from prism import Command, Flag, FlagSet
 
-fn test(ctx: Context) raises -> None:
-    var name = ctx.command[].flags.get_string("name")
-    if name:
-        print("Hello {}".format(name.value()))
+fn test(args: List[String], flags: FlagSet) raises -> None:
+    if name := flags.get_string("name"):
+        print("Hello ", name[])
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="greet",
         usage="Greet a user!",
         raising_run=test,
-        flags=List[Flag](
+        flags=[
             Flag.string(
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
                 environment_variable="NAME",
             )
-        ),
-    ).execute()
+        ],
+    )
+    cli.execute()
 ```
 
 ### Default flag values from files
@@ -186,28 +170,28 @@ fn main() -> None:
 Likewise, flag values can also be retrieved from a file as well, if a value is not provided as an argument.
 
 ```mojo
-from prism import Command, Flag
+from prism import Command, Flag, FlagSet
 import prism
 
-fn test(ctx: Context) raises -> None:
-    var name = ctx.command[].flags.get_string("name")
-    if name:
-        print("Hello {}".format(name.value()))
+fn test(args: List[String], flags: FlagSet) raises -> None:
+    if name := flags.get_string("name"):
+        print("Hello ", name[])
 
 fn main() -> None:
-    root = Command(
+    var cli = Command(
         name="greet",
         usage="Greet a user!",
         raising_run=test,
-        flags=List[Flag](
+        flags=[
             Flag.string(
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
                 file_path="~/.myapp/config",
             )
-        ),
-    ).execute()
+        ],
+    )
+    cli.execute()
 ```
 
 ### Flag Precedence
@@ -227,28 +211,29 @@ Flags and hooks can also be inherited by children commands! This can be useful f
 from prism import Command, Flag
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="nested",
         description="Base command.",
         run=base,
-        children=List[ArcPointer[Command]](
-            ArcPointer(Command(
+        children=[
+            Command(
                 name="get",
                 description="Base command for getting some data.",
                 run=print_information,
                 persistent_pre_run=pre_hook,
                 persistent_post_run=post_hook,
-            ))
-        ),
-        flags=List[Flag](
+            )
+        ],
+        flags=[
             Flag.bool(
                 name="lover",
                 shorthand="l",
                 usage="Are you an animal lover?",
                 persistent=True,
             )
-        ),
-    ).execute()
+        ],
+    )
+    cli.execute()
 ```
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/main/doc/tapes/persistent.gif)
@@ -260,23 +245,24 @@ Flags can be grouped together to enable relationships between them. This can be 
 By default flags are considered optional. If you want your command to report an error when a flag has not been set, mark it as required:
 
 ```mojo
-from prism import Command, Flag, Context
+from prism import Command, Flag, FlagSet
 
 fn main():
-    Command(
+    var cli = Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
-        aliases=List[String]("object", "thing"),
-        flags=List[Flag](
+        aliases=["object", "thing"],
+        flags=[
             Flag.bool(
                 name="required",
                 shorthand="r",
                 usage="Always required.",
                 required=True,
             )
-        ),
-    ).execute()
+        ],
+    )
+    cli.execute()
 ```
 
 ### Flag Groups
@@ -288,12 +274,12 @@ from prism import Command, Flag
 import prism
 
 fn main():
-    Command(
+    var cli = Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
-        aliases=List[String]("object", "thing"),
-        flags=List[Flag](
+        aliases=["object", "thing"],
+        flags=[
             Flag.uint32(
                 name="color",
                 shorthand="c",
@@ -305,24 +291,24 @@ fn main():
                 shorthand="f",
                 usage="Text formatting",
             ),
-        ),
-        flags_required_together=List[String]("color", "formatting"),
-    ).execute()
+        ],
+        flags_required_together=["color", "formatting"],
+    )
+    cli.execute()
 ```
 
 You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
 
 ```mojo
 from prism import Command, Flag
-import prism
 
 fn main():
-   Command(
+   var cli = Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
-        aliases=List[String]("object", "thing"),
-        flags=List[Flag](
+        aliases=["object", "thing"],
+        flags=[
             Flag.uint32(
                 name="color",
                 shorthand="c",
@@ -335,9 +321,10 @@ fn main():
                 usage="Text color",
                 default=0x3464eb,
             ),
-        ),
-        mutually_exclusive_flags=List[String]("color", "hue"),
-    ).execute()
+        ],
+        mutually_exclusive_flags=["color", "hue"],
+    )
+    cli.execute()
 ```
 
 If you want to require at least one flag from a group to be present, you can use `mark_flags_one_required`. This can be combined with `mark_flags_mutually_exclusive` to enforce exactly one flag from a given group:
@@ -346,12 +333,12 @@ If you want to require at least one flag from a group to be present, you can use
 from prism import Command, Flag
 
 fn main():
-   print_tool = Command(
+   var cli = Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
-        aliases=List[String]("object", "thing"),
-        flags=List[Flag](
+        aliases=["object", "thing"],
+        flags=[
             Flag.uint32(
                 name="color",
                 shorthand="c",
@@ -363,10 +350,11 @@ fn main():
                 shorthand="f",
                 usage="Text formatting",
             ),
-        ),
-        one_required_flags=List[String]("color", "formatting"),
-        mutually_exclusive_flags=List[String]("color", "formatting"),
-    ).execute()
+        ],
+        one_required_flags=["color", "formatting"],
+        mutually_exclusive_flags=["color", "formatting"],
+    )
+    cli.execute()
 ```
 
 In these cases:
@@ -386,12 +374,12 @@ from prism import Command, Flag
 import prism
 
 fn main():
-    Command(
+    var cli = Command(
         name="tool",
         description="This is a dummy command!",
         run=tool_func,
-        aliases=List[String]("object", "thing"),
-        flags=List[Flag](
+        aliases=["object", "thing"],
+        flags=[
             Flag.string(
                 name="color",
                 shorthand="c",
@@ -403,9 +391,10 @@ fn main():
                 shorthand="f",
                 usage="Text formatting",
             ),
-        ),
+        ],
         suggest=True,
-    ).execute()
+    )
+    cli.execute()
 ```
 
 If you run the command with an invalid flag, it will suggest the closest match to the flag you provided.
@@ -448,13 +437,13 @@ If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 Commands are configured to accept a `--help` and `-h` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed. You can use the `help` argument of the `Command` constructor to configure the help function, and the help flag itself.
 
 ```mojo
-from prism import Command, Context, Flag, Help
+from prism import Command, FlagSet, Flag, Help
 
-fn help_func(ctx: Context) -> String:
+fn help_func(args: List[String], flags: FlagSet) -> String:
     return "My help function."
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="hello",
         description="This is a dummy command!",
         run=test,
@@ -462,7 +451,8 @@ fn main() -> None:
             flag=Flag.bool(name="custom-help", shorthand="ch", usage="My Cool Help Flag."),
             action=help_func,
         ),
-    ).execute()
+    )
+    cli.execute()
 ```
 
 ![Help](https://github.com/thatstoasty/prism/blob/main/doc/tapes/help.gif)
@@ -472,16 +462,16 @@ fn main() -> None:
 Commands can be configured to accept `--version` and `-v` flag to run a version function. This will print the result of the version function using the output writer that's configured for the command. You can also configure the flag and function to run when the version flag is passed by using the `version` argument of the `Command` constructor.
 
 ```mojo
-from prism import Command, Context, Version, Flag
+from prism import Command, FlagSet, Version, Flag
 
-fn test(ctx: Context) -> None:
+fn test(args: List[String], flags: FlagSet) -> None:
     print("Pass -v to see the version!")
 
-fn version(ctx: Context) -> String:
-    return "MyCLI version: " + ctx.command[].version.value().value
+fn version(version: String) -> String:
+    return "MyCLI version: " + version
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="hello",
         usage="This is a dummy command!",
         run=test,
@@ -490,7 +480,8 @@ fn main() -> None:
             flag=Flag.bool(name="custom-version", shorthand="cv", usage="My Cool Version Flag."),
             action=version
         ),
-    ).execute()
+    )
+    cli.execute()
 ```
 
 ## Output Redirection
@@ -498,8 +489,7 @@ fn main() -> None:
 The standard output and error output behavior can be customized by providing writer functions. By default, the writer is set to `print` to stdout and stderr, but you can provide custom writer functions that satisfy the expected function signatures.
 
 ```mojo
-from memory import ArcPointer
-from prism import Command, Context
+from prism import Command, FlagSet
 from sys import stderr
 
 fn my_output_writer(arg: String):
@@ -508,38 +498,40 @@ fn my_output_writer(arg: String):
 fn my_error_writer(arg: String):
     print(arg, file=stderr)
 
-fn test(ctx: Context) -> None:
+fn test(args: List[String], flags: FlagSet) -> None:
     print("Pass -v to see the version!")
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="hello",
         usage="This is a dummy command!",
         run=test,
         version=version,
         output_writer=my_output_writer,
         error_writer=my_error_writer,
-    ).execute()
+    )
+    cli.execute()
 ```
 
 ## Reading arguments in from stdin
 
-Commands can additionally read arguments in from `stdin`. Set `read_from_stdin` to `True` and `stdin` will also be read and parsed for arguments.
+Commands can additionally read arguments in from `stdin`. Set `read_from_stdin` to `True` and `stdin` will also be read and parsed for arguments. This should only be set on the root command.
 
 ```mojo
-from prism import Command, Context
+from prism import Command, FlagSet
 
-fn test(ctx: Context) -> None:
-    for arg in ctx.args:
-        print("Received:", arg[])
+fn test(args: List[String], flags: FlagSet) -> None:
+    for arg in args:
+        print("Received:", arg)
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="hello",
         usage="This is a dummy command!",
         run=test,
         read_from_stdin=True
-    ).execute()
+    )
+    cli.execute()
 ```
 
 ## Exiting the program
@@ -547,29 +539,29 @@ fn main() -> None:
 By default, `prism` will exit with a status code of `1` if any `Errors` are raised during the execution of the program. However, the exit behavior can be customized by providing an exit function to the `Command` struct. It's a bit manual with error handling now, but it will be improved in the future.
 
 ```mojo
-from memory import ArcPointer
-from prism import Command, Context
+from prism import Command, FlagSet
 from sys import exit
 
 
-fn test(ctx: Context) raises -> None:
+fn test(args: List[String], flags: FlagSet) raises -> None:
     raise Error("Error: Exit Code 2")
 
 
 fn my_exit(e: Error) -> None:
-    if String(e) == "Error: Exit Code 2":
+    if e.as_string_slice() == "Error: Exit Code 2":
         exit(2)
     else:
         exit(1)
 
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="hello",
         usage="This is a dummy command!",
         raising_run=test,
         exit=my_exit,
-    ).execute()
+    )
+    cli.execute()
 ```
 
 ## Notes
@@ -578,7 +570,7 @@ fn main() -> None:
 
 ## TODO
 
-I am considering restructuring the code to make use of a top level `CLI` or `App` struct that can be used to manage the commands and subcommands. There are some command configurations which only make sense at the top level, such as the `read_from_stdin` flag, and we always make sure to execute from the top level command when `command.execute()` is called.
+Should error and output writers even be supported for commands? It seems like unneccessary complexity to have them for every command, when they can be set at the top level. Perhaps we can make it so that the top level command has a default writer, and child commands can override it if needed.
 
 ### Features
 
@@ -596,3 +588,5 @@ I am considering restructuring the code to make use of a top level `CLI` or `App
 - Commands without children can be created at compile time, but those with them cannot. Perhaps I can find a way to make this work.
 
 ## Bugs
+
+- The `CLI.help` is temporarily no longer optional due to a bug in Mojo. It should be optional in order to disable the help flag, but the optional argument in the constructor with a default value leads to an issue where the pointer to the help function is null.

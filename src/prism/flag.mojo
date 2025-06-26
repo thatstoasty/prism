@@ -1,13 +1,12 @@
-from collections import Dict
 from prism._flag_set import Annotation
 
 
-alias FlagActionFn = fn (ctx: Context, value: String) raises -> None
+alias FlagActionFn = fn (String) raises -> None
 """The type of a function that runs after a flag has been processed."""
 
 
-@value
-struct FType(EqualityComparable, Movable, Copyable, ExplicitlyCopyable):
+@fieldwise_init
+struct FType(Copyable, EqualityComparable, ExplicitlyCopyable, Movable):
     """Flag types enum helper."""
 
     var value: String
@@ -123,8 +122,8 @@ struct FType(EqualityComparable, Movable, Copyable, ExplicitlyCopyable):
 
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
 # needing to cast values to and from string.
-@value
-struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Writable):
+@fieldwise_init
+struct Flag(Copyable, ExplicitlyCopyable, Movable, Representable, Stringable, Writable):
     """Represents a flag that can be passed via the command line.
     Flags are passed in via `--name` or `-shorthand` and can have a value associated with them.
     """
@@ -283,16 +282,16 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             ")",
         )
 
-    fn set(mut self, value: String) -> None:
+    fn set(mut self, value: StringSlice) -> None:
         """Sets the value of the flag.
 
         Args:
             value: The value to set.
         """
-        self.value = value
+        self.value = String(value)
         self.changed = True
 
-    fn get_with_transform[T: CollectionElement, //, transform: fn (value: String) -> T](self) -> Optional[T]:
+    fn get_with_transform[T: Movable & Copyable, //, transform: fn (value: StringSlice) -> T](self) -> Optional[T]:
         """Returns the value of the flag with a transformation applied to it.
 
         Parameters:
@@ -334,8 +333,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn string(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[String] = None,
         environment_variable: Optional[String] = None,
@@ -367,9 +366,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.String,
             environment_variable=environment_variable,
@@ -381,8 +380,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn bool(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[Bool] = None,
         environment_variable: Optional[String] = None,
@@ -414,9 +413,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.Bool,
             environment_variable=environment_variable,
@@ -428,8 +427,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn int(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[Int] = None,
         environment_variable: Optional[String] = None,
@@ -461,9 +460,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.Int,
             environment_variable=environment_variable,
@@ -475,8 +474,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn int8(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[Int8] = None,
         environment_variable: Optional[String] = None,
@@ -508,9 +507,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.Int8,
             environment_variable=environment_variable,
@@ -522,8 +521,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn int16(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[Int16] = None,
         environment_variable: Optional[String] = None,
@@ -555,9 +554,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.Int16,
             environment_variable=environment_variable,
@@ -569,8 +568,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn int32(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[Int32] = None,
         environment_variable: Optional[String] = None,
@@ -602,9 +601,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.Int32,
             environment_variable=environment_variable,
@@ -616,8 +615,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn int64(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[Int64] = None,
         environment_variable: Optional[String] = None,
@@ -649,9 +648,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.Int64,
             environment_variable=environment_variable,
@@ -663,8 +662,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn uint(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[UInt] = None,
         environment_variable: Optional[String] = None,
@@ -696,9 +695,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.UInt,
             environment_variable=environment_variable,
@@ -710,8 +709,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn uint8(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[UInt8] = None,
         environment_variable: Optional[String] = None,
@@ -743,9 +742,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.UInt8,
             environment_variable=environment_variable,
@@ -757,8 +756,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn uint16(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[UInt16] = None,
         environment_variable: Optional[String] = None,
@@ -790,9 +789,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.UInt16,
             environment_variable=environment_variable,
@@ -804,8 +803,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn uint32(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[UInt32] = None,
         environment_variable: Optional[String] = None,
@@ -837,9 +836,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.UInt32,
             environment_variable=environment_variable,
@@ -851,8 +850,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn uint64(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[UInt64] = None,
         environment_variable: Optional[String] = None,
@@ -884,9 +883,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.UInt64,
             environment_variable=environment_variable,
@@ -898,8 +897,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn float16(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[Float16] = None,
         environment_variable: Optional[String] = None,
@@ -931,9 +930,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.Float16,
             environment_variable=environment_variable,
@@ -945,8 +944,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn float32(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[Float32] = None,
         environment_variable: Optional[String] = None,
@@ -978,9 +977,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.Float32,
             environment_variable=environment_variable,
@@ -992,8 +991,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn float64(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[Float64] = None,
         environment_variable: Optional[String] = None,
@@ -1025,9 +1024,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.Float64,
             environment_variable=environment_variable,
@@ -1039,8 +1038,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn string_list(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[List[String]] = None,
         environment_variable: Optional[String] = None,
@@ -1072,9 +1071,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.StringList,
             environment_variable=environment_variable,
@@ -1086,8 +1085,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn int_list(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[List[Int, True]] = None,
         environment_variable: Optional[String] = None,
@@ -1119,9 +1118,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.IntList,
             environment_variable=environment_variable,
@@ -1133,8 +1132,8 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
 
     @staticmethod
     fn float64_list(
-        name: String,
-        usage: String,
+        name: StringSlice,
+        usage: StringSlice,
         shorthand: String = "",
         default: Optional[List[Float64, True]] = None,
         environment_variable: Optional[String] = None,
@@ -1166,9 +1165,9 @@ struct Flag(Representable, Movable, Copyable, ExplicitlyCopyable, Stringable, Wr
             default_value = None
 
         return Flag(
-            name=name,
+            name=String(name),
             shorthand=shorthand,
-            usage=usage,
+            usage=String(usage),
             default=default_value,
             type=FType.Float64List,
             environment_variable=environment_variable,

@@ -1,4 +1,3 @@
-from collections import Dict
 from prism._flag_group import (
     validate_required_flag_group,
     get_set_flags,
@@ -10,12 +9,7 @@ import testing
 
 
 fn make_test_data(required: Bool, alternative: Bool) -> Dict[String, Dict[String, Bool]]:
-    var data = Dict[String, Dict[String, Bool]]()
-    var entry = Dict[String, Bool]()
-    entry["required"] = required
-    entry["alternative"] = alternative
-    data["group1"] = entry
-    return data^
+    return {"group1": {"required": required, "alternative": alternative}}
 
 
 fn test_validate_required_flag_group() raises -> None:
@@ -54,17 +48,17 @@ fn test_validate_mutually_exclusive_flag_group_multiple_set() raises -> None:
 fn test_get_set_flags() raises -> None:
     var data = make_test_data(False, False)
     for pair in data.items():
-        testing.assert_equal(get_set_flags(pair[]), List[String](), "Expected no flags to be set.")
+        testing.assert_equal(get_set_flags(pair), [], "Expected no flags to be set.")
 
     data["group1"]["required"] = True
     for pair in data.items():
-        testing.assert_equal(get_set_flags(pair[]), List[String]("required"), "Expected the required flag to be set.")
+        testing.assert_equal(get_set_flags(pair), ["required"], "Expected the required flag to be set.")
 
     data["group1"]["alternative"] = True
     for pair in data.items():
         testing.assert_equal(
-            get_set_flags(pair[]),
-            List[String]("required", "alternative"),
+            get_set_flags(pair),
+            ["required", "alternative"],
             "Expected the required and alternative flag to be set.",
         )
 
@@ -74,7 +68,7 @@ fn test_extract_keys() raises -> None:
 
     for pair in data.items():
         testing.assert_equal(
-            extract_keys(pair[]),
-            List[String]("alternative", "required"),
+            extract_keys(pair),
+            ["alternative", "required"],
             "Expected the alternative and required flag names.",
         )

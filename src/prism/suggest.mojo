@@ -1,7 +1,7 @@
 import math.math
 
 
-fn jaro_distance(a: String, b: String) -> Float64:
+fn jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
     """Measure of similarity between two strings. It returns a
     value between 0 and 1, where 1 indicates identical strings and 0 indicates
     completely different strings.
@@ -23,13 +23,11 @@ fn jaro_distance(a: String, b: String) -> Float64:
     if len(a) == 0 or len(b) == 0:
         return 0.0
 
-    var hash_a = List[Bool]()
-    var hash_b = List[Bool]()
-    hash_a.resize(len(a), False)
-    hash_b.resize(len(b), False)
+    var hash_a = List[Bool, True](length=len(a), fill=False)
+    var hash_b = List[Bool, True](length=len(b), fill=False)
 
     var max_distance = Int(max(0, math.floor(max(len(a), len(b)) / 2.0) - 1))
-    var matches = Float64(0)
+    var matches: Float64 = 0.0
     for i in range(len(a)):
         var start = Int(max(0, Float64(i - max_distance)))
         var end = Int(min(len(b) - 1, Float64(i + max_distance)))
@@ -46,7 +44,7 @@ fn jaro_distance(a: String, b: String) -> Float64:
     if matches == 0:
         return 0
 
-    var transpositions = Float64(0)
+    var transpositions: Float64 = 0.0
     var j = 0
     for i in range(len(a)):
         if not hash_a[i]:
@@ -61,7 +59,7 @@ fn jaro_distance(a: String, b: String) -> Float64:
     return ((matches / len(a)) + (matches / len(b)) + ((matches - transpositions) / matches)) / 3.0
 
 
-fn jaro_winkler(a: String, b: String) -> Float64:
+fn jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
     """Jaro-Winkler distance between two strings. It returns a value between 0 and 1,
     where 1 indicates identical strings and 0 indicates completely different strings.
 
@@ -85,7 +83,7 @@ fn jaro_winkler(a: String, b: String) -> Float64:
         return jaro_dist
 
     var prefix = Int(min(len(a), min(PREFIX_SIZE, len(b))))
-    var prefix_match = Float64(0)
+    var prefix_match: Float64 = 0.0
     for i in range(prefix):
         if a[i] == b[i]:
             prefix_match += 1.0
@@ -95,7 +93,7 @@ fn jaro_winkler(a: String, b: String) -> Float64:
     return jaro_dist + 0.1 * prefix_match * (1.0 - jaro_dist)
 
 
-fn suggest_flag(flags: List[Flag], flag_name: String, hide_help: Bool = False) -> String:
+fn suggest_flag(flags: Span[Flag], flag_name: StringSlice, hide_help: Bool = False) -> String:
     """Suggests a flag based on the provided string.
 
     Args:
@@ -107,19 +105,15 @@ fn suggest_flag(flags: List[Flag], flag_name: String, hide_help: Bool = False) -
         The suggested flag.
     """
     # TODO: Implement hide_help and hide_version eventually.
-    var distance = Float64(0)
-    var suggestion = String("")
+    var distance: Float64 = 0.0
+    var suggestion = String()
 
     for flag in flags:
-        var flag_names = flag[].names()
-        # if not hide_help and Flag.help_flag() != None:
-        #     flag_names.append(Flag.help_flag().names())
-
-        for name in flag_names:
-            var new_distance = jaro_winkler(name[], flag_name)
+        for name in flag.names():
+            var new_distance = jaro_winkler(name, flag_name)
             if new_distance > distance:
                 distance = new_distance
-                suggestion = name[]
+                suggestion = name
 
     if len(suggestion) == 1:
         suggestion = String("-", suggestion)
@@ -129,7 +123,7 @@ fn suggest_flag(flags: List[Flag], flag_name: String, hide_help: Bool = False) -
     return suggestion^
 
 
-fn flag_from_error(error: Error) -> Optional[String]:
+fn flag_from_error(error: Error) -> Optional[StringSlice[ImmutableAnyOrigin]]:
     """Returns the flag from the error message.
 
     Args:
@@ -138,7 +132,7 @@ fn flag_from_error(error: Error) -> Optional[String]:
     Returns:
         The flag.
     """
-    var message = String(error)
+    var message = error.as_string_slice()
     var index = message.find("Name: ")
     if index == -1:
         return None

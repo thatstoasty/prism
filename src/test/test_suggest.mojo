@@ -45,13 +45,11 @@ fn test_jaro_distance() raises:
     )
 
     for test_case in test_cases:
-        var result = jaro_distance(test_case[].a, test_case[].b)
+        var result = jaro_distance(test_case.a, test_case.b)
         testing.assert_almost_equal(
             result,
-            test_case[].expected,
-            String(
-                "Expected: ", test_case[].expected, ", got: ", result, " for ", test_case[].a, " and ", test_case[].b
-            ),
+            test_case.expected,
+            String("Expected: ", test_case.expected, ", got: ", result, " for ", test_case.a, " and ", test_case.b),
         )
 
 
@@ -120,13 +118,11 @@ fn test_jaro_winkler() raises:
     )
 
     for test_case in test_cases:
-        var result = jaro_winkler(test_case[].a, test_case[].b)
+        var result = jaro_winkler(test_case.a, test_case.b)
         testing.assert_almost_equal(
             result,
-            test_case[].expected,
-            String(
-                "Expected: ", test_case[].expected, ", got: ", result, " for ", test_case[].a, " and ", test_case[].b
-            ),
+            test_case.expected,
+            String("Expected: ", test_case.expected, ", got: ", result, " for ", test_case.a, " and ", test_case.b),
         )
 
 
@@ -168,11 +164,11 @@ fn test_suggest_flag() raises:
     )
 
     for test_case in test_cases:
-        var result = suggest_flag(flags, test_case[].provided)
+        var result = suggest_flag(Span(flags), test_case.provided)
         testing.assert_equal(
             result,
-            test_case[].expected,
-            String("Expected: ", test_case[].expected, ", got: ", result, " for ", test_case[].provided),
+            test_case.expected,
+            String("Expected: ", test_case.expected, ", got: ", result, " for ", test_case.provided),
         )
 
 

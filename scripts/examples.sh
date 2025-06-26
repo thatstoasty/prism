@@ -5,37 +5,37 @@ PACKAGE_NAME=prism
 mkdir -p $TEMP_DIR
 
 echo "[INFO] Building $PACKAGE_NAME package and example binaries."
-magic run mojo package src/$PACKAGE_NAME -o $TEMP_DIR/$PACKAGE_NAME.mojopkg
+pixi run mojo package src/$PACKAGE_NAME -o $TEMP_DIR/$PACKAGE_NAME.mojopkg
 cp -a examples/. $TEMP_DIR
-magic run mojo build $TEMP_DIR/aliases.mojo -o $TEMP_DIR/aliases
-magic run mojo build $TEMP_DIR/hello_world.mojo -o $TEMP_DIR/hello_world
-magic run mojo build $TEMP_DIR/fg_parent.mojo -o $TEMP_DIR/parent
-magic run mojo build $TEMP_DIR/fg_child.mojo -o $TEMP_DIR/child
-magic run mojo build $TEMP_DIR/arg_validators.mojo -o $TEMP_DIR/validators
-magic run mojo build $TEMP_DIR/alt_flag_values.mojo -o $TEMP_DIR/alt_flag_values
-magic run mojo build $TEMP_DIR/flag_action.mojo -o $TEMP_DIR/flag_action
-magic run mojo build $TEMP_DIR/list_flags.mojo -o $TEMP_DIR/list_flags
-magic run mojo build $TEMP_DIR/version.mojo -o $TEMP_DIR/version
-magic run mojo build $TEMP_DIR/exit.mojo -o $TEMP_DIR/exit
-magic run mojo build $TEMP_DIR/multiple_bool_flag.mojo -o $TEMP_DIR/multiple_bool_flag
-magic run mojo build $TEMP_DIR/stdin.mojo -o $TEMP_DIR/stdin
-magic run mojo build $TEMP_DIR/suggest.mojo -o $TEMP_DIR/suggest
-magic run mojo build $TEMP_DIR/full_api.mojo -o $TEMP_DIR/full_api
+pixi run mojo build $TEMP_DIR/aliases.mojo -o $TEMP_DIR/aliases
+pixi run mojo build $TEMP_DIR/hello_world.mojo -o $TEMP_DIR/hello_world
+pixi run mojo build $TEMP_DIR/fg_parent.mojo -o $TEMP_DIR/parent
+pixi run mojo build $TEMP_DIR/fg_child.mojo -o $TEMP_DIR/child
+pixi run mojo build $TEMP_DIR/arg_validators.mojo -o $TEMP_DIR/validators
+pixi run mojo build $TEMP_DIR/alt_flag_values.mojo -o $TEMP_DIR/alt_flag_values
+pixi run mojo build $TEMP_DIR/flag_action.mojo -o $TEMP_DIR/flag_action
+pixi run mojo build $TEMP_DIR/list_flags.mojo -o $TEMP_DIR/list_flags
+pixi run mojo build $TEMP_DIR/version.mojo -o $TEMP_DIR/version
+pixi run mojo build $TEMP_DIR/exit.mojo -o $TEMP_DIR/exit
+pixi run mojo build $TEMP_DIR/multiple_bool_flag.mojo -o $TEMP_DIR/multiple_bool_flag
+pixi run mojo build $TEMP_DIR/stdin.mojo -o $TEMP_DIR/stdin
+pixi run mojo build $TEMP_DIR/suggest.mojo -o $TEMP_DIR/suggest
+pixi run mojo build $TEMP_DIR/full_api.mojo -o $TEMP_DIR/full_api
 
 
 echo "[INFO] Running examples..."
 # Need to run these first examples as part of a mojo project as they have external dependencies.
 # printer is a portable binary, but nested and persistent_flags are not because they depend on a python library.
 # cd examples/printer
-# magic run mojo build printer.mojo
+# pixi run mojo build printer.mojo
 # ./printer "sample-text" --formatting=underline
 
 # cd ../requests
-# magic run mojo build nested.mojo
-# magic run nested get cat --count 3 -l
-# magic run mojo build persistent_flags.mojo -o persistent
-# magic run persistent get cat --count 2 --lover
-# magic run persistent get dog
+# pixi run mojo build nested.mojo
+# pixi run nested get cat --count 3 -l
+# pixi run mojo build persistent_flags.mojo -o persistent
+# pixi run persistent get cat --count 2 --lover
+# pixi run persistent get dog
 
 cd ../..
 

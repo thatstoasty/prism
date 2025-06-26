@@ -1,4 +1,4 @@
-from collections.dict import Dict, DictEntry
+from collections.dict import DictEntry
 from prism.flag import Flag
 from prism._flag_set import FlagSet, Annotation
 
@@ -17,14 +17,14 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -
     # If it's unset then add to a list to check the condition of all required flags being set.
     for pair in data.items():
         var unset = List[String]()
-        for flag in pair[].value.items():
-            if not flag[].value:
-                unset.append(flag[].key)
+        for flag in pair.value.items():
+            if not flag.value:
+                unset.append(flag.key)
 
-        if len(unset) == len(pair[].value) or len(unset) == 0:
+        if len(unset) == len(pair.value) or len(unset) == 0:
             continue
 
-        var keys = extract_keys(pair[])
+        var keys = extract_keys(pair)
         raise Error(
             "If any flags in the group, ",
             keys.__str__(),
@@ -45,8 +45,8 @@ fn get_set_flags(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:
     """
     var set = List[String]()
     for flag in pair.value.items():
-        if flag[].value:
-            set.append(flag[].key)
+        if flag.value:
+            set.append(flag.key)
     return set^
 
 
@@ -61,7 +61,7 @@ fn extract_keys(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:
     """
     var keys = List[String]()
     for key in pair.value.keys():
-        keys.append(key[])
+        keys.append(key)
     sort(keys)
     return keys^
 
@@ -78,11 +78,11 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) rais
     """
     # Check if at least one key is set.
     for pair in data.items():
-        var set = get_set_flags(pair[])
+        var set = get_set_flags(pair)
         if len(set) >= 1:
             continue
 
-        var keys = extract_keys(pair[])
+        var keys = extract_keys(pair)
         raise Error(StaticString("At least one of the flags in the group {} is required.").format(keys.__str__()))
 
 
@@ -98,10 +98,10 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
     """
     # Check if more than one mutually exclusive flag is set.
     for pair in data.items():
-        var set = get_set_flags(pair[])
+        var set = get_set_flags(pair)
         if len(set) == 0 or len(set) == 1:
             continue
 
-        var keys = extract_keys(pair[])
+        var keys = extract_keys(pair)
         alias msg = StaticString("If any flags in the group {} are set none of the others can be; {} were all set.")
         raise Error(msg.format(keys.__str__(), set.__str__()))

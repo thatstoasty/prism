@@ -1,29 +1,27 @@
-from memory import ArcPointer
-from prism import Command, Context, Flag
+from prism import Command, FlagSet, Flag
 import prism
 
 
-fn test(ctx: Context) raises -> None:
-    var host = ctx.command[].flags.get_string("host")
-    var port = ctx.command[].flags.get_string("port")
-    var uri = ctx.command[].flags.get_string("uri")
+fn test(args: List[String], flags: FlagSet) raises -> None:
+    var host = flags.get_string("host")
+    var port = flags.get_string("port")
 
-    if uri:
-        print("URI:", uri.value())
+    if uri := flags.get_string("uri"):
+        print("URI:", uri[])
     elif host and port:
-        print(host.value() + ":" + port.value())
+        print(host[] + ":" + port[])
 
 
-fn tool_func(ctx: Context) -> None:
+fn tool_func(args: List[String], flags: FlagSet) -> None:
     print("My tool!")
 
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="my",
         usage="This is a dummy command!",
         raising_run=test,
-        flags=List[Flag](
+        flags=[
             Flag.bool(
                 name="required",
                 shorthand="r",
@@ -45,7 +43,8 @@ fn main() -> None:
                 shorthand="u",
                 usage="URI",
             ),
-        ),
-        mutually_exclusive_flags=List[String]("host", "uri"),
-        flags_required_together=List[String]("host", "port"),
-    ).execute()
+        ],
+        mutually_exclusive_flags=["host", "uri"],
+        flags_required_together=["host", "port"],
+    )
+    cli.execute()

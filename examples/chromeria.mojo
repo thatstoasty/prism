@@ -1,21 +1,19 @@
-from memory import ArcPointer
-from prism import Command, Context
+from prism import Command, Flag, FlagSet
 
 
-fn test(ctx: Context) -> None:
+fn test(args: List[String], flags: FlagSet) -> None:
     print("Pass chromeria as a subcommand!")
 
 
-fn hello(ctx: Context) -> None:
+fn hello(args: List[String], flags: FlagSet) -> None:
     print("Hello from Chromeria!")
 
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="hello",
         usage="This is a dummy command!",
         run=test,
-        children=List[ArcPointer[Command]](
-            ArcPointer(Command(name="chromeria", usage="This is a dummy command!", run=hello))
-        ),
-    ).execute()
+        children=[Command(name="chromeria", usage="This is a dummy command!", run=hello)],
+    )
+    cli.execute()
