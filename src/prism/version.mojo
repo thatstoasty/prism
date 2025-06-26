@@ -1,24 +1,20 @@
-from prism.context import Context
-
-
-alias VersionFn = fn (Context) -> String
+alias VersionFn = fn (String) -> String
 """The function to call when the version flag is passed."""
 
 
-fn default_version_writer(ctx: Context) -> String:
-    """Writes the version information for the command.
+fn default_version_writer(version: String) -> String:
+    """Writes the version information for the CLI.
 
     Args:
-        ctx: The context of the command to generate version information for.
+        version: The version of the command.
 
     Returns:
         The version information for the command.
     """
-    return String(ctx.command[].name, ": ", ctx.command[].version.value().value)
+    return version.copy()
 
 
-@value
-struct Version(CollectionElement):
+struct Version(Copyable, ExplicitlyCopyable, Movable):
     """A struct representing the version of a command."""
 
     var value: String
@@ -45,3 +41,11 @@ struct Version(CollectionElement):
         self.value = version
         self.flag = flag
         self.action = action
+
+    fn copy(self) -> Self:
+        """Returns a copy of the `Version` instance.
+
+        Returns:
+            A new `Version` instance with the same value, flag, and action.
+        """
+        return Version(self.value.copy(), flag=self.flag.copy(), action=self.action)

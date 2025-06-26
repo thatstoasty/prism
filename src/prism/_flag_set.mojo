@@ -1,5 +1,5 @@
 from collections.list import _ListIter
-from collections.dict import Dict, DictEntry
+from collections.dict import DictEntry
 from utils import Variant
 import os
 from prism.flag import Flag, FlagActionFn, FType
@@ -11,14 +11,13 @@ from prism._flag_group import (
     validate_mutually_exclusive_flag_group,
 )
 
-
-alias FlagVisitorFn = fn (Flag) capturing -> None
+alias FlagVisitorFn = fn (Flag) -> None
 """Function perform some action while visiting all flags."""
-alias FlagVisitorRaisingFn = fn (Flag) capturing raises -> None
+alias FlagVisitorRaisingFn = fn (Flag) raises -> None
 """Function perform some action while visiting all flags. Can raise."""
 
 
-@value
+@fieldwise_init
 @register_passable("trivial")
 struct ParserState:
     var value: UInt8
@@ -34,7 +33,7 @@ struct ParserState:
 
 
 # Flag Group annotations
-@value
+@fieldwise_init
 struct Annotation:
     var value: String
 
@@ -53,8 +52,7 @@ struct Annotation:
         return self.value != other.value
 
 
-@value
-struct FlagSet(Writable, Stringable, Boolable):
+struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringable, Writable):
     """A set of flags."""
 
     var flags: List[Flag]
@@ -62,8 +60,22 @@ struct FlagSet(Writable, Stringable, Boolable):
 
     @implicit
     fn __init__(out self, flags: List[Flag] = List[Flag]()):
-        """Initializes a new FlagSet."""
+        """Initializes a new FlagSet.
+
+        Args:
+            flags: The flags to initialize the flag set with. Defaults to an empty list.
+        """
         self.flags = flags
+
+    @always_inline
+    fn __init__(out self, owned *values: Flag, __list_literal__: () = ()):
+        """Constructs a list from the given values.
+
+        Args:
+            values: The values to populate the list with.
+            __list_literal__: Tell Mojo to use this method for list literals.
+        """
+        self.flags = List[Flag](elements=values^)
 
     fn __bool__(self) -> Bool:
         return Bool(self.flags)
@@ -103,8 +115,11 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
         writer.write(self.flags.__str__())
 
-    fn set_annotation[annotation: Annotation](mut self, name: String, value: String) raises -> None:
+    fn set_annotation[annotation: Annotation](mut self, name: StringSlice, value: String) raises -> None:
         """Sets an annotation for a flag.
+
+        Parameters:
+            annotation: The annotation to set for the flag.
 
         Args:
             name: The name of the flag to set the annotation for.
@@ -144,9 +159,9 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
 
         @parameter
-        fn set_flag_value(name: String, value: String) raises -> None:
+        fn set_flag_value(mut flags: FlagSet, name: StringSlice, value: StringSlice) raises -> None:
             # Set the value of the flag.
-            var flag = self.lookup(name)
+            var flag = flags.lookup(name)
             if not flag:
                 alias msg = StaticString(
                     "FlagSet.from_args: Failed to set flag, {}, with value: {}. Flag could not be found."
@@ -179,7 +194,7 @@ struct FlagSet(Writable, Stringable, Boolable):
             # Parse out a flag and set the value on the flag.
             elif state == ParserState.PARSE_FLAG:
                 name, value, increment_by = parser.parse_flag(argument, self)
-                set_flag_value(name, value)
+                set_flag_value(self, name, value)
                 parser.index += increment_by
                 state = ParserState.FIND_FLAG
 
@@ -187,21 +202,21 @@ struct FlagSet(Writable, Stringable, Boolable):
             elif state == ParserState.PARSE_SHORTHAND_FLAG:
                 names, value, increment_by = parser.parse_shorthand_flag(argument, self)
                 for name in names:
-                    set_flag_value(name[], value)
+                    set_flag_value(self, name, value)
                 parser.index += increment_by
                 state = ParserState.FIND_FLAG
 
         # If flags are not set, check if they can be set from an environment variable or from a file.
         # Set it from that value if there is one available.
-        for flag in self:
-            if not flag[].value:
-                if flag[].environment_variable:
-                    value = os.getenv(flag[].environment_variable.value())
+        for ref flag in self:
+            if not flag.value:
+                if flag.environment_variable:
+                    value = os.getenv(flag.environment_variable.value())
                     if value != "":
-                        flag[].set(value)
-                elif flag[].file_path:
-                    with open(os.path.expanduser(flag[].file_path.value()), "r") as f:
-                        flag[].set(f.read())
+                        flag.set(value)
+                elif flag.file_path:
+                    with open(os.path.expanduser(flag.file_path.value()), "r") as f:
+                        flag.set(f.read())
 
         return remaining_args^
 
@@ -213,7 +228,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
         var result = List[String](capacity=len(self.flags))
         for flag in self.flags:
-            result.append(flag[].name)
+            result.append(flag.name)
         return result^
 
     fn shorthands(self) -> List[String]:
@@ -224,8 +239,8 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
         var result = List[String](capacity=len(self.flags))
         for flag in self.flags:
-            if flag[].shorthand:
-                result.append(flag[].shorthand)
+            if flag.shorthand:
+                result.append(flag.shorthand)
         return result^
 
     fn visit_all[visitor: FlagVisitorFn](self) -> None:
@@ -235,7 +250,7 @@ struct FlagSet(Writable, Stringable, Boolable):
             visitor: The visitor function to call for each flag.
         """
         for flag in self.flags:
-            visitor(flag[])
+            visitor(flag)
 
     fn visit_all[visitor: FlagVisitorRaisingFn](self) raises -> None:
         """Visits all flags in the flag set.
@@ -247,7 +262,7 @@ struct FlagSet(Writable, Stringable, Boolable):
             Error: If the visitor raises an error.
         """
         for flag in self.flags:
-            visitor(flag[])
+            visitor(flag)
 
     fn validate_required_flags(self) raises -> None:
         """Validates all required flags are present and returns an error otherwise.
@@ -256,13 +271,10 @@ struct FlagSet(Writable, Stringable, Boolable):
             Error: If a required flag is not set.
         """
         var missing_flag_names = List[String]()
-
-        @parameter
-        fn check_required_flag(flag: Flag) -> None:
+        for flag in self:
             if flag.required and not flag.changed:
                 missing_flag_names.append(flag.name)
 
-        self.visit_all[check_required_flag]()
         if len(missing_flag_names) > 0:
             raise Error("Required flag(s): " + missing_flag_names.__str__() + " not set.")
 
@@ -276,9 +288,9 @@ struct FlagSet(Writable, Stringable, Boolable):
         Returns:
             Optional Pointer to the Flag.
         """
-        for flag in self.flags:
-            if flag[].name.as_string_slice() == name:
-                return Pointer(to=flag[])
+        for ref flag in self.flags:
+            if flag.name.as_string_slice() == name:
+                return Pointer(to=flag)
 
         return None
 
@@ -295,9 +307,9 @@ struct FlagSet(Writable, Stringable, Boolable):
         Returns:
             Optional Pointer to the Flag.
         """
-        for flag in self.flags:
-            if flag[].name.as_string_slice() == name and flag[].type == type:
-                return Pointer(to=flag[])
+        for ref flag in self.flags:
+            if flag.name.as_string_slice() == name and flag.type == type:
+                return Pointer(to=flag)
 
         return None
 
@@ -311,9 +323,9 @@ struct FlagSet(Writable, Stringable, Boolable):
         Returns:
             Optional Pointer to the Flag.
         """
-        for flag in self.flags:
-            if flag[].shorthand.as_string_slice() == name:
-                return Pointer(to=flag[])
+        for ref flag in self.flags:
+            if flag.shorthand.as_string_slice() == name:
+                return Pointer(to=flag)
 
         return None
 
@@ -330,9 +342,9 @@ struct FlagSet(Writable, Stringable, Boolable):
         Returns:
             Optional Pointer to the Flag.
         """
-        for flag in self.flags:
-            if flag[].shorthand.as_string_slice() == name and flag[].type == type:
-                return Pointer(to=flag[])
+        for ref flag in self.flags:
+            if flag.shorthand.as_string_slice() == name and flag.type == type:
+                return Pointer(to=flag)
 
         return None
 
@@ -346,8 +358,8 @@ struct FlagSet(Writable, Stringable, Boolable):
             The name of the flag.
         """
         for flag in self.flags:
-            if flag[].shorthand and flag[].shorthand.as_string_slice() == shorthand:
-                return flag[].name
+            if flag.shorthand and flag.shorthand.as_string_slice() == shorthand:
+                return flag.name
 
         return None
 
@@ -362,7 +374,7 @@ struct FlagSet(Writable, Stringable, Boolable):
         """
         var names = self.names()
         for name in flag_names:
-            if name[] not in names:
+            if name not in names:
                 return False
         return True
 
@@ -386,8 +398,8 @@ struct FlagSet(Writable, Stringable, Boolable):
             return
 
         for group in fg_annotations:
-            if len(group_status.get(group[], Dict[String, Bool]())) == 0:
-                var flag_names = group[].split(sep=" ")
+            if len(group_status.get(group, Dict[String, Bool]())) == 0:
+                var flag_names = group.split(sep=" ")
 
                 # Only consider this flag group at all if all the flags are defined.
                 if not self.has_all_flags(flag_names):
@@ -395,12 +407,12 @@ struct FlagSet(Writable, Stringable, Boolable):
 
                 for name in flag_names:
                     var entry = Dict[String, Bool]()
-                    entry[name[]] = False
-                    group_status[group[]] = entry
+                    entry[name] = False
+                    group_status[group] = entry
 
             # If flag.changed = True, then it had a value set on it.
             try:
-                group_status[group[]][flag.name] = flag.changed
+                group_status[group][flag.name] = flag.changed
             except e:
                 raise Error(
                     "process_group_annotations: Failed to set group status for annotation ", annotation.value, ": ", e
@@ -418,13 +430,10 @@ struct FlagSet(Writable, Stringable, Boolable):
         var one_required_group_status = Dict[String, Dict[String, Bool]]()
         var mutually_exclusive_group_status = Dict[String, Dict[String, Bool]]()
 
-        @parameter
-        fn flag_checker(flag: Flag) raises -> None:
+        for flag in self.flags:
             self.process_group_annotations[Annotation.REQUIRED_AS_GROUP](flag, group_status)
             self.process_group_annotations[Annotation.ONE_REQUIRED](flag, one_required_group_status)
             self.process_group_annotations[Annotation.MUTUALLY_EXCLUSIVE](flag, mutually_exclusive_group_status)
-
-        self.visit_all[flag_checker]()
 
         # Validate required flag groups
         validate_required_flag_group(group_status)
@@ -792,7 +801,7 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         var ints = List[Int](capacity=len(result.value()))
         for value in result.value():
-            ints.append(atol(value[]))
+            ints.append(atol(value))
         return ints^
 
     fn get_float64_list(self, name: String) raises -> Optional[List[Float64]]:
@@ -813,5 +822,5 @@ struct FlagSet(Writable, Stringable, Boolable):
 
         var floats = List[Float64](capacity=len(result.value()))
         for value in result.value():
-            floats.append(atof(value[]))
+            floats.append(atof(value))
         return floats^

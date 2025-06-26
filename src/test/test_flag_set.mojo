@@ -1,9 +1,9 @@
 import testing
-from prism import Command, Context
+from prism import Command, FlagSet
 from prism.flag import Flag, FType
 
 
-fn dummy(ctx: Context) -> None:
+fn dummy(args: List[String], flags: FlagSet) -> None:
     return None
 
 
@@ -12,9 +12,9 @@ def test_string():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.string(name="key", usage="usage", default=String("default")),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.String]("key")
@@ -27,9 +27,9 @@ def test_bool():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.bool(name="flag", usage="usage", default=False),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.Bool]("flag")
@@ -42,9 +42,9 @@ def test_int():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.int(name="num", usage="usage", default=0),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.Int]("num")
@@ -57,9 +57,9 @@ def test_int8():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.int8(name="num", usage="usage", default=Int8(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.Int8]("num")
@@ -72,9 +72,9 @@ def test_int16():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.int16(name="num", usage="usage", default=Int16(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.Int16]("num")
@@ -87,9 +87,9 @@ def test_int32():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.int32(name="num", usage="usage", default=Int32(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.Int32]("num")
@@ -102,9 +102,9 @@ def test_int64():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.int64(name="num", usage="usage", default=Int64(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.Int64]("num")
@@ -117,9 +117,9 @@ def test_uint():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.uint(name="num", usage="usage", default=UInt(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.UInt]("num")
@@ -132,9 +132,9 @@ def test_uint8():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.uint8(name="num", usage="usage", default=UInt8(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.UInt8]("num")
@@ -147,9 +147,9 @@ def test_uint16():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.uint16(name="num", usage="usage", default=UInt16(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.UInt16]("num")
@@ -162,9 +162,9 @@ def test_uint32():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.uint32(name="num", usage="usage", default=UInt32(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.UInt32]("num")
@@ -177,9 +177,9 @@ def test_uint64():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.uint64(name="num", usage="usage", default=UInt64(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.UInt64]("num")
@@ -192,9 +192,9 @@ def test_float16():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.float16(name="num", usage="usage", default=Float16(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.Float16]("num")
@@ -207,9 +207,9 @@ def test_float32():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.float32(name="num", usage="usage", default=Float32(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.Float32]("num")
@@ -222,9 +222,9 @@ def test_float64():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.float64(name="num", usage="usage", default=Float64(0)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.Float64]("num")
@@ -237,9 +237,9 @@ def test_string_list():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.string_list(name="num", usage="usage", default=List[String]("a", "b")),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.StringList]("num")
@@ -252,9 +252,9 @@ def test_int_list():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.int_list(name="num", usage="usage", default=List[Int, True](0, 1)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.IntList]("num")
@@ -270,9 +270,9 @@ def test_float64_list():
         name="root",
         usage="Base command.",
         run=dummy,
-        flags=List[Flag](
+        flags=[
             Flag.float64_list(name="num", usage="usage", default=List[Float64, True](0, 1)),
-        ),
+        ],
     )
 
     var flag = cmd.flags.lookup[FType.Float64List]("num")

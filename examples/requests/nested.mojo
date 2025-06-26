@@ -1,21 +1,21 @@
 from memory import ArcPointer
-from prism import Command, Context, Flag
+from prism import Command, FlagSet, Flag
 import prism
 from python import Python
 
 
-fn base(ctx: Context) -> None:
+fn base(args: List[String], flags: FlagSet) -> None:
     print("This is the base command!")
     return None
 
 
-fn print_information(ctx: Context) -> None:
+fn print_information(args: List[String], flags: FlagSet) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
     return None
 
 
-fn get_cat_fact(ctx: Context) raises -> None:
-    var lover = ctx.command[].flags.get_bool("lover")
+fn get_cat_fact(args: List[String], flags: FlagSet) raises -> None:
+    var lover = flags.get_bool("lover")
     if lover:
         print("Hello fellow cat lover!")
 
@@ -25,7 +25,7 @@ fn get_cat_fact(ctx: Context) raises -> None:
     var url = "https://catfact.ninja/fact"
 
     # Send the GET requests
-    var count = ctx.command[].flags.get_int("count")
+    var count = flags.get_int("count")
     if not count:
         raise Error("Count flag was not found.")
 
@@ -40,7 +40,7 @@ fn get_cat_fact(ctx: Context) raises -> None:
             raise Error("Request failed!")
 
 
-fn get_dog_breeds(ctx: Context) raises -> None:
+fn get_dog_breeds(args: List[String], flags: FlagSet) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = "https://dog.ceo/api/breeds/list/all"

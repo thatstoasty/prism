@@ -1,32 +1,26 @@
-from memory import ArcPointer
-from prism import Command, Context, Flag
-import prism
+from prism import Command, FlagSet, Flag
 
 
-fn test(ctx: Context) raises -> None:
-    var required = ctx.command[].flags.get_bool("required")
-    var automation = ctx.command[].flags.get_bool("automation")
-    var secure = ctx.command[].flags.get_bool("secure")
-    var verbose = ctx.command[].flags.get_bool("verbose")
-
-    if required:
+fn test(args: List[String], flags: FlagSet) raises -> None:
+    if flags.get_bool("required"):
         print("Required flag is set!")
-    if automation:
+    if flags.get_bool("automation"):
         print("Automation flag is set!")
-    if secure:
+    if flags.get_bool("secure"):
         print("Secure flag is set!")
-    if verbose:
+    if flags.get_bool("verbose"):
         print("Verbose flag is set!")
 
-    if len(ctx.args) > 0:
-        print("Arguments:", ctx.args.__str__())
+    if len(args) > 0:
+        print("Arguments:", args.__str__())
+
 
 fn main() -> None:
-    alias cmd = Command(
+    var cli = Command(
         name="my",
         usage="This is a dummy command!",
         raising_run=test,
-        flags=List[Flag](
+        flags=[
             Flag.bool(
                 name="required",
                 shorthand="r0",
@@ -48,6 +42,6 @@ fn main() -> None:
                 shorthand="vv",
                 usage="Verbose output.",
             ),
-        ),
+        ],
     )
-    cmd.execute()
+    cli.execute()

@@ -1,14 +1,13 @@
-from memory import ArcPointer
-from prism import Command, Context
+from prism import Command, FlagSet
 from sys import exit
 
 
-fn test(ctx: Context) raises -> None:
+fn test(args: List[String], flags: FlagSet) raises -> None:
     raise Error("Error: Exit Code 2")
 
 
 fn my_exit(e: Error) -> None:
-    if String(e) == "Error: Exit Code 2":
+    if e.as_string_slice() == "Error: Exit Code 2":
         print("Exiting with code 2")
         exit(2)
     else:
@@ -16,9 +15,10 @@ fn my_exit(e: Error) -> None:
 
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="hello",
         usage="This is a dummy command!",
         raising_run=test,
         exit=my_exit,
-    ).execute()
+    )
+    cli.execute()

@@ -1,0 +1,38 @@
+[workspace]
+description = "A Budding CLI Library!"
+authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
+channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://conda.modular.com/max", "https://prefix.dev/pixi-build-backends"]
+platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
+license = "MIT"
+license-file = "LICENSE"
+readme = "README.md"
+homepage = "https://github.com/thatstoasty/prism"
+repository = "https://github.com/thatstoasty/prism"
+preview = ["pixi-build"]
+
+[feature.util.tasks]
+tests = "python scripts/util.py run-tests"
+benchmarks = "python scripts/util.py run-benchmarks"
+examples = "bash scripts/examples.sh"
+template = "python scripts/util.py generate-recipe"
+build = { cmd = "python scripts/util.py build-conda-package" }
+publish = { cmd = "python scripts/util.py publish", env = { PREFIX_API_KEY = "$PREFIX_API_KEY" } }
+
+[dependencies]
+max = ">=25.4.0,<25.5.0"
+mog = ">=25.4.0,<25.5.0"
+
+[package]
+name = "prism"
+version = "25.4.0"
+
+[package.build]
+backend = { name = "pixi-build-rattler-build", version = "*" }
+
+[feature.util.dependencies]
+typer = ">=0.16.0,<0.17"
+pyyaml = ">=6.0.2,<7"
+
+[environments]
+default = { solve-group = "default" }
+util = { features = ["util"], solve-group = "default" }

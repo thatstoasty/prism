@@ -13,7 +13,7 @@ fn parse_args_from_command_line(args: VariadicList[StaticString]) -> List[String
     return result^
 
 
-@value
+@fieldwise_init
 @register_passable("trivial")
 struct STDINParserState:
     """State of the parser when reading from stdin."""
@@ -47,7 +47,7 @@ struct STDINParserState:
         return self.value != other.value
 
 
-fn parse_args_from_stdin(input: String) -> List[String]:
+fn parse_args_from_stdin(input: StringSlice) -> List[String]:
     """Reads arguments from stdin and returns them as a list of strings.
 
     Args:

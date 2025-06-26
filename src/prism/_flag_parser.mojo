@@ -1,12 +1,13 @@
-import os
-from memory import Span
 from prism._flag_set import FlagSet, FType
 
 
-@value
+@fieldwise_init
 @register_passable("trivial")
 struct ShorthandParserState:
+    """State of the parser when parsing shorthand flags."""
+
     var value: UInt8
+    """Internal value."""
     alias START = Self(0)
     alias MULTIPLE_BOOLS = Self(1)
     alias CHECK_FLAG = Self(2)
@@ -27,7 +28,11 @@ struct FlagParser[origin: ImmutableOrigin]:
     """The arguments passed to the command."""
 
     fn __init__(out self, arguments: Span[String, origin]):
-        """Initializes the FlagParser."""
+        """Initializes the FlagParser.
+
+        Args:
+            arguments: The arguments passed to the command.
+        """
         self.index = 0
         self.arguments = arguments
 
@@ -91,7 +96,7 @@ struct FlagParser[origin: ImmutableOrigin]:
             var shorthand = argument[1:sep_index]
             var value = argument[sep_index:]
             var name = flags.lookup_name(shorthand)
-            if not name or name.value() not in flags.names():
+            if not name or name[] not in flags.names():
                 raise Error("Command does not accept the shorthand flag supplied: ", shorthand)
 
             return List[String](name.value()), String(value), 1
@@ -154,7 +159,7 @@ struct FlagParser[origin: ImmutableOrigin]:
                         shorthand,
                     )
 
-                if flag.value()[].type == FType.Bool:
+                if flag[][].type == FType.Bool:
                     return flag_names^, String("True"), 1
 
                 # Non bool flags expect a value to be set. If the end of the arguments list is reached, raise an error.

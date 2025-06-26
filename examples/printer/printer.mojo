@@ -1,20 +1,20 @@
 from memory import ArcPointer
-from prism import Command, Context, exact_args, Flag
+from prism import Command, FlagSet, exact_args, Flag
 import prism
 import mist
 
 
-fn printer(ctx: Context) raises -> None:
-    if len(ctx.args) <= 0:
+fn printer(args: List[String], flags: FlagSet) raises -> None:
+    if len(args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    var color = ctx.command[].flags.get_uint32("color")
-    var formatting = ctx.command[].flags.get_string("formatting")
+    var color = flags.get_uint32("color")
+    var formatting = flags.get_string("formatting")
     var style = mist.Style().foreground(color.value())
 
     if not formatting:
-        print(style.render(ctx.args[0]))
+        print(style.render(args[0]))
         return None
 
     var format = formatting.value()
@@ -25,19 +25,19 @@ fn printer(ctx: Context) raises -> None:
     elif format == "italic":
         style = style.italic()
 
-    print(style.render(ctx.args[0]))
+    print(style.render(args[0]))
 
 
-fn pre_hook(ctx: Context) -> None:
+fn pre_hook(args: List[String], flags: FlagSet) -> None:
     print("Pre-hook executed!")
 
 
-fn post_hook(ctx: Context) -> None:
+fn post_hook(args: List[String], flags: FlagSet) -> None:
     print("Post-hook executed!")
 
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="printer",
         usage="Base command.",
         raising_run=printer,
@@ -48,4 +48,5 @@ fn main() -> None:
             Flag.uint32(name="color", shorthand="c", usage="Text color", default=UInt32(0x3464EB)),
             Flag.string(name="formatting", shorthand="f", usage="Text formatting"),
         ),
-    ).execute()
+    )
+    cli.execute()

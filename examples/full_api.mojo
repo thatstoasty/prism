@@ -1,15 +1,13 @@
-from memory import ArcPointer
 from sys import exit, stderr
-from prism import Command, Context, Flag, no_args, Version
+from prism import Command, FlagSet, Flag, no_args, Version
 
 
-fn base(ctx: Context) -> None:
+fn base(args: List[String], flags: FlagSet) -> None:
     print("Pass a subcommand!")
 
 
-fn connect(ctx: Context) raises -> None:
-    var host = ctx.command[].flags.get_string("host")
-    if host:
+fn connect(args: List[String], flags: FlagSet) raises -> None:
+    if host := flags.get_string("host"):
         print("Connecting to", host.value())
     else:
         raise Error("Error: Exit Code 2")
@@ -17,15 +15,15 @@ fn connect(ctx: Context) raises -> None:
 
 fn my_exit(e: Error) -> None:
     print(e, file=stderr)
-    if String(e) == "Error: Exit Code 2":
+    if e.as_string_slice() == "Error: Exit Code 2":
         print("Exiting with code 2")
         exit(2)
     else:
         exit(1)
 
 
-fn allow_hosts(ctx: Context) raises -> None:
-    var hosts = ctx.command[].flags.get_string_list("hosts")
+fn allow_hosts(args: List[String], flags: FlagSet) raises -> None:
+    var hosts = flags.get_string_list("hosts")
     if not hosts:
         print("Received no names to print.")
         return
@@ -33,32 +31,32 @@ fn allow_hosts(ctx: Context) raises -> None:
     print("Allowing: ", hosts.value().__str__())
 
 
-fn version(ctx: Context) -> String:
-    return "MyCLI version: " + ctx.command[].version.value().value
+fn version(version: String) -> String:
+    return "MyCLI version: " + version
 
 
-fn validate_hosts(ctx: Context, value: String) raises -> None:
+fn validate_hosts(value: String) raises -> None:
     alias approved_hosts = List[String]("localhost", "0.0.0.0", "192.168.1.1")
     var hosts = value.split(" ")
     for host in hosts:
-        if host[] not in approved_hosts:
+        if host not in approved_hosts:
             raise Error(
                 "ValueError: Host provided is not permitted.\nReceived: ",
-                host[],
+                host,
                 " Approved: ",
                 approved_hosts.__str__(),
             )
 
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="connector",
         usage="Base Command.",
         run=base,
         exit=my_exit,
         version=Version("0.1.0", action=version),
         suggest=True,
-        flags=List[Flag](
+        flags=[
             Flag.bool(name="required", shorthand="r0", usage="Always required.", required=True, persistent=True),
             Flag.string(
                 name="host",
@@ -87,15 +85,15 @@ fn main() -> None:
                 usage="Verbose output.",
                 persistent=True,
             ),
-        ),
-        flags_required_together=List[String]("host", "port"),
-        children=List[ArcPointer[Command]](
+        ],
+        flags_required_together=["host", "port"],
+        children=[
             Command(
                 name="connect",
                 usage="Connect to a database.",
                 raising_run=connect,
-                aliases=List[String]("db-connect"),
-                flags=List[Flag](
+                aliases=["db-connect"],
+                flags=[
                     Flag.bool(
                         name="also",
                         shorthand="a",
@@ -107,7 +105,7 @@ fn main() -> None:
                         shorthand="u",
                         usage="URI",
                     ),
-                ),
+                ],
                 arg_validator=no_args,
                 suggest=True,
             ),
@@ -115,7 +113,7 @@ fn main() -> None:
                 name="allow",
                 usage="Add hosts to the allow list!",
                 raising_run=allow_hosts,
-                flags=List[Flag](
+                flags=[
                     Flag.string_list(
                         name="hosts",
                         shorthand="hl",
@@ -123,8 +121,9 @@ fn main() -> None:
                         default=List[String]("localhost", "0.0.0.0"),
                         action=validate_hosts,
                     )
-                ),
+                ],
                 read_from_stdin=True,
             ),
-        ),
-    ).execute()
+        ],
+    )
+    cli.execute()

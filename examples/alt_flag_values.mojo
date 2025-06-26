@@ -1,11 +1,9 @@
-from memory import ArcPointer
-from prism import Command, Context, Flag
-import prism
+from prism import Command, Flag, FlagSet
 import os
 
 
-fn test(ctx: Context) raises -> None:
-    var name = ctx.command[].flags.get_string("name")
+fn test(args: List[String], flags: FlagSet) raises -> None:
+    var name = flags.get_string("name")
     if name:
         print("Hello", name.value())
     else:
@@ -14,11 +12,11 @@ fn test(ctx: Context) raises -> None:
 
 fn main() -> None:
     _ = os.setenv("NAME", "Mikhail")
-    Command(
+    var cli = Command(
         name="greet",
         usage="Greet a user!",
         raising_run=test,
-        flags=List[Flag](
+        flags=[
             Flag.string(
                 name="name",
                 shorthand="n",
@@ -27,7 +25,8 @@ fn main() -> None:
                 file_path=String("~/.myapp/config"),
                 default=String("World"),
             )
-        ),
-    ).execute()
+        ],
+    )
+    cli.execute()
 
     _ = os.unsetenv("NAME")

@@ -1,19 +1,19 @@
-from memory import ArcPointer
-from prism import Command, Context, Version, Flag
+from prism import Command, FlagSet, Version, Flag
 
 
-fn test(ctx: Context) -> None:
+fn test(args: List[String], flags: FlagSet) -> None:
     print("Pass -v to see the version!")
 
 
-fn version(ctx: Context) -> String:
-    return "MyCLI version: " + ctx.command[].version.value().value
+fn version(version: String) -> String:
+    return String("MyCLI version: ", version)
 
 
 fn main() -> None:
-    Command(
+    var cli = Command(
         name="hello",
         usage="This is a dummy command!",
         run=test,
         version=Version("0.1.0", action=version),
-    ).execute()
+    )
+    cli.execute()

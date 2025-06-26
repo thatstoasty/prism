@@ -1,16 +1,18 @@
-from prism.context import Context
+from memory import OwnedPointer
+from prism.flag import Flag
+from prism.command import Command
 import mog
 
 
-alias HelpFn = fn (ctx: Context) raises -> String
+alias HelpFn = fn (OwnedPointer[Command]) raises -> String
 """The function to generate help output."""
 
 
-fn default_help(ctx: Context) raises -> String:
+fn default_help(cmd: OwnedPointer[Command]) raises -> String:
     """Prints the help information for the command.
 
     Args:
-        ctx: The context of the command to generate help information for.
+        cmd: The command to generate help information for.
 
     Returns:
         The help information for the command.
@@ -18,64 +20,62 @@ fn default_help(ctx: Context) raises -> String:
     Raises:
         Any error that occurs while generating the help information.
     """
-    var cmd = ctx.command[]
-    alias style = mog.Style(mog.ASCII)
-    var builder = String("Usage: ", cmd.full_name())
+    alias style = mog.Style(mog.ASCII_PROFILE)
+    var builder = String("Usage: ", cmd[].full_name())
 
-    if len(cmd.flags) > 0:
+    if len(cmd[].flags) > 0:
         builder.write(" [OPTIONS]")
-    if len(cmd.children) > 0:
+    if len(cmd[].children) > 0:
         builder.write(" COMMAND")
-    builder.write(" [ARGS]...", "\n\n", cmd.usage, "\n")
+    builder.write(" [ARGS]...", "\n\n", cmd[].usage, "\n")
 
-    if cmd.args_usage:
-        builder.write("\nArguments:\n  ", cmd.args_usage.value(), "\n")
+    if cmd[].args_usage:
+        builder.write("\nArguments:\n  ", cmd[].args_usage.value(), "\n")
 
     var option_width = 0
-    if cmd.flags:
+    if cmd[].flags:
         var widest_flag = 0
         var widest_shorthand = 0
-        for flag in cmd.flags:
-            if len(flag[].name) > widest_flag:
-                widest_flag = len(flag[].name)
-            if len(flag[].shorthand) > widest_shorthand:
-                widest_shorthand = len(flag[].shorthand)
+        for flag in cmd[].flags:
+            if len(flag.name) > widest_flag:
+                widest_flag = len(flag.name)
+            if len(flag.shorthand) > widest_shorthand:
+                widest_shorthand = len(flag.shorthand)
 
         alias USAGE_PADDING = 4
         option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
         var options_style = style.width(option_width)
 
         builder.write("\nOptions:")
-        for flag in cmd.flags:
+        for flag in cmd[].flags:
             var option = String("\n  ")
-            if flag[].shorthand:
-                option.write("-", flag[].shorthand, ", ")
-            option.write("--", flag[].name)
-            builder.write(options_style.render(option), flag[].usage)
+            if flag.shorthand:
+                option.write("-", flag.shorthand, ", ")
+            option.write("--", flag.name)
+            builder.write(options_style.render(option), flag.usage)
 
         builder.write("\n")
 
-    if cmd.children:
+    if cmd[].children:
         var options_style = style.width(option_width - 2)
         builder.write("\nCommands:")
-        for i in range(len(cmd.children)):
-            builder.write("\n  ", options_style.render(cmd.children[i][].name), cmd.children[i][].usage)
+        for i in range(len(cmd[].children)):
+            builder.write("\n  ", options_style.render(cmd[].children[i][].name), cmd[].children[i][].usage)
         builder.write("\n")
 
-    if cmd.aliases:
+    if cmd[].aliases:
         builder.write("\nAliases:\n  ")
-        for i in range(len(cmd.aliases)):
-            builder.write(cmd.aliases[i])
+        for i in range(len(cmd[].aliases)):
+            builder.write(cmd[].aliases[i])
 
-            if i < len(cmd.aliases) - 1:
+            if i < len(cmd[].aliases) - 1:
                 builder.write(", ")
         builder.write("\n")
 
     return builder^
 
 
-@value
-struct Help(CollectionElement):
+struct Help(Copyable, ExplicitlyCopyable, Movable):
     """A struct representing the help information for a command."""
 
     var flag: Flag
@@ -97,3 +97,28 @@ struct Help(CollectionElement):
         """
         self.flag = flag
         self.action = action
+
+    fn __copyinit__(out self, existing: Self):
+        """Initializes a new `Help` instance by copying from another.
+
+        Args:
+            existing: The `Help` instance to copy from.
+        """
+        return Help(flag=existing.flag.copy(), action=existing.action)
+
+    fn __moveinit__(out self, owned other: Self):
+        """Initializes a new `Help` instance by moving from another.
+
+        Args:
+            other: The `Help` instance to move from.
+        """
+        self.flag = other.flag^
+        self.action = other.action
+
+    fn copy(self) -> Self:
+        """Returns a copy of the `Help` instance.
+
+        Returns:
+            A new `Help` instance with the same flag and action.
+        """
+        return Help(flag=self.flag.copy(), action=self.action)
