@@ -22,7 +22,7 @@ Inspired by: `Cobra` and `urfave/cli`!
 Here's an example of a basic command and subcommand!
 
 ```mojo
-from prism import Command, Context, FlagSet
+from prism import Command, FlagSet
 
 fn test(args: List[String], flags: FlagSet) -> None:
     print("Pass chromeria as a subcommand!")
