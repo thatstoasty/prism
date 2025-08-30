@@ -1,5 +1,6 @@
-from prism import Command, Flag, FlagSet
 import os
+
+from prism import Command, Flag, FlagSet
 
 
 fn test(args: List[String], flags: FlagSet) raises -> None:

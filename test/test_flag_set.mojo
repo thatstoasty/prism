@@ -1,6 +1,7 @@
 import testing
-from prism import Command, FlagSet
 from prism.flag import Flag, FType
+
+from prism import Command, FlagSet
 
 
 fn dummy(args: List[String], flags: FlagSet) -> None:

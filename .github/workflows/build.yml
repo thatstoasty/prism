@@ -36,10 +36,8 @@ jobs:
         env:
           TARGET_PLATFORM: ${{ matrix.target }}
           PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY }}
-          CONDA_BLD_PATH: ${{ runner.workspace }}/.rattler
 
         run: |
           # Build and publish
-          pixi run -e util build
           pixi auth login prefix.dev --token "$PREFIX_API_KEY"
-          pixi run -e util publish mojo-community
+          pixi run build_and_publish

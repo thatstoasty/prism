@@ -1,15 +1,17 @@
-from collections.list import _ListIter
-from collections.dict import DictEntry
-from utils import Variant
 import os
-from prism.flag import Flag, FlagActionFn, FType
-from prism._util import string_to_bool
-from prism._flag_parser import FlagParser
+from collections.dict import DictEntry
+from collections.list import _ListIter
+
 from prism._flag_group import (
-    validate_required_flag_group,
-    validate_one_required_flag_group,
     validate_mutually_exclusive_flag_group,
+    validate_one_required_flag_group,
+    validate_required_flag_group,
 )
+from prism._flag_parser import FlagParser
+from prism._util import string_to_bool
+from prism.flag import Flag, FlagActionFn, FType
+from utils import Variant
+
 
 alias FlagVisitorFn = fn (Flag) -> None
 """Function perform some action while visiting all flags."""
@@ -399,7 +401,7 @@ struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringabl
 
         for group in fg_annotations:
             if len(group_status.get(group, Dict[String, Bool]())) == 0:
-                var flag_names = group.split(sep=" ")
+                var flag_names = [String(name) for name in group.split(sep=" ")]
 
                 # Only consider this flag group at all if all the flags are defined.
                 if not self.has_all_flags(flag_names):
@@ -764,7 +766,8 @@ struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringabl
         var result = flag.value()[].value_or_default()
         if not result:
             return None
-        return result.value().split(sep=" ")
+
+        return Optional([String(item) for item in result.value().split(sep=" ")])
 
     fn get_string_list(self, name: String) raises -> Optional[List[String]]:
         """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.

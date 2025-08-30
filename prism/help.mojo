@@ -1,7 +1,7 @@
-from memory import OwnedPointer
-from prism.flag import Flag
-from prism.command import Command
 import mog
+from memory import OwnedPointer
+from prism.command import Command
+from prism.flag import Flag
 
 
 alias HelpFn = fn (OwnedPointer[Command]) raises -> String
@@ -20,7 +20,7 @@ fn default_help(cmd: OwnedPointer[Command]) raises -> String:
     Raises:
         Any error that occurs while generating the help information.
     """
-    alias style = mog.Style(mog.ASCII_PROFILE)
+    alias style = mog.Style(mog.Profile.ASCII)
     var builder = String("Usage: ", cmd[].full_name())
 
     if len(cmd[].flags) > 0:

@@ -1,4 +1,4 @@
-from prism import Command, FlagSet, Flag
+from prism import Command, Flag, FlagSet
 
 
 fn printer(args: List[String], flags: FlagSet) -> None:

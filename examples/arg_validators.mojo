@@ -1,14 +1,6 @@
 from memory import ArcPointer
-from prism import (
-    Command,
-    FlagSet,
-    no_args,
-    valid_args,
-    minimum_n_args,
-    maximum_n_args,
-    exact_args,
-    range_args,
-)
+
+from prism import Command, FlagSet, exact_args, maximum_n_args, minimum_n_args, no_args, range_args, valid_args
 
 
 fn test(args: List[String], flags: FlagSet) -> None:

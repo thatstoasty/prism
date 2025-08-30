@@ -1,16 +1,18 @@
-from builtin.io import _fdopen
-from memory import OwnedPointer, ArcPointer
-from sys import argv, stdin, env_get_bool
-from prism._util import panic
-from prism._flag_set import Annotation, FlagSet
+from io.io import _fdopen
+from sys import argv, env_get_bool, stdin
+
+from memory import ArcPointer, OwnedPointer
 from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
-from prism.flag import Flag
-from prism.args import arbitrary_args, ArgValidatorFn
-from prism.suggest import suggest_flag, flag_from_error
-from prism.help import Help
-from prism.version import Version
+from prism._flag_set import Annotation, FlagSet
+from prism._util import panic
+from prism.args import ArgValidatorFn, arbitrary_args
 from prism.exit import ExitFn, default_exit
+from prism.flag import Flag
+from prism.help import Help
+from prism.suggest import flag_from_error, suggest_flag
+from prism.version import Version
 from prism.writer import WriterFn, default_error_writer, default_output_writer
+
 
 alias ENABLE_TRAVERSE_RUN_HOOKS = env_get_bool["PRISM_TRAVERSE_RUN_HOOKS", False]()
 """Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.

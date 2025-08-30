@@ -1,5 +1,6 @@
 from sys import exit, stderr
-from prism import Command, FlagSet, Flag, no_args, Version
+
+from prism import Command, Flag, FlagSet, Version, no_args
 
 
 fn base(args: List[String], flags: FlagSet) -> None:
@@ -39,7 +40,7 @@ fn validate_hosts(value: String) raises -> None:
     alias approved_hosts = List[String]("localhost", "0.0.0.0", "192.168.1.1")
     var hosts = value.split(" ")
     for host in hosts:
-        if host not in approved_hosts:
+        if String(host) not in approved_hosts:
             raise Error(
                 "ValueError: Host provided is not permitted.\nReceived: ",
                 host,
