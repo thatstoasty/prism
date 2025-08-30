@@ -21,4 +21,4 @@ jobs:
             pixi-version: v0.47.0
 
         - name: Run the package command
-          run: pixi run mojo package src/prism -o prism.mojopkg
+          run: pixi run mojo package prism -o prism.mojopkg

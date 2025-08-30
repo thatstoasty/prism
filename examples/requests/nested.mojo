@@ -1,7 +1,8 @@
 from memory import ArcPointer
-from prism import Command, FlagSet, Flag
-import prism
 from python import Python
+
+import prism
+from prism import Command, Flag, FlagSet
 
 
 fn base(args: List[String], flags: FlagSet) -> None:

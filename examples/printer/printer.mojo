@@ -1,7 +1,8 @@
-from memory import ArcPointer
-from prism import Command, FlagSet, exact_args, Flag
-import prism
 import mist
+from memory import ArcPointer
+
+import prism
+from prism import Command, Flag, FlagSet, exact_args
 
 
 fn printer(args: List[String], flags: FlagSet) raises -> None:

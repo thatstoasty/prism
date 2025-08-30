@@ -1,16 +1,16 @@
 import testing
 from memory import OwnedPointer
-from prism import Command, FlagSet
-from prism.args import (
-    no_args,
-    valid_args,
+from prism.args import (  # match_all,
     arbitrary_args,
-    minimum_n_args,
-    maximum_n_args,
     exact_args,
+    maximum_n_args,
+    minimum_n_args,
+    no_args,
     range_args,
-    # match_all,
+    valid_args,
 )
+
+from prism import Command, FlagSet
 
 
 fn dummy(args: List[String], flags: FlagSet) -> None:

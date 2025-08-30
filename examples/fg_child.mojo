@@ -1,5 +1,5 @@
-from prism import Command, FlagSet, Flag
 import prism
+from prism import Command, Flag, FlagSet
 
 
 fn test(args: List[String], flags: FlagSet) -> None:

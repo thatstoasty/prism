@@ -1,5 +1,6 @@
 from memory import OwnedPointer
 
+
 alias ArgValidatorFn = fn (cmd: OwnedPointer[Command], args: List[String]) raises -> None
 """The function for an argument validator."""
 

@@ -1,6 +1,7 @@
-from memory import ArcPointer
 import testing
-from prism.command import Command, FlagSet, Flag
+from memory import ArcPointer
+from prism.command import Command, Flag, FlagSet
+
 import prism
 
 

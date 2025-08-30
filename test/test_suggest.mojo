@@ -1,10 +1,10 @@
-from prism.suggest import jaro_winkler, jaro_distance, suggest_flag, flag_from_error
-from prism.flag import Flag, FType
 import testing
+from prism.flag import Flag, FType
+from prism.suggest import flag_from_error, jaro_distance, jaro_winkler, suggest_flag
 
 
-@value
-struct TestCase:
+@fieldwise_init
+struct TestCase(Copyable, Movable):
     var a: String
     var b: String
     var expected: Float64
@@ -126,8 +126,8 @@ fn test_jaro_winkler() raises:
         )
 
 
-@value
-struct SuggestTestCase:
+@fieldwise_init
+struct SuggestTestCase(Copyable, Movable):
     var provided: String
     var expected: String
 

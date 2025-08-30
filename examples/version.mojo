@@ -1,4 +1,4 @@
-from prism import Command, FlagSet, Version, Flag
+from prism import Command, Flag, FlagSet, Version
 
 
 fn test(args: List[String], flags: FlagSet) -> None:

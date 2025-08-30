@@ -1,11 +1,11 @@
-from prism._flag_group import (
-    validate_required_flag_group,
-    get_set_flags,
-    extract_keys,
-    validate_one_required_flag_group,
-    validate_mutually_exclusive_flag_group,
-)
 import testing
+from prism._flag_group import (
+    extract_keys,
+    get_set_flags,
+    validate_mutually_exclusive_flag_group,
+    validate_one_required_flag_group,
+    validate_required_flag_group,
+)
 
 
 fn make_test_data(required: Bool, alternative: Bool) -> Dict[String, Dict[String, Bool]]:

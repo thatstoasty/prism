@@ -1,5 +1,5 @@
 [workspace]
-description = "A Budding CLI Library!"
+description = "A budding CLI Library!"
 authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
 channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://conda.modular.com/max", "https://prefix.dev/pixi-build-backends"]
 platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
@@ -11,27 +11,47 @@ repository = "https://github.com/thatstoasty/prism"
 preview = ["pixi-build"]
 
 [feature.util.tasks]
-tests = "python scripts/util.py run-tests"
-benchmarks = "python scripts/util.py run-benchmarks"
+tests = "mojo test"
+benchmarks = "python3 scripts/util.py run-benchmarks"
 examples = "bash scripts/examples.sh"
-template = "python scripts/util.py generate-recipe"
-build = { cmd = "python scripts/util.py build-conda-package" }
-publish = { cmd = "python scripts/util.py publish", env = { PREFIX_API_KEY = "$PREFIX_API_KEY" } }
+template = "python3 scripts/util.py generate-recipe"
 
-[dependencies]
-max = ">=25.4.0,<25.5.0"
-mog = ">=25.4.0,<25.5.0"
+# Linting and Formatting
+lint_docs = "python3 scripts/check-docstrings.py"
+mojo_format = "mojo format prism --line-length 120"
+sort_imports = "isort **/*.mojo -m 3 --line-length 120 --lines-after-imports 2 --trailing-comma"
+format = [{ task = "mojo_format" }, { task = "sort_imports" }]
+
+# Build and publish
+build = { cmd = "pixi build -o ." }
+publish = { cmd = "find . -name 'prism-*.conda' | xargs pixi upload https://prefix.dev/api/v1/upload/mojo-community" }
+build_and_publish = [{ task = "build" }, { task = "publish" }]
 
 [package]
 name = "prism"
-version = "25.4.0"
+version = "25.5.0"
 
 [package.build]
-backend = { name = "pixi-build-rattler-build", version = "*" }
+backend = { name = "pixi-build-mojo", version = "*" }
+
+[dependencies]
+mojo = ">=25.5.0,<25.6.0"
+mog = ">=25.5.0,<25.6.0"
+
+[package.build-dependencies]
+mojo-compiler = ">=25.5.0,<25.6.0"
+mog = ">=25.5.0,<25.6.0"
+
+[package.host-dependencies]
+mojo = ">=25.5.0,<25.6.0"
+
+[package.run-dependencies]
+mojo = ">=25.5.0,<25.6.0"
+mog = ">=25.5.0,<25.6.0"
 
 [feature.util.dependencies]
 typer = ">=0.16.0,<0.17"
-pyyaml = ">=6.0.2,<7"
+isort = ">=6.0.1,<7"
 
 [environments]
 default = { solve-group = "default" }

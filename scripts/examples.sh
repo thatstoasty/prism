@@ -5,7 +5,7 @@ PACKAGE_NAME=prism
 mkdir -p $TEMP_DIR
 
 echo "[INFO] Building $PACKAGE_NAME package and example binaries."
-pixi run mojo package src/$PACKAGE_NAME -o $TEMP_DIR/$PACKAGE_NAME.mojopkg
+pixi run mojo package $PACKAGE_NAME -o $TEMP_DIR/$PACKAGE_NAME.mojopkg
 cp -a examples/. $TEMP_DIR
 pixi run mojo build $TEMP_DIR/aliases.mojo -o $TEMP_DIR/aliases
 pixi run mojo build $TEMP_DIR/hello_world.mojo -o $TEMP_DIR/hello_world
