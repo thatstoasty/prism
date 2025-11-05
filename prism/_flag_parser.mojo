@@ -15,11 +15,8 @@ struct ShorthandParserState:
     fn __eq__(self, other: Self) -> Bool:
         return self.value == other.value
 
-    fn __ne__(self, other: Self) -> Bool:
-        return self.value != other.value
 
-
-struct FlagParser[origin: ImmutableOrigin]:
+struct FlagParser[origin: ImmutOrigin]:
     """Parses flags from the command line arguments."""
 
     var index: Int

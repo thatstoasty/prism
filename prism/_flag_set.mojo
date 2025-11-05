@@ -30,9 +30,6 @@ struct ParserState:
     fn __eq__(self, other: Self) -> Bool:
         return self.value == other.value
 
-    fn __ne__(self, other: Self) -> Bool:
-        return self.value != other.value
-
 
 # Flag Group annotations
 @fieldwise_init
@@ -50,27 +47,24 @@ struct Annotation:
     fn __eq__(self, other: Self) -> Bool:
         return self.value == other.value
 
-    fn __ne__(self, other: Self) -> Bool:
-        return self.value != other.value
 
-
-struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringable, Writable):
+struct FlagSet(Boolable, Copyable, Movable, Sized, Stringable, Writable):
     """A set of flags."""
 
     var flags: List[Flag]
     """The flags in the set."""
 
     @implicit
-    fn __init__(out self, flags: List[Flag] = List[Flag]()):
+    fn __init__(out self, var flags: List[Flag] = List[Flag]()):
         """Initializes a new FlagSet.
 
         Args:
             flags: The flags to initialize the flag set with. Defaults to an empty list.
         """
-        self.flags = flags
+        self.flags = flags^
 
     @always_inline
-    fn __init__(out self, owned *values: Flag, __list_literal__: () = ()):
+    fn __init__(out self, var *values: Flag, __list_literal__: () = ()):
         """Constructs a list from the given values.
 
         Args:
@@ -85,17 +79,17 @@ struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringabl
     fn __len__(self) -> Int:
         return len(self.flags)
 
-    fn __iter__(ref self) -> _ListIter[Flag, False, __origin_of(self.flags)]:
+    fn __iter__(ref self) -> _ListIter[Flag, origin_of(self.flags)]:
         return self.flags.__iter__()
 
-    fn append(mut self, flag: Flag):
+    fn append(mut self, var flag: Flag):
         """Adds a flag to the flag set.
 
         Args:
             flag: The flag to add to the flag set.
 
         """
-        self.flags.append(flag)
+        self.flags.append(flag^)
 
     fn extend(mut self, other: FlagSet):
         """Adds a flag to the flag set.
@@ -104,7 +98,7 @@ struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringabl
             other: The flag to add to the flag set.
 
         """
-        self.flags.extend(other.flags)
+        self.flags.extend(other.flags.copy())
 
     fn __str__(self) -> String:
         return String.write(self)
@@ -195,14 +189,20 @@ struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringabl
 
             # Parse out a flag and set the value on the flag.
             elif state == ParserState.PARSE_FLAG:
-                name, value, increment_by = parser.parse_flag(argument, self)
+                var result = parser.parse_flag(argument, self)
+                var name = result[0].copy()
+                var value = result[1]
+                var increment_by = result[2]
                 set_flag_value(self, name, value)
                 parser.index += increment_by
                 state = ParserState.FIND_FLAG
 
             # Parse out shorthand flag(s) and set the value on the flag(s).
             elif state == ParserState.PARSE_SHORTHAND_FLAG:
-                names, value, increment_by = parser.parse_shorthand_flag(argument, self)
+                var result = parser.parse_shorthand_flag(argument, self)
+                var names = result[0].copy()
+                var value = result[1]
+                var increment_by = result[2]
                 for name in names:
                     set_flag_value(self, name, value)
                 parser.index += increment_by
@@ -280,7 +280,7 @@ struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringabl
         if len(missing_flag_names) > 0:
             raise Error("Required flag(s): " + missing_flag_names.__str__() + " not set.")
 
-    fn lookup(ref self, name: StringSlice) -> Optional[Pointer[Flag, __origin_of(self.flags)]]:
+    fn lookup(ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -296,7 +296,7 @@ struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringabl
 
         return None
 
-    fn lookup[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, __origin_of(self.flags)]]:
+    fn lookup[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -315,7 +315,7 @@ struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringabl
 
         return None
 
-    fn lookup_shorthand(ref self, name: StringSlice) -> Optional[Pointer[Flag, __origin_of(self.flags)]]:
+    fn lookup_shorthand(ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -331,7 +331,7 @@ struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringabl
 
         return None
 
-    fn lookup_shorthand[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, __origin_of(self.flags)]]:
+    fn lookup_shorthand[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -410,7 +410,7 @@ struct FlagSet(Boolable, Copyable, ExplicitlyCopyable, Movable, Sized, Stringabl
                 for name in flag_names:
                     var entry = Dict[String, Bool]()
                     entry[name] = False
-                    group_status[group] = entry
+                    group_status[group] = entry.copy()
 
             # If flag.changed = True, then it had a value set on it.
             try:

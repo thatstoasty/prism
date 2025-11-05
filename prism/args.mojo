@@ -1,27 +1,27 @@
 from memory import OwnedPointer
 
 
-alias ArgValidatorFn = fn (cmd: OwnedPointer[Command], args: List[String]) raises -> None
+alias ArgValidatorFn = fn (args: List[String], valid_args: List[String]) raises -> None
 """The function for an argument validator."""
 
 
-fn no_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
-    """Returns an error if the command has any arguments.
+fn no_args(args: List[String], valid_args: List[String]) raises -> None:
+    """Returns an error if This command has any arguments.
 
     Args:
-        cmd: The command being executed.
-        args: The arguments passed to the command.
+        args: The arguments passed to This command.
+        valid_args: The valid arguments for This command.
     """
     if len(args) > 0:
-        raise Error("The command `", cmd[].name, "` does not take any arguments.")
+        raise Error("This command does not take any arguments.")
 
 
-fn arbitrary_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
+fn arbitrary_args(args: List[String], valid_args: List[String]) raises -> None:
     """Never returns an error.
 
     Args:
-        cmd: The command being executed.
-        args: The arguments passed to the command.
+        args: The arguments passed to This command.
+        valid_args: The valid arguments for This command.
     """
     return None
 
@@ -36,12 +36,10 @@ fn minimum_n_args[n: Int]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    fn less_than_n_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
+    fn less_than_n_args(args: List[String], valid_args: List[String]) raises -> None:
         if len(args) < n:
             raise Error(
-                "The command `",
-                cmd[].name,
-                "` accepts at least ",
+                "This command accepts at least ",
                 n,
                 " argument(s). Received: ",
                 len(args),
@@ -60,9 +58,9 @@ fn maximum_n_args[n: UInt]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    fn more_than_n_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
+    fn more_than_n_args(args: List[String], valid_args: List[String]) raises -> None:
         if len(args) > n:
-            raise Error("The command `", cmd[].name, "` accepts at most ", n, " argument(s). Received: ", len(args))
+            raise Error("This command accepts at most ", n, " argument(s). Received: ", len(args))
 
     return more_than_n_args
 
@@ -77,25 +75,24 @@ fn exact_args[n: UInt]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    fn exactly_n_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
+    fn exactly_n_args(args: List[String], valid_args: List[String]) raises -> None:
         if len(args) != n:
-            alias msg = StaticString("The command `{}` accepts exactly {} argument(s). Received: {}.")
-            raise Error(msg.format(cmd[].name, n, len(args)))
+            raise Error("This command accepts exactly ", n, "argument(s). Received: ", len(args))
 
     return exactly_n_args
 
 
-fn valid_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
-    """Returns an error if threre are any positional args that are not in the command's `valid_args`.
+fn valid_args(args: List[String], valid_args: List[String]) raises -> None:
+    """Returns an error if threre are any positional args that are not in This command's `valid_args`.
 
     Args:
-        cmd: The command being executed.
-        args: The arguments passed to the command.
+        args: The arguments passed to This command.
+        valid_args: The valid arguments for This command.
     """
-    if cmd[].valid_args:
+    if valid_args:
         for arg in args:
-            if arg not in cmd[].valid_args:
-                raise Error("Invalid argument: `", arg, "`, for the command `", cmd[].name, "`.")
+            if arg not in valid_args:
+                raise Error("Invalid argument: `", arg, "`, for This command .")
 
 
 fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
@@ -109,12 +106,10 @@ fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    fn range_n_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
+    fn range_n_args(args: List[String], valid_args: List[String]) raises -> None:
         if len(args) < minimum or len(args) > maximum:
             raise Error(
-                "The command `",
-                cmd[].name,
-                "`, accepts between ",
+                "This command accepts between ",
                 minimum,
                 " to ",
                 maximum,
@@ -125,20 +120,19 @@ fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
     return range_n_args
 
 
-# fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
-#     """Returns an error if any of the arg_validators return an error.
+fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
+    """Returns an error if any of the arg_validators return an error.
 
-#     Parameters:
-#         arg_validators: A list of ArgValidatorFn functions that check the arguments.
+    Parameters:
+        arg_validators: A list of ArgValidatorFn functions that check the arguments.
 
-#     Returns:
-#         A function that checks all the arguments using the arg_validators list..
-#     """
-#     fn match_all_args(cmd: OwnedPointer[Command], args: List[String]) raises -> None:
-#         # alias validators = VariadicList(arg_validators)
-#         @parameter
-#         for i in range(len(arg_validators)):
-#             print(i)
-#             arg_validators[i](cmd, args)
+    Returns:
+        A function that checks all the arguments using the arg_validators list.
+    """
 
-#     return match_all_args
+    fn match_all_args(args: List[String], valid_args: List[String]) raises -> None:
+        @parameter
+        for validator in VariadicList(arg_validators):
+            validator(args, valid_args)
+
+    return match_all_args

@@ -6,7 +6,7 @@ alias FlagActionFn = fn (String) raises -> None
 
 
 @fieldwise_init
-struct FType(Copyable, EqualityComparable, ExplicitlyCopyable, Movable):
+struct FType(Copyable, EqualityComparable, ImplicitlyCopyable, Movable):
     """Flag types enum helper."""
 
     var value: String
@@ -108,22 +108,11 @@ struct FType(Copyable, EqualityComparable, ExplicitlyCopyable, Movable):
         """
         return self.value == other.value
 
-    fn __ne__(self, other: Self) -> Bool:
-        """Compares two FType objects for inequality.
-
-        Args:
-            other: The other FType to compare against.
-
-        Returns:
-            True if the FTypes are not equal, False otherwise.
-        """
-        return self.value != other.value
-
 
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
 # needing to cast values to and from string.
 @fieldwise_init
-struct Flag(Copyable, ExplicitlyCopyable, Movable, Representable, Stringable, Writable):
+struct Flag(Copyable, Movable, Representable, Stringable, Writable):
     """Represents a flag that can be passed via the command line.
     Flags are passed in via `--name` or `-shorthand` and can have a value associated with them.
     """
@@ -232,17 +221,6 @@ struct Flag(Copyable, ExplicitlyCopyable, Movable, Representable, Stringable, Wr
             and self.changed == other.changed
         )
 
-    fn __ne__(self, other: Self) -> Bool:
-        """Compares two Flags for inequality.
-
-        Args:
-            other: The other Flag to compare against.
-
-        Returns:
-            True if the Flags are not equal, False otherwise.
-        """
-        return not self == other
-
     fn write_to[W: Writer, //](self, mut writer: W):
         """Write Flag string representation to a writer.
 
@@ -291,7 +269,9 @@ struct Flag(Copyable, ExplicitlyCopyable, Movable, Representable, Stringable, Wr
         self.value = String(value)
         self.changed = True
 
-    fn get_with_transform[T: Movable & Copyable, //, transform: fn (value: StringSlice) -> T](self) -> Optional[T]:
+    fn get_with_transform[
+        T: Movable & ImplicitlyCopyable, //, transform: fn (value: StringSlice) -> T
+    ](self) -> Optional[T]:
         """Returns the value of the flag with a transformation applied to it.
 
         Parameters:
@@ -1088,7 +1068,7 @@ struct Flag(Copyable, ExplicitlyCopyable, Movable, Representable, Stringable, Wr
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
-        default: Optional[List[Int, True]] = None,
+        default: Optional[List[Int]] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -1135,7 +1115,7 @@ struct Flag(Copyable, ExplicitlyCopyable, Movable, Representable, Stringable, Wr
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
-        default: Optional[List[Float64, True]] = None,
+        default: Optional[List[Float64]] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,

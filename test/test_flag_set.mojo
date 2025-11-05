@@ -254,7 +254,7 @@ def test_int_list():
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.int_list(name="num", usage="usage", default=List[Int, True](0, 1)),
+            Flag.int_list(name="num", usage="usage", default=List[Int](0, 1)),
         ],
     )
 
@@ -272,7 +272,7 @@ def test_float64_list():
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.float64_list(name="num", usage="usage", default=List[Float64, True](0, 1)),
+            Flag.float64_list(name="num", usage="usage", default=List[Float64](0, 1)),
         ],
     )
 

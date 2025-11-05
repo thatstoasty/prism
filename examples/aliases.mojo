@@ -1,3 +1,5 @@
+from memory import ArcPointer
+
 from prism import Command, Flag, FlagSet
 
 
@@ -14,6 +16,8 @@ fn main() -> None:
         name="my",
         usage="This is a dummy command!",
         run=test,
-        children=[Command(name="tool", usage="This is a dummy command!", run=tool_func, aliases=["object", "thing"])],
+        children=[
+            ArcPointer(Command(name="tool", usage="This is a dummy command!", run=tool_func, aliases=["object", "thing"]))
+        ],
     )
     cli.execute()

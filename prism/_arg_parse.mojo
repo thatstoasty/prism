@@ -35,17 +35,6 @@ struct STDINParserState:
         """
         return self.value == other.value
 
-    fn __ne__(self, other: Self) -> Bool:
-        """Compares two `STDINParserState` instances for inequality.
-
-        Args:
-            other: The other `STDINParserState` instance to compare to.
-
-        Returns:
-            True if the two instances are not equal, False otherwise.
-        """
-        return self.value != other.value
-
 
 fn parse_args_from_stdin(input: StringSlice) -> List[String]:
     """Reads arguments from stdin and returns them as a list of strings.

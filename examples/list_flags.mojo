@@ -57,7 +57,7 @@ fn main() -> None:
                         name="number",
                         shorthand="n",
                         usage="A number to include in the sum.",
-                        default=List[Int, True](1, 2),
+                        default=List[Int](1, 2),
                     )
                 ],
             ),
@@ -70,7 +70,7 @@ fn main() -> None:
                         name="number",
                         shorthand="n",
                         usage="A number to include in the sum.",
-                        default=List[Float64, True](1, 2),
+                        default=List[Float64](1, 2),
                     )
                 ],
             ),
