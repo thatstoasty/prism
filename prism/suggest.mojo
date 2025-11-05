@@ -23,8 +23,8 @@ fn jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
     if len(a) == 0 or len(b) == 0:
         return 0.0
 
-    var hash_a = List[Bool, True](length=len(a), fill=False)
-    var hash_b = List[Bool, True](length=len(b), fill=False)
+    var hash_a = List[Bool](length=len(a), fill=False)
+    var hash_b = List[Bool](length=len(b), fill=False)
 
     var max_distance = Int(max(0, math.floor(max(len(a), len(b)) / 2.0) - 1))
     var matches: Float64 = 0.0
@@ -123,7 +123,7 @@ fn suggest_flag(flags: Span[Flag], flag_name: StringSlice, hide_help: Bool = Fal
     return suggestion^
 
 
-fn flag_from_error(error: Error) -> Optional[StringSlice[ImmutableAnyOrigin]]:
+fn flag_from_error(error: Error) -> Optional[StringSlice[ImmutAnyOrigin]]:
     """Returns the flag from the error message.
 
     Args:

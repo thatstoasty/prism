@@ -14,7 +14,7 @@ fn default_version_writer(version: String) -> String:
     return version.copy()
 
 
-struct Version(Copyable, ExplicitlyCopyable, Movable):
+struct Version(Copyable, Movable):
     """A struct representing the version of a command."""
 
     var value: String
@@ -28,7 +28,7 @@ struct Version(Copyable, ExplicitlyCopyable, Movable):
         out self,
         version: String,
         *,
-        flag: Flag = Flag.bool(name="version", shorthand="v", usage="Displays the version of the command."),
+        var flag: Flag = Flag.bool(name="version", shorthand="v", usage="Displays the version of the command."),
         action: VersionFn = default_version_writer,
     ):
         """Constructs a new `Version` configuration.
@@ -39,7 +39,7 @@ struct Version(Copyable, ExplicitlyCopyable, Movable):
             action: The function to call when the version flag is passed.
         """
         self.value = version
-        self.flag = flag
+        self.flag = flag^
         self.action = action
 
     fn copy(self) -> Self:

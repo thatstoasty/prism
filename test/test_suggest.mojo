@@ -4,7 +4,7 @@ from prism.suggest import flag_from_error, jaro_distance, jaro_winkler, suggest_
 
 
 @fieldwise_init
-struct TestCase(Copyable, Movable):
+struct TestCase(ImplicitlyCopyable, Movable):
     var a: String
     var b: String
     var expected: Float64
@@ -127,7 +127,7 @@ fn test_jaro_winkler() raises:
 
 
 @fieldwise_init
-struct SuggestTestCase(Copyable, Movable):
+struct SuggestTestCase(ImplicitlyCopyable, Movable):
     var provided: String
     var expected: String
 

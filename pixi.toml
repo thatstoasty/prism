@@ -1,7 +1,7 @@
 [workspace]
 description = "A budding CLI Library!"
 authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
-channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://conda.modular.com/max", "https://prefix.dev/pixi-build-backends"]
+channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://conda.modular.com/max-nightly", "https://prefix.dev/pixi-build-backends"]
 platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
 license = "MIT"
 license-file = "LICENSE"
@@ -29,25 +29,25 @@ build_and_publish = [{ task = "build" }, { task = "publish" }]
 
 [package]
 name = "prism"
-version = "25.5.0"
+version = "25.7.0"
 
 [package.build]
 backend = { name = "pixi-build-mojo", version = "*" }
 
 [dependencies]
-mojo = ">=25.5.0,<25.6.0"
-mog = ">=25.5.0,<25.6.0"
+mojo = ">=0.25.6.0,<0.25.7.0"
+mog = ">=25.6.0,<25.7.0"
 
 [package.build-dependencies]
-mojo-compiler = ">=25.5.0,<25.6.0"
-mog = ">=25.5.0,<25.6.0"
+mojo-compiler = ">=0.25.6.0,<0.25.7.0"
+mog = ">=25.6.0,<25.7.0"
 
 [package.host-dependencies]
-mojo = ">=25.5.0,<25.6.0"
+mojo = ">=0.25.6.0,<0.25.7.0"
 
 [package.run-dependencies]
-mojo = ">=25.5.0,<25.6.0"
-mog = ">=25.5.0,<25.6.0"
+mojo = ">=0.25.6.0,<0.25.7.0"
+mog = ">=25.6.0,<25.7.0"
 
 [feature.util.dependencies]
 typer = ">=0.16.0,<0.17"

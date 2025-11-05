@@ -29,7 +29,7 @@ alias RaisingParentVisitorFn = fn (Command) capturing raises -> None
 """The function for visiting parents of a command."""
 
 
-fn _parse_command(owned command: Command, arg: StringSlice, mut leftover_start: Int) -> Command:
+fn _parse_command(var command: Command, arg: StringSlice, mut leftover_start: Int) -> Command:
     """Traverses the command tree to find the command that matches the given argument.
 
     Args:
@@ -44,12 +44,12 @@ fn _parse_command(owned command: Command, arg: StringSlice, mut leftover_start: 
     for cmd in command.children:
         if cmd[].name == argument or argument in cmd[].aliases:
             leftover_start += 1
-            return cmd[]
+            return cmd[].copy()
 
     return command^
 
 
-fn _parse_command_from_args(owned command: Command, owned args: List[String]) -> (Command, List[String]):
+fn _parse_command_from_args(var command: Command, var args: List[String]) -> Tuple[Command, List[String]]:
     """Traverses the command tree to find the command that matches the given arguments.
 
     Args:
@@ -78,7 +78,8 @@ fn _parse_command_from_args(owned command: Command, owned args: List[String]) ->
     return command^, remaining_args^
 
 
-struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
+@fieldwise_init
+struct Command(Copyable, Movable, Stringable, Writable):
     """A struct representing a command that can be executed from the command line.
 
     ```mojo
@@ -176,16 +177,16 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
         name: String,
         usage: String,
         *,
-        owned args_usage: Optional[String] = None,
-        owned aliases: List[String] = [],
+        var args_usage: Optional[String] = None,
+        var aliases: List[String] = [],
         help: Help = Help(),
         version: Optional[Version] = None,
         exit: ExitFn = default_exit,
         output_writer: WriterFn = default_output_writer,
         error_writer: WriterFn = default_error_writer,
         read_from_stdin: Bool = False,
-        owned valid_args: List[String] = [],
-        owned children: List[ArcPointer[Self]] = [],
+        var valid_args: List[String] = [],
+        var children: List[ArcPointer[Self]] = [],
         run: Optional[CmdFn] = None,
         pre_run: Optional[CmdFn] = None,
         post_run: Optional[CmdFn] = None,
@@ -196,7 +197,7 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
         persistent_post_run: Optional[CmdFn] = None,
         persistent_raising_pre_run: Optional[RaisingCmdFn] = None,
         persistent_raising_post_run: Optional[RaisingCmdFn] = None,
-        owned flags: FlagSet = FlagSet(),
+        var flags: FlagSet = FlagSet(),
         flags_required_together: List[String] = [],
         mutually_exclusive_flags: List[String] = [],
         one_required_flags: List[String] = [],
@@ -245,8 +246,8 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
         self.aliases = aliases^
 
         self.exit = exit
-        self.help = help
-        self.version = version
+        self.help = help.copy()
+        self.version = version.copy()
         self.output_writer = output_writer
         self.error_writer = error_writer
 
@@ -274,13 +275,13 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
         self.children = children^
         for command in self.children:
             if command[].parent:
-                command[].parent[0] = self
+                command[].parent[0] = ArcPointer(self.copy())
             else:
-                command[].parent.append(self)
+                command[].parent.append(ArcPointer(self.copy()))
 
-        self.flags.append(help.flag)
+        self.flags.append(help.flag.copy())
         if self.version:
-            self.flags.append(self.version.value().flag)
+            self.flags.append(self.version.value().flag.copy())
         try:
             if flags_required_together:
                 self._mark_flag_group_as[Annotation.REQUIRED_AS_GROUP](flags_required_together)
@@ -338,7 +339,7 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
         else:
             return self.name
 
-    fn root(self) -> ArcPointer[Self]:
+    fn root(self) -> Self:
         """Returns the root command of the command tree.
 
         Returns:
@@ -346,7 +347,7 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
         """
         if self.has_parent():
             return self.parent[0][].root()
-        return self
+        return self.copy()
 
     fn inherited_flags(self) -> FlagSet:
         """Returns the flags for the command and inherited flags from its parent.
@@ -360,7 +361,7 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
         fn add_parent_persistent_flags(parent: Self) capturing -> None:
             for flag in parent.flags:
                 if flag.persistent:
-                    flags.append(flag)
+                    flags.append(flag.copy())
 
         self.visit_parents[add_parent_persistent_flags]()
         return FlagSet(flags^)
@@ -451,13 +452,13 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
         @parameter
         fn run_action(parent: Self) raises -> None:
             if parent.persistent_raising_post_run:
-                parent.persistent_raising_post_run.value()(args, cmd.flags.flags)
+                parent.persistent_raising_post_run.value()(args, cmd.flags)
 
                 @parameter
                 if not ENABLE_TRAVERSE_RUN_HOOKS:
                     return
             elif parent.persistent_post_run:
-                parent.persistent_post_run.value()(args, cmd.flags.flags)
+                parent.persistent_post_run.value()(args, cmd.flags)
 
                 @parameter
                 if not ENABLE_TRAVERSE_RUN_HOOKS:
@@ -469,9 +470,9 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
 
             # Run the pre-run hooks.
             if cmd.pre_run:
-                cmd.pre_run.value()(args, cmd.flags.flags)
+                cmd.pre_run.value()(args, cmd.flags)
             elif cmd.raising_pre_run:
-                cmd.raising_pre_run.value()(args, cmd.flags.flags)
+                cmd.raising_pre_run.value()(args, cmd.flags)
         except e:
             self.error_writer("Failed to run pre-run hooks for command: " + cmd.name)
             raise e
@@ -490,13 +491,13 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
         @parameter
         fn run_action(parent: Self) raises -> None:
             if parent.persistent_raising_post_run:
-                parent.persistent_raising_post_run.value()(args, cmd.flags.flags)
+                parent.persistent_raising_post_run.value()(args, cmd.flags)
 
                 @parameter
                 if not ENABLE_TRAVERSE_RUN_HOOKS:
                     return
             elif parent.persistent_post_run:
-                parent.persistent_post_run.value()(args, cmd.flags.flags)
+                parent.persistent_post_run.value()(args, cmd.flags)
 
                 @parameter
                 if not ENABLE_TRAVERSE_RUN_HOOKS:
@@ -509,9 +510,9 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
 
             # Run the post-run hooks.
             if cmd.post_run:
-                cmd.post_run.value()(args, cmd.flags.flags)
+                cmd.post_run.value()(args, cmd.flags)
             elif cmd.raising_post_run:
-                cmd.raising_post_run.value()(args, cmd.flags.flags)
+                cmd.raising_post_run.value()(args, cmd.flags)
         except e:
             self.error_writer("Failed to run post-run hooks for command: " + cmd.name)
             raise e
@@ -524,7 +525,8 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
 
         # Always execute from the root command, regardless of what command was executed in main.
         if self.has_parent():
-            return self.root()[].execute()
+            var root = self.root()
+            return root.execute()
 
         var input_args = parse_args_from_command_line(argv())
 
@@ -536,10 +538,12 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
             except e:
                 # TODO: The compiler doesn't like just having the exit function.
                 # In case the user provided exit function does NOT exit, we return early since we have no input args.
-                self.exit(String("Failed to read from stdin: ", e))
+                self.exit(Error("Failed to read from stdin: ", e))
                 return
 
-        command, args = _parse_command_from_args(self, input_args)
+        var result = _parse_command_from_args(self.copy(), input_args.copy())
+        var command = result[0].copy()
+        var args = result[1].copy()
 
         # Merge persistent flags from ancestors.
         command._merge_flags()
@@ -595,14 +599,14 @@ struct Command(Copyable, ExplicitlyCopyable, Movable, Stringable, Writable):
             cmd[].flags.visit_all[run_action]()
 
             # Validate the remaining arguments
-            cmd[].arg_validator(cmd, remaining_args)
+            cmd[].arg_validator(remaining_args, self.valid_args)
 
             # Run the function's commands.
             self._execute_pre_run_hooks(cmd[], remaining_args)
             if cmd[].run:
-                cmd[].run.value()(remaining_args, cmd[].flags.flags)
+                cmd[].run.value()(remaining_args, cmd[].flags)
             else:
-                cmd[].raising_run.value()(remaining_args, cmd[].flags.flags)
+                cmd[].raising_run.value()(remaining_args, cmd[].flags)
             self._execute_post_run_hooks(cmd[], remaining_args)
         except e:
             self.exit(e)

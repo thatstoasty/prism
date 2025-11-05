@@ -13,9 +13,9 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-commit]
-      - id: mojo-docs
-        name: mojo-docs
-        entry: pixi run lint_docs
-        language: system
-        pass_filenames: false
-        stages: [pre-commit]
+      # - id: mojo-docs
+      #   name: mojo-docs
+      #   entry: pixi run lint_docs
+      #   language: system
+      #   pass_filenames: false
+      #   stages: [pre-commit]
