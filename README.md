@@ -6,14 +6,14 @@ Prism is a Mojo library designed to help you build command-line interfaces (CLI)
 
 Inspired by: `Cobra` and `urfave/cli`!
 
-![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-25.4-orange)
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-25.7-orange)
 ![Build Status](https://github.com/thatstoasty/prism/actions/workflows/build.yml/badge.svg)
 ![Test Status](https://github.com/thatstoasty/prism/actions/workflows/test.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Installation
 
-1. First, you'll need to configure your `mojoproject.toml` file to include my Conda channel. Add `"https://repo.prefix.dev/mojo-community"` to the list of channels.
+1. First, you'll need to configure your `pixi.toml` file to include my Conda channel. Add `"https://repo.prefix.dev/mojo-community"` to the list of channels.
 2. Next, add `prism` to your project's dependencies by running `pixi add prism`.
 3. Finally, run `pixi install` to install in `prism` and its dependencies. You should see the `.mojopkg` files in `$CONDA_PREFIX/lib/mojo/` (usually resolves to `.pixi/envs/default/lib/mojo`).
 
@@ -54,7 +54,7 @@ Due to the nature of self-referential structs, we need to use a smart pointer to
 
 ## Accessing arguments
 
-`prism` provides the parsed arguments as part of the `ctx` argument.
+`prism` provides the parsed cli arguments as command function arguments.
 
 ```mojo
 from prism import FlagSet

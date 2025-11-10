@@ -29,7 +29,7 @@ alias RaisingParentVisitorFn = fn (Command) capturing raises -> None
 """The function for visiting parents of a command."""
 
 
-fn _parse_command(var command: Command, arg: StringSlice, mut leftover_start: Int) -> Command:
+fn _parse_command(command: Command, arg: StringSlice, mut leftover_start: Int) -> Command:
     """Traverses the command tree to find the command that matches the given argument.
 
     Args:
@@ -46,7 +46,7 @@ fn _parse_command(var command: Command, arg: StringSlice, mut leftover_start: In
             leftover_start += 1
             return cmd[].copy()
 
-    return command^
+    return command.copy()
 
 
 fn _parse_command_from_args(var command: Command, var args: List[String]) -> Tuple[Command, List[String]]:
@@ -65,7 +65,7 @@ fn _parse_command_from_args(var command: Command, var args: List[String]) -> Tup
 
     var leftover_start = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
     for arg in args:
-        command = _parse_command(command^, arg, leftover_start)
+        command = _parse_command(command, arg, leftover_start)
 
     if leftover_start == 0:
         return command^, args^
@@ -83,29 +83,28 @@ struct Command(Copyable, Movable, Stringable, Writable):
     """A struct representing a command that can be executed from the command line.
 
     ```mojo
-     from prism import Command, CLI, Flag
+     from prism import Command, FlagSet, read_args
 
-     fn test(args: List[String], flags: List[Flag]) -> None:
+     fn test(args: List[String], flags: FlagSet) -> None:
          print("Hello from Chromeria!")
 
      fn main():
-         var cli = CLI(
+         var cli = Command(
              name="hello",
              usage="This is a dummy command!",
-             command=Command(
-                 name="hello",
-                 usage="This is a dummy command!",
-                 run=test,
-             ),
+             run=test,
          )
-         cli.run()
-     ```
+         cli.execute(read_args())
+    ```
 
-     Then execute the command by running the mojo file or binary.
-     ```sh
-     > mojo run hello.mojo
-     Hello from Chromeria!
-     ```
+    Then execute the command by running the mojo file or binary.
+    ```sh
+    > mojo hello.mojo
+    Hello from Chromeria!
+
+    > mojo build hello.mojo && ./hello
+    Hello from Chromeria!
+    ```
     """
 
     var name: String
@@ -169,9 +168,6 @@ struct Command(Copyable, Movable, Stringable, Writable):
     var suggest: Bool
     """If True, the command will suggest flags when an unknown flag is passed."""
 
-    var read_from_stdin: Bool
-    """If True, the command will read args from stdin as well."""
-
     fn __init__(
         out self,
         name: String,
@@ -184,7 +180,6 @@ struct Command(Copyable, Movable, Stringable, Writable):
         exit: ExitFn = default_exit,
         output_writer: WriterFn = default_output_writer,
         error_writer: WriterFn = default_error_writer,
-        read_from_stdin: Bool = False,
         var valid_args: List[String] = [],
         var children: List[ArcPointer[Self]] = [],
         run: Optional[CmdFn] = None,
@@ -216,7 +211,6 @@ struct Command(Copyable, Movable, Stringable, Writable):
             exit: The function to call when an error occurs.
             output_writer: The function to call when writing output.
             error_writer: The function to call when writing errors.
-            read_from_stdin: If True, the command will read args from stdin as well.
             valid_args: The valid arguments for the command.
             children: The child commands.
             run: The function to run when the command is executed.
@@ -251,8 +245,6 @@ struct Command(Copyable, Movable, Stringable, Writable):
         self.output_writer = output_writer
         self.error_writer = error_writer
 
-        self.read_from_stdin = read_from_stdin
-
         self.pre_run = pre_run
         self.run = run
         self.post_run = post_run
@@ -271,13 +263,13 @@ struct Command(Copyable, Movable, Stringable, Writable):
 
         self.valid_args = valid_args^
         self.flags = flags^
-        self.parent = List[ArcPointer[Self]](capacity=1)
+        self.parent = List[ArcPointer[Self]]()
         self.children = children^
         for command in self.children:
-            if command[].parent:
+            if self.parent:
                 command[].parent[0] = ArcPointer(self.copy())
             else:
-                command[].parent.append(ArcPointer(self.copy()))
+                self.parent.append(ArcPointer(self.copy()))
 
         self.flags.append(help.flag.copy())
         if self.version:
@@ -517,8 +509,31 @@ struct Command(Copyable, Movable, Stringable, Writable):
             self.error_writer("Failed to run post-run hooks for command: " + cmd.name)
             raise e
 
-    fn execute(mut self) -> None:
-        """Traverses the arguments passed to the executable and executes the last command in the branch."""
+    fn execute(mut self, var args: List[String]) -> None:
+        """Traverses the arguments passed to the executable and executes the last command in the branch.
+
+        Args:
+            args: The arguments passed to the executable.
+        """
+        self._execute(args^)
+
+    fn execute(mut self, args: VariadicList[StaticString]) -> None:
+        """Traverses the arguments passed to the executable and executes the last command in the branch.
+
+        This is an overload that accepts a variadic list of static strings, which is generally used for the
+        result of `argv()`.
+
+        Args:
+            args: The arguments passed to the executable.
+        """
+        self._execute(parse_args_from_command_line(args))
+
+    fn _execute(mut self, var input_args: List[String]) -> None:
+        """Traverses the arguments passed to the executable and executes the last command in the branch.
+
+        Args:
+            input_args: The arguments passed to the executable.
+        """
         # Traverse from the root command through the children to find a match for the current argument.
         # Any additional arguments past the last matched command name are considered arguments.
         # TODO: Tree traversal is new to me, there's probably a better way to do this.
@@ -526,20 +541,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
         # Always execute from the root command, regardless of what command was executed in main.
         if self.has_parent():
             var root = self.root()
-            return root.execute()
-
-        var input_args = parse_args_from_command_line(argv())
-
-        # Read from stdin and parse the arguments.
-        if self.read_from_stdin:
-            try:
-                # TODO: Switch from readline to reading until EOF
-                input_args.extend(parse_args_from_stdin(_fdopen["r"](stdin).readline()))
-            except e:
-                # TODO: The compiler doesn't like just having the exit function.
-                # In case the user provided exit function does NOT exit, we return early since we have no input args.
-                self.exit(Error("Failed to read from stdin: ", e))
-                return
+            return root._execute(input_args^)
 
         var result = _parse_command_from_args(self.copy(), input_args.copy())
         var command = result[0].copy()
