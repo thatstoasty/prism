@@ -1,3 +1,7 @@
+from io.io import _fdopen
+from sys import argv, env_get_bool, stdin
+
+
 fn parse_args_from_command_line(args: VariadicList[StaticString]) -> List[String]:
     """Returns the arguments passed to the executable as a list of strings.
 
@@ -82,3 +86,21 @@ fn parse_args_from_stdin(input: StringSlice) -> List[String]:
             args.append(token)
 
     return args^
+
+
+fn read_args() -> List[String]:
+    """Reads arguments from command line and returns them as a list of strings.
+
+    Returns:
+        The arguments read from command line as a list of strings.
+    """
+    return parse_args_from_command_line(argv())
+
+
+fn read_args_from_stdin() raises -> List[String]:
+    """Reads arguments from stdin and returns them as a list of strings.
+
+    Returns:
+        The arguments read from stdin as a list of strings.
+    """
+    return parse_args_from_stdin(_fdopen["r"](stdin).readline())
