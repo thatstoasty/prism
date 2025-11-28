@@ -18,7 +18,6 @@ pixi run mojo build $TEMP_DIR/list_flags.mojo -o $TEMP_DIR/list_flags
 pixi run mojo build $TEMP_DIR/version.mojo -o $TEMP_DIR/version
 pixi run mojo build $TEMP_DIR/exit.mojo -o $TEMP_DIR/exit
 pixi run mojo build $TEMP_DIR/multiple_bool_flag.mojo -o $TEMP_DIR/multiple_bool_flag
-pixi run mojo build $TEMP_DIR/stdin.mojo -o $TEMP_DIR/stdin
 pixi run mojo build $TEMP_DIR/suggest.mojo -o $TEMP_DIR/suggest
 pixi run mojo build $TEMP_DIR/full_api.mojo -o $TEMP_DIR/full_api
 
@@ -69,7 +68,6 @@ $TEMP_DIR/exit || echo "Exit Code: $?"
 $TEMP_DIR/multiple_bool_flag -r0vvas
 $TEMP_DIR/multiple_bool_flag -r0vas
 $TEMP_DIR/multiple_bool_flag -r0a --verbose "Hello Mojo!"
-echo "Hello Python!" | $TEMP_DIR/stdin examples/stdin.mojo "Hello Mojo!"
 $TEMP_DIR/suggest --gelp
 $TEMP_DIR/full_api
 $TEMP_DIR/full_api connect -r0a --verbose --host 192.168.1.1

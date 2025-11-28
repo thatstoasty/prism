@@ -2,7 +2,7 @@ from memory import ArcPointer
 from python import Python
 
 import prism
-from prism import Command, Flag, FlagSet
+from prism import Command, Flag, FlagSet, read_args
 
 
 fn base(args: List[String], flags: FlagSet) -> None:
@@ -111,6 +111,6 @@ fn main() -> None:
         )
     )
 
-    var root = Command(name="nested", usage="Base command.", run=base, children=List[ArcPointer[Command]](get_command))
+    var root = Command(name="nested", usage="Base command.", run=base, children=[get_command])
 
-    root.execute()
+    root.execute(read_args())

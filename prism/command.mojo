@@ -266,10 +266,10 @@ struct Command(Copyable, Movable, Stringable, Writable):
         self.parent = List[ArcPointer[Self]]()
         self.children = children^
         for command in self.children:
-            if self.parent:
+            if command[].parent:
                 command[].parent[0] = ArcPointer(self.copy())
             else:
-                self.parent.append(ArcPointer(self.copy()))
+                command[].parent.append(ArcPointer(self.copy()))
 
         self.flags.append(help.flag.copy())
         if self.version:

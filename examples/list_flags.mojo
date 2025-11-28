@@ -1,4 +1,6 @@
-from prism import Command, Flag, FlagSet
+from memory import ArcPointer
+
+from prism import Command, Flag, FlagSet, read_args
 
 
 fn test(args: List[String], flags: FlagSet) raises -> None:
@@ -48,7 +50,7 @@ fn main() -> None:
             )
         ],
         children=[
-            Command(
+            ArcPointer(Command(
                 name="sum",
                 usage="Add up the numbers passed in with the -n flag!",
                 raising_run=sum,
@@ -60,8 +62,8 @@ fn main() -> None:
                         default=List[Int](1, 2),
                     )
                 ],
-            ),
-            Command(
+            )),
+            ArcPointer(Command(
                 name="sum_float",
                 usage="Add up the numbers passed in with the -n flag!",
                 raising_run=sum_float,
@@ -73,7 +75,7 @@ fn main() -> None:
                         default=List[Float64](1, 2),
                     )
                 ],
-            ),
+            )),
         ],
     )
-    cli.execute()
+    cli.execute(read_args())

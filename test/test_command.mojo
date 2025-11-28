@@ -1,6 +1,7 @@
 import testing
 from memory import ArcPointer
 from prism.command import Command, Flag, FlagSet
+from testing import TestSuite
 
 import prism
 
@@ -14,15 +15,19 @@ def test_command_operations():
         usage="Base command.",
         run=dummy,
         children=[
-            Command(
+            ArcPointer(Command(
                 name="child",
                 usage="Child command.",
                 run=dummy,
                 flags=[Flag.uint32(name="color", shorthand="c", usage="Text color", default=UInt32(0x3464EB))],
-            )
+            ))
         ],
     )
     for flag in cmd.flags:
         testing.assert_equal("help", flag.name)
 
     # testing.assert_equal(child_cmd[].full_name(), "root child")
+
+
+fn main() raises:
+    TestSuite.discover_tests[__functions_in_module()]().run()

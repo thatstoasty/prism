@@ -1,5 +1,6 @@
-import prism
-from prism import Command, Flag, FlagSet
+from memory import ArcPointer
+
+from prism import Command, Flag, FlagSet, read_args
 
 
 fn test(args: List[String], flags: FlagSet) raises -> None:
@@ -47,4 +48,4 @@ fn main() -> None:
         mutually_exclusive_flags=["host", "uri"],
         flags_required_together=["host", "port"],
     )
-    cli.execute()
+    cli.execute(read_args())

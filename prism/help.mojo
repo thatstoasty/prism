@@ -1,4 +1,4 @@
-# import mog
+import mog
 from memory import OwnedPointer
 from prism.command import Command
 from prism.flag import Flag
@@ -9,74 +9,70 @@ alias HelpFn = fn (OwnedPointer[Command]) raises -> String
 
 
 fn default_help(cmd: OwnedPointer[Command]) raises -> String:
-    return ""
+    """Prints the help information for the command.
 
+    Args:
+        cmd: The command to generate help information for.
 
-# fn default_help(cmd: OwnedPointer[Command]) raises -> String:
-#     """Prints the help information for the command.
+    Returns:
+        The help information for the command.
 
-#     Args:
-#         cmd: The command to generate help information for.
+    Raises:
+        Any error that occurs while generating the help information.
+    """
+    alias style = mog.Style(mog.Profile.ASCII)
+    var builder = String("Usage: ", cmd[].full_name())
 
-#     Returns:
-#         The help information for the command.
+    if len(cmd[].flags) > 0:
+        builder.write(" [OPTIONS]")
+    if len(cmd[].children) > 0:
+        builder.write(" COMMAND")
+    builder.write(" [ARGS]...", "\n\n", cmd[].usage, "\n")
 
-#     Raises:
-#         Any error that occurs while generating the help information.
-#     """
-#     alias style = mog.Style(mog.Profile.ASCII)
-#     var builder = String("Usage: ", cmd[].full_name())
+    if cmd[].args_usage:
+        builder.write("\nArguments:\n  ", cmd[].args_usage.value(), "\n")
 
-#     if len(cmd[].flags) > 0:
-#         builder.write(" [OPTIONS]")
-#     if len(cmd[].children) > 0:
-#         builder.write(" COMMAND")
-#     builder.write(" [ARGS]...", "\n\n", cmd[].usage, "\n")
+    var option_width = 0
+    if cmd[].flags:
+        var widest_flag = 0
+        var widest_shorthand = 0
+        for flag in cmd[].flags:
+            if len(flag.name) > widest_flag:
+                widest_flag = len(flag.name)
+            if len(flag.shorthand) > widest_shorthand:
+                widest_shorthand = len(flag.shorthand)
 
-#     if cmd[].args_usage:
-#         builder.write("\nArguments:\n  ", cmd[].args_usage.value(), "\n")
+        alias USAGE_PADDING = 4
+        option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
+        var options_style = style.set_width(option_width)
 
-#     var option_width = 0
-#     if cmd[].flags:
-#         var widest_flag = 0
-#         var widest_shorthand = 0
-#         for flag in cmd[].flags:
-#             if len(flag.name) > widest_flag:
-#                 widest_flag = len(flag.name)
-#             if len(flag.shorthand) > widest_shorthand:
-#                 widest_shorthand = len(flag.shorthand)
+        builder.write("\nOptions:")
+        for flag in cmd[].flags:
+            var option = String("\n  ")
+            if flag.shorthand:
+                option.write("-", flag.shorthand, ", ")
+            option.write("--", flag.name)
+            builder.write(options_style.render(option), flag.usage)
 
-#         alias USAGE_PADDING = 4
-#         option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
-#         var options_style = style.set_width(option_width)
+        builder.write("\n")
 
-#         builder.write("\nOptions:")
-#         for flag in cmd[].flags:
-#             var option = String("\n  ")
-#             if flag.shorthand:
-#                 option.write("-", flag.shorthand, ", ")
-#             option.write("--", flag.name)
-#             builder.write(options_style.render(option), flag.usage)
+    if cmd[].children:
+        var options_style = style.set_width(option_width - 2)
+        builder.write("\nCommands:")
+        for i in range(len(cmd[].children)):
+            builder.write("\n  ", options_style.render(cmd[].children[i][].name), cmd[].children[i][].usage)
+        builder.write("\n")
 
-#         builder.write("\n")
+    if cmd[].aliases:
+        builder.write("\nAliases:\n  ")
+        for i in range(len(cmd[].aliases)):
+            builder.write(cmd[].aliases[i])
 
-#     if cmd[].children:
-#         var options_style = style.set_width(option_width - 2)
-#         builder.write("\nCommands:")
-#         for i in range(len(cmd[].children)):
-#             builder.write("\n  ", options_style.render(cmd[].children[i][].name), cmd[].children[i][].usage)
-#         builder.write("\n")
+            if i < len(cmd[].aliases) - 1:
+                builder.write(", ")
+        builder.write("\n")
 
-#     if cmd[].aliases:
-#         builder.write("\nAliases:\n  ")
-#         for i in range(len(cmd[].aliases)):
-#             builder.write(cmd[].aliases[i])
-
-#             if i < len(cmd[].aliases) - 1:
-#                 builder.write(", ")
-#         builder.write("\n")
-
-#     return builder^
+    return builder^
 
 
 struct Help(Copyable, Movable):

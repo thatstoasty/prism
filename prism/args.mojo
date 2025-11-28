@@ -1,6 +1,3 @@
-from memory import OwnedPointer
-
-
 alias ArgValidatorFn = fn (args: List[String], valid_args: List[String]) raises -> None
 """The function for an argument validator."""
 
@@ -59,7 +56,7 @@ fn maximum_n_args[n: UInt]() -> ArgValidatorFn:
     """
 
     fn more_than_n_args(args: List[String], valid_args: List[String]) raises -> None:
-        if len(args) > n:
+        if UInt(len(args)) > n:
             raise Error("This command accepts at most ", n, " argument(s). Received: ", len(args))
 
     return more_than_n_args
@@ -76,8 +73,8 @@ fn exact_args[n: UInt]() -> ArgValidatorFn:
     """
 
     fn exactly_n_args(args: List[String], valid_args: List[String]) raises -> None:
-        if len(args) != n:
-            raise Error("This command accepts exactly ", n, "argument(s). Received: ", len(args))
+        if UInt(len(args)) != n:
+            raise Error("This command accepts exactly ", n, " argument(s). Received: ", len(args))
 
     return exactly_n_args
 
@@ -107,7 +104,7 @@ fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
     """
 
     fn range_n_args(args: List[String], valid_args: List[String]) raises -> None:
-        if len(args) < minimum or len(args) > maximum:
+        if UInt(len(args)) < minimum or UInt(len(args)) > maximum:
             raise Error(
                 "This command accepts between ",
                 minimum,

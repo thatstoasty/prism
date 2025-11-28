@@ -1,5 +1,6 @@
 import testing
 from prism.flag import Flag, FType
+from testing import TestSuite
 
 from prism import Command, FlagSet
 
@@ -261,7 +262,7 @@ def test_int_list():
     var flag = cmd.flags.lookup[FType.IntList]("num")
     testing.assert_equal(flag.value()[].type.value, FType.IntList.value)
 
-    var result = cmd.flags.get_int_list("num").value()
+    ref result = cmd.flags.get_int_list("num").value()
     testing.assert_equal(result[0], 0)
     testing.assert_equal(result[1], 1)
 
@@ -279,6 +280,10 @@ def test_float64_list():
     var flag = cmd.flags.lookup[FType.Float64List]("num")
     testing.assert_equal(flag.value()[].type.value, FType.Float64List.value)
 
-    var result = cmd.flags.get_float64_list("num").value()
+    ref result = cmd.flags.get_float64_list("num").value()
     testing.assert_equal(result[0], Float64(0))
     testing.assert_equal(result[1], Float64(1))
+
+
+fn main() raises:
+    TestSuite.discover_tests[__functions_in_module()]().run()

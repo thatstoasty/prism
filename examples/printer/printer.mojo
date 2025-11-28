@@ -2,7 +2,7 @@ import mist
 from memory import ArcPointer
 
 import prism
-from prism import Command, Flag, FlagSet, exact_args
+from prism import Command, Flag, FlagSet, exact_args, read_args
 
 
 fn printer(args: List[String], flags: FlagSet) raises -> None:
@@ -50,4 +50,4 @@ fn main() -> None:
             Flag.string(name="formatting", shorthand="f", usage="Text formatting"),
         ),
     )
-    cli.execute()
+    cli.execute(read_args())
