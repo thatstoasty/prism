@@ -2,12 +2,13 @@
 authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
 channels = ["https://repo.prefix.dev/mojo-community", "conda-forge", "https://conda.modular.com/max"]
 description = "Add a short description here"
-name = "printer"
-platforms = ["osx-arm64", "linux-64"]
+name = "requests"
+platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
 version = "0.1.0"
 
 [tasks]
 
 [dependencies]
-mojo = ">=25.5.0,<25.6.0"
-prism = ">=25.5.0,<25.6.0"
+mojo = ">=25.7.0,<26.1.0"
+prism = ">=25.7.0,<26.1.0"
+requests = ">=2.32.3,<3"

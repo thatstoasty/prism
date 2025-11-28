@@ -1,6 +1,6 @@
 from sys import exit
 
-from prism import Command, FlagSet
+from prism import Command, FlagSet, read_args
 
 
 fn test(args: List[String], flags: FlagSet) raises -> None:
@@ -22,4 +22,4 @@ fn main() -> None:
         raising_run=test,
         exit=my_exit,
     )
-    cli.execute()
+    cli.execute(read_args())

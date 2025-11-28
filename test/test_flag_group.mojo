@@ -6,6 +6,7 @@ from prism._flag_group import (
     validate_one_required_flag_group,
     validate_required_flag_group,
 )
+from testing import TestSuite
 
 
 fn make_test_data(required: Bool, alternative: Bool) -> Dict[String, Dict[String, Bool]]:
@@ -72,3 +73,7 @@ fn test_extract_keys() raises -> None:
             ["alternative", "required"],
             "Expected the alternative and required flag names.",
         )
+
+
+fn main() raises:
+    TestSuite.discover_tests[__functions_in_module()]().run()

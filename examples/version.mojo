@@ -1,4 +1,4 @@
-from prism import Command, Flag, FlagSet, Version
+from prism import Command, Flag, FlagSet, Version, read_args
 
 
 fn test(args: List[String], flags: FlagSet) -> None:
@@ -16,4 +16,4 @@ fn main() -> None:
         run=test,
         version=Version("0.1.0", action=version),
     )
-    cli.execute()
+    cli.execute(read_args())

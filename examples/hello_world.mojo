@@ -1,4 +1,6 @@
-from prism import Command, Flag, FlagSet
+from memory import ArcPointer
+
+from prism import Command, Flag, FlagSet, read_args
 
 
 fn printer(args: List[String], flags: FlagSet) -> None:
@@ -41,28 +43,28 @@ fn main() -> None:
         run=test,
         flags=[Flag.string(name="env", shorthand="e", usage="Environment.")],
         children=[
-            Command(
+            ArcPointer(Command(
                 name="printer",
                 usage="Print the first arg.",
                 run=printer,
-            ),
-            Command(
+            )),
+            ArcPointer(Command(
                 name="say",
                 usage="Say something to someone",
                 run=say,
                 children=[
-                    Command(
+                    ArcPointer(Command(
                         name="hello",
                         usage="Say hello to someone",
                         run=say_hello,
-                    ),
-                    Command(
+                    )),
+                    ArcPointer(Command(
                         name="goodbye",
                         usage="Say goodbye to someone",
                         run=say_goodbye,
-                    ),
+                    )),
                 ],
-            ),
+            )),
         ],
     )
-    cli.execute()
+    cli.execute(read_args())

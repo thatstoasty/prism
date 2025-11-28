@@ -1,6 +1,7 @@
 import testing
 from prism.flag import Flag, FType
 from prism.suggest import flag_from_error, jaro_distance, jaro_winkler, suggest_flag
+from testing import TestSuite
 
 
 @fieldwise_init
@@ -133,7 +134,7 @@ struct SuggestTestCase(ImplicitlyCopyable, Movable):
 
 
 fn test_suggest_flag() raises:
-    alias flags = List[Flag](
+    var flags = List[Flag](
         Flag(name="another-flag", shorthand="b", usage="Another flag", type=FType.String),
         Flag(name="help", shorthand="h", usage="Help flag", type=FType.Bool),
         Flag(name="version", shorthand="v", usage="Version flag", type=FType.Bool),
@@ -182,3 +183,7 @@ fn test_flag_from_error_wrong_error() raises:
     var error = Error("Some other error.")
     result = flag_from_error(error)
     testing.assert_false(Bool(result))
+
+
+fn main() raises:
+    TestSuite.discover_tests[__functions_in_module()]().run()

@@ -1,4 +1,4 @@
-from prism import Command, FlagSet
+from prism import Command, FlagSet, read_args
 
 
 fn test(args: List[String], flags: FlagSet) -> None:
@@ -8,4 +8,4 @@ fn test(args: List[String], flags: FlagSet) -> None:
 
 fn main() -> None:
     var cli = Command(name="hello", usage="This is a dummy command!", run=test, suggest=True)
-    cli.execute()
+    cli.execute(read_args())

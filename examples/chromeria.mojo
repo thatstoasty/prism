@@ -1,4 +1,6 @@
-from prism import Command, Flag, FlagSet
+from memory import ArcPointer
+
+from prism import Command, Flag, FlagSet, read_args
 
 
 fn test(args: List[String], flags: FlagSet) -> None:
@@ -14,6 +16,6 @@ fn main() -> None:
         name="hello",
         usage="This is a dummy command!",
         run=test,
-        children=[Command(name="chromeria", usage="This is a dummy command!", run=hello)],
+        children=[ArcPointer(Command(name="chromeria", usage="This is a dummy command!", run=hello))],
     )
-    cli.execute()
+    cli.execute(read_args())

@@ -1,5 +1,6 @@
-import prism
-from prism import Command, Flag, FlagSet
+from memory import ArcPointer
+
+from prism import Command, Flag, FlagSet, read_args
 
 
 fn test(args: List[String], flags: FlagSet) -> None:
@@ -31,7 +32,7 @@ fn main() -> None:
             ),
         ],
         children=[
-            Command(
+            ArcPointer(Command(
                 name="tool",
                 usage="This is a dummy command!",
                 run=tool_func,
@@ -50,7 +51,7 @@ fn main() -> None:
                 ],
                 # mutually_exclusive_flags=List[String]("host", "uri"),
                 # flags_required_together=List[String]("host", "port"),
-            )
+            ))
         ],
     )
-    cli.execute()
+    cli.execute(read_args())

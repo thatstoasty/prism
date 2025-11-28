@@ -1,6 +1,6 @@
 import os
 
-from prism import Command, Flag, FlagSet
+from prism import Command, Flag, FlagSet, read_args
 
 
 fn test(args: List[String], flags: FlagSet) raises -> None:
@@ -28,6 +28,6 @@ fn main() -> None:
             )
         ],
     )
-    cli.execute()
+    cli.execute(read_args())
 
     _ = os.unsetenv("NAME")

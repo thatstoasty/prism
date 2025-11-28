@@ -1,4 +1,4 @@
-from prism import Command, Flag, FlagSet, Help, Version
+from prism import Command, Flag, FlagSet, Help, Version, read_args
 
 
 fn test(args: List[String], flags: FlagSet) -> None:
@@ -13,4 +13,4 @@ fn main() -> None:
         help=Help(flag=Flag.bool(name="custom-help", shorthand="ch", usage="My Cool Help Flag.")),
         version=Version("0.1.0", flag=Flag.bool(name="custom-version", shorthand="cv", usage="My Cool Version Flag.")),
     )
-    cli.execute()
+    cli.execute(read_args())

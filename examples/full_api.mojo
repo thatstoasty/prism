@@ -1,6 +1,8 @@
 from sys import exit, stderr
 
-from prism import Command, Flag, FlagSet, Version, no_args
+from memory import ArcPointer
+
+from prism import Command, Flag, FlagSet, Version, no_args, read_args
 
 
 fn base(args: List[String], flags: FlagSet) -> None:
@@ -37,7 +39,7 @@ fn version(version: String) -> String:
 
 
 fn validate_hosts(value: String) raises -> None:
-    alias approved_hosts = List[String]("localhost", "0.0.0.0", "192.168.1.1")
+    var approved_hosts = List[String]("localhost", "0.0.0.0", "192.168.1.1")
     var hosts = value.split(" ")
     for host in hosts:
         if String(host) not in approved_hosts:
@@ -89,7 +91,7 @@ fn main() -> None:
         ],
         flags_required_together=["host", "port"],
         children=[
-            Command(
+            ArcPointer(Command(
                 name="connect",
                 usage="Connect to a database.",
                 raising_run=connect,
@@ -109,8 +111,8 @@ fn main() -> None:
                 ],
                 arg_validator=no_args,
                 suggest=True,
-            ),
-            Command(
+            )),
+            ArcPointer(Command(
                 name="allow",
                 usage="Add hosts to the allow list!",
                 raising_run=allow_hosts,
@@ -123,8 +125,7 @@ fn main() -> None:
                         action=validate_hosts,
                     )
                 ],
-                read_from_stdin=True,
-            ),
+            )),
         ],
     )
-    cli.execute()
+    cli.execute(read_args())

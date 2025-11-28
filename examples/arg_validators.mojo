@@ -1,6 +1,16 @@
 from memory import ArcPointer
 
-from prism import Command, FlagSet, exact_args, maximum_n_args, minimum_n_args, no_args, range_args, valid_args
+from prism import (
+    Command,
+    FlagSet,
+    exact_args,
+    maximum_n_args,
+    minimum_n_args,
+    no_args,
+    range_args,
+    read_args,
+    valid_args,
+)
 
 
 fn test(args: List[String], flags: FlagSet) -> None:
@@ -18,22 +28,22 @@ fn main() -> None:
         usage="This is a dummy command!",
         run=test,
         children=[
-            Command(
+            ArcPointer(Command(
                 name="minimum_n_args", usage="This is a dummy command!", run=hello, arg_validator=minimum_n_args[4]()
-            ),
-            Command(
+            )),
+            ArcPointer(Command(
                 name="maximum_n_args", usage="This is a dummy command!", run=hello, arg_validator=maximum_n_args[1]()
-            ),
-            Command(name="exact_args", usage="This is a dummy command!", run=hello, arg_validator=exact_args[1]()),
-            Command(name="range_args", usage="This is a dummy command!", run=hello, arg_validator=range_args[0, 1]()),
-            Command(
+            )),
+            ArcPointer(Command(name="exact_args", usage="This is a dummy command!", run=hello, arg_validator=exact_args[1]())),
+            ArcPointer(Command(name="range_args", usage="This is a dummy command!", run=hello, arg_validator=range_args[0, 1]())),
+            ArcPointer(Command(
                 name="valid_args",
                 usage="This is a dummy command!",
                 run=hello,
                 valid_args=List[String]("Pineapple"),
                 arg_validator=valid_args,
-            ),
-            Command(name="no_args", usage="This is a dummy command!", run=hello, arg_validator=no_args),
+            )),
+            ArcPointer(Command(name="no_args", usage="This is a dummy command!", run=hello, arg_validator=no_args)),
         ],
     )
-    cli.execute()
+    cli.execute(read_args())

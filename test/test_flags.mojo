@@ -1,5 +1,6 @@
 import testing
 from prism.flag import Flag
+from testing import TestSuite
 
 from prism import Command, FlagSet
 
@@ -38,3 +39,7 @@ def test_parse():
 
     remaining_args = cmd.flags.from_args(List[String]("--key=value"))
     testing.assert_equal(len(remaining_args), 0)
+
+
+fn main() raises:
+    TestSuite.discover_tests[__functions_in_module()]().run()
