@@ -1,7 +1,7 @@
 from prism._util import panic
 
 
-alias ExitFn = fn (Error) -> None
+comptime ExitFn = fn (Error) -> None
 """The function to call when an error occurs."""
 
 

@@ -4,7 +4,7 @@ from prism.command import Command
 from prism.flag import Flag
 
 
-alias HelpFn = fn (OwnedPointer[Command]) raises -> String
+comptime HelpFn = fn (OwnedPointer[Command]) raises -> String
 """The function to generate help output."""
 
 
@@ -20,7 +20,7 @@ fn default_help(cmd: OwnedPointer[Command]) raises -> String:
     Raises:
         Any error that occurs while generating the help information.
     """
-    alias style = mog.Style(mog.Profile.ASCII)
+    comptime style = mog.Style(mog.Profile.ASCII)
     var builder = String("Usage: ", cmd[].full_name())
 
     if len(cmd[].flags) > 0:
@@ -42,7 +42,7 @@ fn default_help(cmd: OwnedPointer[Command]) raises -> String:
             if len(flag.shorthand) > widest_shorthand:
                 widest_shorthand = len(flag.shorthand)
 
-        alias USAGE_PADDING = 4
+        comptime USAGE_PADDING = 4
         option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
         var options_style = style.set_width(option_width)
 
@@ -75,6 +75,7 @@ fn default_help(cmd: OwnedPointer[Command]) raises -> String:
     return builder^
 
 
+@fieldwise_init
 struct Help(Copyable, Movable):
     """A struct representing the help information for a command."""
 
@@ -97,28 +98,3 @@ struct Help(Copyable, Movable):
         """
         self.flag = flag^
         self.action = action
-
-    fn __copyinit__(out self, existing: Self):
-        """Initializes a new `Help` instance by copying from another.
-
-        Args:
-            existing: The `Help` instance to copy from.
-        """
-        return Help(flag=existing.flag.copy(), action=existing.action)
-
-    fn __moveinit__(out self, deinit other: Self):
-        """Initializes a new `Help` instance by moving from another.
-
-        Args:
-            other: The `Help` instance to move from.
-        """
-        self.flag = other.flag^
-        self.action = other.action
-
-    fn copy(self) -> Self:
-        """Returns a copy of the `Help` instance.
-
-        Returns:
-            A new `Help` instance with the same flag and action.
-        """
-        return Help(flag=self.flag.copy(), action=self.action)

@@ -3,7 +3,7 @@ from memory import ArcPointer
 from prism import Command, Flag, FlagSet, read_args
 
 
-fn test(args: List[String], flags: FlagSet) -> None:
+fn test(args: List[String], flags: FlagSet) raises -> None:
     print("Pass chromeria as a subcommand!")
 
 

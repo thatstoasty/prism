@@ -66,9 +66,9 @@ fn main() -> None:
                 shorthand="h",
                 usage="Host",
                 persistent=True,
-                environment_variable=String("CONNECTOR_HOST"),
-                file_path=String("~/.myapp/config"),
-                default=String("localhost"),
+                environment_variable="CONNECTOR_HOST",
+                file_path="~/.myapp/config",
+                default="localhost",
             ),
             Flag.string(
                 name="port",
@@ -94,7 +94,7 @@ fn main() -> None:
             ArcPointer(Command(
                 name="connect",
                 usage="Connect to a database.",
-                raising_run=connect,
+                run=connect,
                 aliases=["db-connect"],
                 flags=[
                     Flag.bool(
@@ -115,7 +115,7 @@ fn main() -> None:
             ArcPointer(Command(
                 name="allow",
                 usage="Add hosts to the allow list!",
-                raising_run=allow_hosts,
+                run=allow_hosts,
                 flags=[
                     Flag.string_list(
                         name="hosts",
