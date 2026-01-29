@@ -1,7 +1,7 @@
 from sys import stderr
 
 
-alias WriterFn = fn (String) -> None
+comptime WriterFn = fn (String) -> None
 """The function to call when writing output or errors."""
 
 

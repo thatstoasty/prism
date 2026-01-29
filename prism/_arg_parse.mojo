@@ -25,8 +25,8 @@ struct STDINParserState:
     var value: UInt8
     """State of the parser when reading from stdin."""
 
-    alias FIND_TOKEN = Self(0)
-    alias FIND_ARG = Self(1)
+    comptime FIND_TOKEN = Self(0)
+    comptime FIND_ARG = Self(1)
 
     fn __eq__(self, other: Self) -> Bool:
         """Compares two `STDINParserState` instances for equality.

@@ -1,4 +1,4 @@
-alias ArgValidatorFn = fn (args: List[String], valid_args: List[String]) raises -> None
+comptime ArgValidatorFn = fn (args: List[String], valid_args: List[String]) raises -> None
 """The function for an argument validator."""
 
 

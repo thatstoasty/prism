@@ -1,4 +1,4 @@
-alias VersionFn = fn (String) -> String
+comptime VersionFn = fn (String) -> String
 """The function to call when the version flag is passed."""
 
 

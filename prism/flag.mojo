@@ -1,34 +1,59 @@
 from prism._flag_set import Annotation
 
 
-alias FlagActionFn = fn (String) raises -> None
+comptime FlagActionFn = fn (String) raises -> None
 """The type of a function that runs after a flag has been processed."""
 
 
 @fieldwise_init
-struct FType(Copyable, EqualityComparable, ImplicitlyCopyable, Movable):
+struct FType(Copyable, Equatable, ImplicitlyCopyable, Movable):
     """Flag types enum helper."""
 
-    var value: String
+    var value: UInt8
     """The value of the flag type."""
-    alias String = Self("String")
-    alias Bool = Self("Bool")
-    alias Int = Self("Int")
-    alias Int8 = Self("Int8")
-    alias Int16 = Self("Int16")
-    alias Int32 = Self("Int32")
-    alias Int64 = Self("Int64")
-    alias UInt = Self("UInt")
-    alias UInt8 = Self("UInt8")
-    alias UInt16 = Self("UInt16")
-    alias UInt32 = Self("UInt32")
-    alias UInt64 = Self("UInt64")
-    alias Float16 = Self("Float16")
-    alias Float32 = Self("Float32")
-    alias Float64 = Self("Float64")
-    alias StringList = Self("StringList")
-    alias IntList = Self("IntList")
-    alias Float64List = Self("Float64List")
+    comptime String = Self(0)
+    comptime Bool = Self(1)
+    comptime Int = Self(2)
+    comptime Int8 = Self(3)
+    comptime Int16 = Self(4)
+    comptime Int32 = Self(5)
+    comptime Int64 = Self(6)
+    comptime UInt = Self(7)
+    comptime UInt8 = Self(8)
+    comptime UInt16 = Self(9)
+    comptime UInt32 = Self(10)
+    comptime UInt64 = Self(11)
+    comptime Float16 = Self(12)
+    comptime Float32 = Self(13)
+    comptime Float64 = Self(14)
+    comptime StringList = Self(15)
+    comptime IntList = Self(16)
+    comptime Float64List = Self(17)
+
+    comptime INT_TYPES = InlineArray[Self, 10](
+        Self.Int,
+        Self.Int8,
+        Self.Int16,
+        Self.Int32,
+        Self.Int64,
+        Self.UInt,
+        Self.UInt8,
+        Self.UInt16,
+        Self.UInt32,
+        Self.UInt64,
+    )
+
+    comptime FLOAT_TYPES = InlineArray[Self, 3](
+        Self.Float16,
+        Self.Float32,
+        Self.Float64,
+    )
+
+    comptime LIST_TYPES = InlineArray[Self, 3](
+        Self.StringList,
+        Self.IntList,
+        Self.Float64List,
+    )
 
     fn is_int_type(self) -> Bool:
         """Returns if the type is an integer type.
@@ -36,19 +61,7 @@ struct FType(Copyable, EqualityComparable, ImplicitlyCopyable, Movable):
         Returns:
             True if the type is an integer type, False otherwise.
         """
-        alias int_types = InlineArray[String, 10](
-            "Int",
-            "Int8",
-            "Int16",
-            "Int32",
-            "Int64",
-            "UInt",
-            "UInt8",
-            "UInt16",
-            "UInt32",
-            "UInt64",
-        )
-        return self.value in int_types
+        return self in Self.INT_TYPES
 
     fn is_float_type(self) -> Bool:
         """Returns if the type is an float type.
@@ -56,8 +69,7 @@ struct FType(Copyable, EqualityComparable, ImplicitlyCopyable, Movable):
         Returns:
             True if the type is an float type, False otherwise.
         """
-        alias float_types = InlineArray[String, 3]("Float16", "Float32", "Float64")
-        return self.value in float_types
+        return self in Self.FLOAT_TYPES
 
     fn is_list_type(self) -> Bool:
         """Returns if the type is a list type.
@@ -65,37 +77,7 @@ struct FType(Copyable, EqualityComparable, ImplicitlyCopyable, Movable):
         Returns:
             True if the type is a list type, False otherwise.
         """
-        alias list_types = InlineArray[String, 3]("StringList", "IntList", "Float64List")
-        return self.value in list_types
-
-    fn is_valid(self) -> Bool:
-        """Returns if the type is a valid type.
-
-        Returns:
-            True if the type is a valid type, False otherwise.
-        """
-        alias valid_types = InlineArray[String, 18](
-            "String",
-            "Bool",
-            "Int",
-            "Int8",
-            "Int16",
-            "Int32",
-            "Int64",
-            "UInt",
-            "UInt8",
-            "UInt16",
-            "UInt32",
-            "UInt64",
-            "Float16",
-            "Float32",
-            "Float64",
-            "StringList",
-            "IntList",
-            "Float64List",
-        )
-
-        return self.value in valid_types
+        return self in Self.LIST_TYPES
 
     fn __eq__(self, other: Self) -> Bool:
         """Compares two FType objects for equality.
@@ -307,7 +289,7 @@ struct Flag(Copyable, Movable, Representable, Stringable, Writable):
         Returns:
             The names of the flag.
         """
-        var names = List[String](self.name, self.shorthand)
+        var names: List[String] = [self.name, self.shorthand]
         # TODO: Add aliases to list when flags support them.
         return names^
 

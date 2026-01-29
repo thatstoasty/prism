@@ -8,12 +8,36 @@ struct ShorthandParserState:
 
     var value: UInt8
     """Internal value."""
-    alias START = Self(0)
-    alias MULTIPLE_BOOLS = Self(1)
-    alias CHECK_FLAG = Self(2)
+    comptime START = Self(0)
+    comptime MULTIPLE_BOOLS = Self(1)
+    comptime CHECK_FLAG = Self(2)
 
     fn __eq__(self, other: Self) -> Bool:
         return self.value == other.value
+
+
+@fieldwise_init
+struct ParseFlagResult:
+    """Result of parsing a flag."""
+
+    var name: String
+    """The name of the flag."""
+    var value: String
+    """The value of the flag."""
+    var increment: Int
+    """The index to increment by."""
+
+
+@fieldwise_init
+struct ParseShorthandFlagResult:
+    """Result of parsing a flag."""
+
+    var names: List[String]
+    """The names of the flag."""
+    var value: String
+    """The value of the flag."""
+    var increment: Int
+    """The index to increment by."""
 
 
 struct FlagParser[origin: ImmutOrigin]:
@@ -21,10 +45,10 @@ struct FlagParser[origin: ImmutOrigin]:
 
     var index: Int
     """The current index in the arguments list."""
-    var arguments: Span[String, origin]
+    var arguments: Span[String, Self.origin]
     """The arguments passed to the command."""
 
-    fn __init__(out self, arguments: Span[String, origin]):
+    fn __init__(out self, arguments: Span[String, Self.origin]):
         """Initializes the FlagParser.
 
         Args:
@@ -33,7 +57,7 @@ struct FlagParser[origin: ImmutOrigin]:
         self.index = 0
         self.arguments = arguments
 
-    fn parse_flag(self, argument: StringSlice, flags: FlagSet) raises -> Tuple[String, String, Int]:
+    fn parse_flag(self, argument: StringSlice, flags: FlagSet) raises -> ParseFlagResult:
         """Parses a flag and returns the name, value, and the index to increment by.
 
         Args:
@@ -54,7 +78,7 @@ struct FlagParser[origin: ImmutOrigin]:
                 raise Error("Command does not accept the flag supplied. Name: ", name)
 
             var value = String(argument[sep_index + 1 :])
-            return name^, value^, 1
+            return ParseFlagResult(name=name^, value=value^, increment=1)
 
         # Flag with value set like "--flag <value>"
         var name = String(argument[2:])
@@ -63,7 +87,7 @@ struct FlagParser[origin: ImmutOrigin]:
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
         if flags.lookup[FType.Bool](name):
-            return name^, String("True"), 1
+            return ParseFlagResult(name=name^, value=String("True"), increment=1)
 
         if self.index + 1 >= len(self.arguments):
             raise Error("Flag requires a value to be set but reached the end of arguments. Name: ", name)
@@ -72,9 +96,9 @@ struct FlagParser[origin: ImmutOrigin]:
             raise Error("Flag requires a value to be set but found another flag instead. Name: ", name)
 
         # Increment index by 2 because 2 args were used (one for name and value).
-        return name^, String(self.arguments[self.index + 1]), 2
+        return ParseFlagResult(name=name^, value=String(self.arguments[self.index + 1]), increment=2)
 
-    fn parse_shorthand_flag(self, argument: StringSlice, flags: FlagSet) raises -> Tuple[List[String], String, Int]:
+    fn parse_shorthand_flag(self, argument: StringSlice, flags: FlagSet) raises -> ParseShorthandFlagResult:
         """Parses a shorthand flag and returns the name, value, and the index to increment by.
 
         Args:
@@ -96,7 +120,7 @@ struct FlagParser[origin: ImmutOrigin]:
             if not name or name[] not in flags.names():
                 raise Error("Command does not accept the shorthand flag supplied: ", shorthand)
 
-            return List[String](name.value()), String(value), 1
+            return ParseShorthandFlagResult(names=[name.value()], value=String(value), increment=1)
 
         # Flag with value set like "-f <value>"
         var state = ShorthandParserState.START
@@ -140,7 +164,7 @@ struct FlagParser[origin: ImmutOrigin]:
                     end = len(argument)
                     # Reached the end of the parser, all flags have been matched and will be set to true.
                     if start == end:
-                        return flag_names^, String("True"), 1
+                        return ParseShorthandFlagResult(names=flag_names^, value="True", increment=1)
                 except e:
                     if "FlagNotFoundError" in String(e):
                         end -= 1
@@ -157,7 +181,7 @@ struct FlagParser[origin: ImmutOrigin]:
                     )
 
                 if flag[][].type == FType.Bool:
-                    return flag_names^, String("True"), 1
+                    return ParseShorthandFlagResult(names=flag_names^, value="True", increment=1)
 
                 # Non bool flags expect a value to be set. If the end of the arguments list is reached, raise an error.
                 if self.index + 1 >= len(self.arguments):
@@ -172,7 +196,9 @@ struct FlagParser[origin: ImmutOrigin]:
                     )
 
                 # Increment index by 2 because 2 args were used (one for name and value).
-                return flag_names^, String(self.arguments[self.index + 1]), 2
+                return ParseShorthandFlagResult(
+                    names=flag_names^, value=String(self.arguments[self.index + 1]), increment=2
+                )
 
         raise Error(
             "FlagParser._parse_shorthand_flag: Parsed out the following flag: ",

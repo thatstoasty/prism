@@ -14,18 +14,18 @@ from prism.version import Version
 from prism.writer import WriterFn, default_error_writer, default_output_writer
 
 
-alias ENABLE_TRAVERSE_RUN_HOOKS = env_get_bool["PRISM_TRAVERSE_RUN_HOOKS", False]()
+comptime ENABLE_TRAVERSE_RUN_HOOKS = env_get_bool["PRISM_TRAVERSE_RUN_HOOKS", False]()
 """Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
 
 
-alias CmdFn = fn (args: List[String], flags: FlagSet) -> None
+comptime CmdFn = fn (args: List[String], flags: FlagSet) -> None
 """The function for a command to run."""
-alias RaisingCmdFn = fn (args: List[String], flags: FlagSet) raises -> None
-"""The function for a command to run that can error."""
-alias ParentVisitorFn = fn (Command) capturing -> None
+# comptime RaisingCmdFn = fn (args: List[String], flags: FlagSet) raises -> None
+# """The function for a command to run that can error."""
+comptime ParentVisitorFn = fn (Command) capturing -> None
 """The function for visiting parents of a command."""
-alias RaisingParentVisitorFn = fn (Command) capturing raises -> None
+comptime RaisingParentVisitorFn = fn (Command) capturing raises -> None
 """The function for visiting parents of a command."""
 
 
@@ -73,7 +73,7 @@ fn _parse_command_from_args(var command: Command, var args: List[String]) -> Tup
     # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
     var remaining_args = List[String]()
     if len(args) >= leftover_start:
-        remaining_args = args[leftover_start : len(args)]
+        remaining_args = List[String](args[leftover_start : len(args)])
 
     return command^, remaining_args^
 
@@ -129,27 +129,27 @@ struct Command(Copyable, Movable, Stringable, Writable):
 
     var pre_run: Optional[CmdFn]
     """A function to run before the run function is executed."""
-    var run: Optional[CmdFn]
+    var run: CmdFn
     """A function to run when the command is executed."""
     var post_run: Optional[CmdFn]
     """A function to run after the run function is executed."""
 
-    var raising_pre_run: Optional[RaisingCmdFn]
-    """A raising function to run before the run function is executed."""
-    var raising_run: Optional[RaisingCmdFn]
-    """A raising function to run when the command is executed."""
-    var raising_post_run: Optional[RaisingCmdFn]
-    """A raising function to run after the run function is executed."""
+    # var raising_pre_run: Optional[RaisingCmdFn]
+    # """A raising function to run before the run function is executed."""
+    # var raising_run: Optional[RaisingCmdFn]
+    # """A raising function to run when the command is executed."""
+    # var raising_post_run: Optional[RaisingCmdFn]
+    # """A raising function to run after the run function is executed."""
 
     var persistent_pre_run: Optional[CmdFn]
     """A function to run before the run function is executed. This persists to children."""
     var persistent_post_run: Optional[CmdFn]
     """A function to run after the run function is executed. This persists to children."""
 
-    var persistent_raising_pre_run: Optional[RaisingCmdFn]
-    """A raising function to run before the run function is executed. This persists to children."""
-    var persistent_raising_post_run: Optional[RaisingCmdFn]
-    """A raising function to run after the run function is executed. This persists to children."""
+    # var persistent_raising_pre_run: Optional[RaisingCmdFn]
+    # """A raising function to run before the run function is executed. This persists to children."""
+    # var persistent_raising_post_run: Optional[RaisingCmdFn]
+    # """A raising function to run after the run function is executed. This persists to children."""
 
     var arg_validator: ArgValidatorFn
     """Function to validate arguments passed to the command."""
@@ -172,6 +172,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
         out self,
         name: String,
         usage: String,
+        run: CmdFn,
         *,
         var args_usage: Optional[String] = None,
         var aliases: List[String] = [],
@@ -182,16 +183,15 @@ struct Command(Copyable, Movable, Stringable, Writable):
         error_writer: WriterFn = default_error_writer,
         var valid_args: List[String] = [],
         var children: List[ArcPointer[Self]] = [],
-        run: Optional[CmdFn] = None,
         pre_run: Optional[CmdFn] = None,
         post_run: Optional[CmdFn] = None,
-        raising_run: Optional[RaisingCmdFn] = None,
-        raising_pre_run: Optional[RaisingCmdFn] = None,
-        raising_post_run: Optional[RaisingCmdFn] = None,
+        # raising_run: Optional[RaisingCmdFn] = None,
+        # raising_pre_run: Optional[RaisingCmdFn] = None,
+        # raising_post_run: Optional[RaisingCmdFn] = None,
         persistent_pre_run: Optional[CmdFn] = None,
         persistent_post_run: Optional[CmdFn] = None,
-        persistent_raising_pre_run: Optional[RaisingCmdFn] = None,
-        persistent_raising_post_run: Optional[RaisingCmdFn] = None,
+        # persistent_raising_pre_run: Optional[RaisingCmdFn] = None,
+        # persistent_raising_post_run: Optional[RaisingCmdFn] = None,
         var flags: FlagSet = FlagSet(),
         flags_required_together: List[String] = [],
         mutually_exclusive_flags: List[String] = [],
@@ -230,10 +230,6 @@ struct Command(Copyable, Movable, Stringable, Writable):
             arg_validator: The function to validate arguments passed to the command.
             suggest: If True, the command will suggest flags when an unknown flag is passed.
         """
-        # TODO: Maybe this should just raise instead of exiting, but it's not really a recoverable error?
-        if not run and not raising_run:
-            panic("A command must have a `run` or `raising_run` function.")
-
         self.name = name
         self.usage = usage
         self.args_usage = args_usage^
@@ -249,14 +245,14 @@ struct Command(Copyable, Movable, Stringable, Writable):
         self.run = run
         self.post_run = post_run
 
-        self.raising_pre_run = raising_pre_run
-        self.raising_run = raising_run
-        self.raising_post_run = raising_post_run
+        # self.raising_pre_run = raising_pre_run
+        # self.raising_run = raising_run
+        # self.raising_post_run = raising_post_run
 
         self.persistent_pre_run = persistent_pre_run
         self.persistent_post_run = persistent_post_run
-        self.persistent_raising_pre_run = persistent_raising_pre_run
-        self.persistent_raising_post_run = persistent_raising_post_run
+        # self.persistent_raising_pre_run = persistent_raising_pre_run
+        # self.persistent_raising_post_run = persistent_raising_post_run
         self.suggest = suggest
 
         self.arg_validator = arg_validator
@@ -443,13 +439,13 @@ struct Command(Copyable, Movable, Stringable, Writable):
 
         @parameter
         fn run_action(parent: Self) raises -> None:
-            if parent.persistent_raising_post_run:
-                parent.persistent_raising_post_run.value()(args, cmd.flags)
+            # if parent.persistent_raising_post_run:
+            #     parent.persistent_raising_post_run.value()(args, cmd.flags)
 
-                @parameter
-                if not ENABLE_TRAVERSE_RUN_HOOKS:
-                    return
-            elif parent.persistent_post_run:
+            #     @parameter
+            #     if not ENABLE_TRAVERSE_RUN_HOOKS:
+            #         return
+            if parent.persistent_post_run:
                 parent.persistent_post_run.value()(args, cmd.flags)
 
                 @parameter
@@ -463,8 +459,8 @@ struct Command(Copyable, Movable, Stringable, Writable):
             # Run the pre-run hooks.
             if cmd.pre_run:
                 cmd.pre_run.value()(args, cmd.flags)
-            elif cmd.raising_pre_run:
-                cmd.raising_pre_run.value()(args, cmd.flags)
+            # elif cmd.raising_pre_run:
+            #     cmd.raising_pre_run.value()(args, cmd.flags)
         except e:
             self.error_writer("Failed to run pre-run hooks for command: " + cmd.name)
             raise e
@@ -482,13 +478,13 @@ struct Command(Copyable, Movable, Stringable, Writable):
 
         @parameter
         fn run_action(parent: Self) raises -> None:
-            if parent.persistent_raising_post_run:
-                parent.persistent_raising_post_run.value()(args, cmd.flags)
+            # if parent.persistent_raising_post_run:
+            #     parent.persistent_raising_post_run.value()(args, cmd.flags)
 
-                @parameter
-                if not ENABLE_TRAVERSE_RUN_HOOKS:
-                    return
-            elif parent.persistent_post_run:
+            #     @parameter
+            #     if not ENABLE_TRAVERSE_RUN_HOOKS:
+            #         return
+            if parent.persistent_post_run:
                 parent.persistent_post_run.value()(args, cmd.flags)
 
                 @parameter
@@ -503,8 +499,8 @@ struct Command(Copyable, Movable, Stringable, Writable):
             # Run the post-run hooks.
             if cmd.post_run:
                 cmd.post_run.value()(args, cmd.flags)
-            elif cmd.raising_post_run:
-                cmd.raising_post_run.value()(args, cmd.flags)
+            # elif cmd.raising_post_run:
+            #     cmd.raising_post_run.value()(args, cmd.flags)
         except e:
             self.error_writer("Failed to run post-run hooks for command: " + cmd.name)
             raise e
@@ -607,8 +603,8 @@ struct Command(Copyable, Movable, Stringable, Writable):
             self._execute_pre_run_hooks(cmd[], remaining_args)
             if cmd[].run:
                 cmd[].run.value()(remaining_args, cmd[].flags)
-            else:
-                cmd[].raising_run.value()(remaining_args, cmd[].flags)
+            # else:
+            #     cmd[].raising_run.value()(remaining_args, cmd[].flags)
             self._execute_post_run_hooks(cmd[], remaining_args)
         except e:
             self.exit(e)

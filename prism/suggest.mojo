@@ -75,8 +75,8 @@ fn jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
         Adapted from: https://github.com/urfave/cli/blob/main/suggestions.go#L82.
     """
 
-    alias BOOST_THRESHOLD = 0.7
-    alias PREFIX_SIZE = 4
+    comptime BOOST_THRESHOLD = 0.7
+    comptime PREFIX_SIZE = 4
 
     var jaro_dist = jaro_distance(a, b)
     if jaro_dist <= BOOST_THRESHOLD:
@@ -123,7 +123,7 @@ fn suggest_flag(flags: Span[Flag], flag_name: StringSlice, hide_help: Bool = Fal
     return suggestion^
 
 
-fn flag_from_error(error: Error) -> Optional[StringSlice[ImmutAnyOrigin]]:
+fn flag_from_error(error: Error) -> Optional[String]:
     """Returns the flag from the error message.
 
     Args:
@@ -132,9 +132,8 @@ fn flag_from_error(error: Error) -> Optional[StringSlice[ImmutAnyOrigin]]:
     Returns:
         The flag.
     """
-    var message = error.as_string_slice()
-    var index = message.find("Name: ")
+    var index = error.data.find("Name: ")
     if index == -1:
         return None
 
-    return message[index + 6 :]
+    return String(error.data[index + 6 :])
