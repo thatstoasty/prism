@@ -1,4 +1,5 @@
 import math.math
+from prism.flag import Flag
 
 
 fn jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
@@ -26,16 +27,16 @@ fn jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
     var hash_a = List[Bool](length=len(a), fill=False)
     var hash_b = List[Bool](length=len(b), fill=False)
 
-    var max_distance = Int(max(0, math.floor(max(len(a), len(b)) / 2.0) - 1))
+    var max_distance = Int(max(Float64(0), math.floor(max(len(a), len(b)) / 2.0) - 1))
     var matches: Float64 = 0.0
     for i in range(len(a)):
-        var start = Int(max(0, Float64(i - max_distance)))
-        var end = Int(min(len(b) - 1, Float64(i + max_distance)))
+        var start = Int(max(Float64(0), Float64(i - max_distance)))
+        var end = Int(min(Float64(len(b) - 1), Float64(i + max_distance)))
 
         for j in range(start, end + 1):
             if hash_b[j]:
                 continue
-            if a[i] == b[j]:
+            if a[i:i+1] == b[j:j+1]:
                 hash_a[i] = True
                 hash_b[j] = True
                 matches += 1.0
@@ -51,7 +52,7 @@ fn jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
             continue
         while not hash_b[j]:
             j += 1
-        if a[i] != b[j]:
+        if a[i:i+1] != b[j:j+1]:
             transpositions += 1.0
         j += 1
 
@@ -85,7 +86,7 @@ fn jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
     var prefix = Int(min(len(a), min(PREFIX_SIZE, len(b))))
     var prefix_match: Float64 = 0.0
     for i in range(prefix):
-        if a[i] == b[i]:
+        if a[i:i+1] == b[i:i+1]:
             prefix_match += 1.0
         else:
             break
@@ -93,7 +94,7 @@ fn jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
     return jaro_dist + 0.1 * prefix_match * (1.0 - jaro_dist)
 
 
-fn suggest_flag(flags: Span[Flag], flag_name: StringSlice, hide_help: Bool = False) -> String:
+fn suggest_flag(flags: Span[mut=False, Flag], flag_name: StringSlice, *, hide_help: Bool = False) -> String:
     """Suggests a flag based on the provided string.
 
     Args:
@@ -132,8 +133,9 @@ fn flag_from_error(error: Error) -> Optional[String]:
     Returns:
         The flag.
     """
-    var index = error.data.find("Name: ")
+    var error_str = String(error)
+    var index = error_str.find("Name: ")
     if index == -1:
         return None
 
-    return String(error.data[index + 6 :])
+    return String(error_str[index + 6 :])

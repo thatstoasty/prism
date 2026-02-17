@@ -60,7 +60,7 @@ fn main() -> None:
     var cat_command = Command(
         name="cat",
         usage="Get some cat facts!",
-        raising_run=get_cat_fact,
+        run=get_cat_fact,
         flags=List[Flag](
             Flag.int(name="count", shorthand="c", usage="Number of facts to get.", default=1),
             Flag.bool(name="lover", shorthand="l", usage="Are you a cat lover?"),
@@ -70,7 +70,7 @@ fn main() -> None:
     var dog_command = Command(
         name="dog",
         usage="Get some dog breeds!",
-        raising_run=get_dog_breeds,
+        run=get_dog_breeds,
     )
 
     var root = Command(

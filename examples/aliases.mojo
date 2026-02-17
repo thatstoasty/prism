@@ -1,7 +1,3 @@
-from sys import argv
-
-from memory import ArcPointer
-
 from prism import Command, Flag, FlagSet, read_args
 
 
@@ -19,8 +15,7 @@ fn main() -> None:
         usage="This is a dummy command!",
         run=test,
         children=[
-            ArcPointer(Command(name="tool", usage="This is a dummy command!", run=tool_func, aliases=["object", "thing"]))
+            Command(name="tool", usage="This is a dummy command!", run=tool_func, aliases=["object", "thing"])
         ],
     )
-
     cli.execute(read_args())

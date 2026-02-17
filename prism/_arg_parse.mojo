@@ -1,5 +1,5 @@
 from io.io import _fdopen
-from sys import argv, env_get_bool, stdin
+from sys import argv, stdin
 
 
 fn parse_args_from_command_line(args: VariadicList[StaticString]) -> List[String]:
@@ -19,12 +19,11 @@ fn parse_args_from_command_line(args: VariadicList[StaticString]) -> List[String
 
 @fieldwise_init
 @register_passable("trivial")
-struct STDINParserState:
+struct STDINParserState(ImplicitlyCopyable, Equatable):
     """State of the parser when reading from stdin."""
 
     var value: UInt8
-    """State of the parser when reading from stdin."""
-
+    """Internal value representing the state of the parser."""
     comptime FIND_TOKEN = Self(0)
     comptime FIND_ARG = Self(1)
 
@@ -40,21 +39,21 @@ struct STDINParserState:
         return self.value == other.value
 
 
-fn parse_args_from_stdin(input: StringSlice) -> List[String]:
+fn parse_args_from_stdin(str: StringSlice) -> List[String]:
     """Reads arguments from stdin and returns them as a list of strings.
 
     Args:
-        input: The input string to parse.
+        str: The input string to parse.
 
     Returns:
         The arguments read from stdin as a list of strings.
     """
     var state = STDINParserState.FIND_TOKEN
     var line_number = 1
-    var token = String("")
+    var token = ""
     var args = List[String]()
 
-    for char in input.codepoint_slices():
+    for char in str.codepoint_slices():
         if state == STDINParserState.FIND_TOKEN:
             if char.isspace() or char == '"':
                 if char == "\n":

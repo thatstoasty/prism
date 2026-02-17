@@ -1,5 +1,4 @@
-from io.io import _fdopen
-from sys import argv, env_get_bool, stdin
+from sys import env_get_bool
 
 from memory import ArcPointer, OwnedPointer
 from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
@@ -19,10 +18,8 @@ comptime ENABLE_TRAVERSE_RUN_HOOKS = env_get_bool["PRISM_TRAVERSE_RUN_HOOKS", Fa
 If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
 
 
-comptime CmdFn = fn (args: List[String], flags: FlagSet) -> None
+comptime CmdFn = fn (args: List[String], flags: FlagSet) raises -> None
 """The function for a command to run."""
-# comptime RaisingCmdFn = fn (args: List[String], flags: FlagSet) raises -> None
-# """The function for a command to run that can error."""
 comptime ParentVisitorFn = fn (Command) capturing -> None
 """The function for visiting parents of a command."""
 comptime RaisingParentVisitorFn = fn (Command) capturing raises -> None
@@ -78,8 +75,14 @@ fn _parse_command_from_args(var command: Command, var args: List[String]) -> Tup
     return command^, remaining_args^
 
 
+# Run flag actions if they have any
+fn run_action(flag: Flag) raises -> None:
+    if flag.action and flag.value:
+        flag.action[](flag.value[])
+
+
 @fieldwise_init
-struct Command(Copyable, Movable, Stringable, Writable):
+struct Command(Copyable, Stringable, Writable):
     """A struct representing a command that can be executed from the command line.
 
     ```mojo
@@ -134,22 +137,10 @@ struct Command(Copyable, Movable, Stringable, Writable):
     var post_run: Optional[CmdFn]
     """A function to run after the run function is executed."""
 
-    # var raising_pre_run: Optional[RaisingCmdFn]
-    # """A raising function to run before the run function is executed."""
-    # var raising_run: Optional[RaisingCmdFn]
-    # """A raising function to run when the command is executed."""
-    # var raising_post_run: Optional[RaisingCmdFn]
-    # """A raising function to run after the run function is executed."""
-
     var persistent_pre_run: Optional[CmdFn]
     """A function to run before the run function is executed. This persists to children."""
     var persistent_post_run: Optional[CmdFn]
     """A function to run after the run function is executed. This persists to children."""
-
-    # var persistent_raising_pre_run: Optional[RaisingCmdFn]
-    # """A raising function to run before the run function is executed. This persists to children."""
-    # var persistent_raising_post_run: Optional[RaisingCmdFn]
-    # """A raising function to run after the run function is executed. This persists to children."""
 
     var arg_validator: ArgValidatorFn
     """Function to validate arguments passed to the command."""
@@ -162,7 +153,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
     var children: List[ArcPointer[Self]]
     """Child commands."""
     # TODO: An optional pointer would be great, but it breaks the compiler. So a list of 0-1 pointers is used.
-    var parent: List[ArcPointer[Self]]
+    var parent: ArcPointer[Optional[Self]]
     """Parent command."""
 
     var suggest: Bool
@@ -182,16 +173,11 @@ struct Command(Copyable, Movable, Stringable, Writable):
         output_writer: WriterFn = default_output_writer,
         error_writer: WriterFn = default_error_writer,
         var valid_args: List[String] = [],
-        var children: List[ArcPointer[Self]] = [],
+        var children: List[Self] = [],
         pre_run: Optional[CmdFn] = None,
         post_run: Optional[CmdFn] = None,
-        # raising_run: Optional[RaisingCmdFn] = None,
-        # raising_pre_run: Optional[RaisingCmdFn] = None,
-        # raising_post_run: Optional[RaisingCmdFn] = None,
         persistent_pre_run: Optional[CmdFn] = None,
         persistent_post_run: Optional[CmdFn] = None,
-        # persistent_raising_pre_run: Optional[RaisingCmdFn] = None,
-        # persistent_raising_post_run: Optional[RaisingCmdFn] = None,
         var flags: FlagSet = FlagSet(),
         flags_required_together: List[String] = [],
         mutually_exclusive_flags: List[String] = [],
@@ -204,6 +190,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
         Args:
             name: The name of the command.
             usage: The usage of the command.
+            run: The function to run when the command is executed.
             args_usage: The usage of the arguments for the command.
             aliases: The aliases for the command.
             help: The help information for the command.
@@ -213,16 +200,10 @@ struct Command(Copyable, Movable, Stringable, Writable):
             error_writer: The function to call when writing errors.
             valid_args: The valid arguments for the command.
             children: The child commands.
-            run: The function to run when the command is executed.
             pre_run: The function to run before the command is executed.
             post_run: The function to run after the command is executed.
-            raising_run: The function to run when the command is executed that returns an error.
-            raising_pre_run: The function to run before the command is executed that returns an error.
-            raising_post_run: The function to run after the command is executed that returns an error.
             persistent_pre_run: The function to run before the command is executed. This persists to children.
             persistent_post_run: The function to run after the command is executed. This persists to children.
-            persistent_raising_pre_run: The function to run before the command is executed that returns an error. This persists to children.
-            persistent_raising_post_run: The function to run after the command is executed that returns an error. This persists to children.
             flags: The flags for the command.
             flags_required_together: The flags that are required together.
             mutually_exclusive_flags: The flags that are mutually exclusive.
@@ -245,27 +226,20 @@ struct Command(Copyable, Movable, Stringable, Writable):
         self.run = run
         self.post_run = post_run
 
-        # self.raising_pre_run = raising_pre_run
-        # self.raising_run = raising_run
-        # self.raising_post_run = raising_post_run
-
         self.persistent_pre_run = persistent_pre_run
         self.persistent_post_run = persistent_post_run
-        # self.persistent_raising_pre_run = persistent_raising_pre_run
-        # self.persistent_raising_post_run = persistent_raising_post_run
         self.suggest = suggest
 
         self.arg_validator = arg_validator
 
         self.valid_args = valid_args^
         self.flags = flags^
-        self.parent = List[ArcPointer[Self]]()
-        self.children = children^
+        self.parent = ArcPointer(Optional[Self](None))
+        self.children = List[ArcPointer[Self]](capacity=len(children))
+        for child in children:
+            self.children.append(ArcPointer(child.copy()))
         for command in self.children:
-            if command[].parent:
-                command[].parent[0] = ArcPointer(self.copy())
-            else:
-                command[].parent.append(ArcPointer(self.copy()))
+            command[].parent = ArcPointer(Optional(self.copy()))
 
         self.flags.append(help.flag.copy())
         if self.version:
@@ -280,6 +254,40 @@ struct Command(Copyable, Movable, Stringable, Writable):
         except e:
             panic(String("Failed to set flag annotations due to following reason: ", e))
 
+    # fn copy(self) -> Self:
+    #     """Returns a copy of the `Command`.
+
+    #     Returns:
+    #         A copy of the `Command`.
+    #     """
+    #     return Command(
+    #         name=self.name,
+    #         usage=self.usage,
+    #         args_usage=self.args_usage,
+    #         aliases=self.aliases.copy(),
+    #         help=self.help.copy(),
+    #         version=self.version.copy(),
+    #         exit=self.exit,
+    #         output_writer=self.output_writer,
+    #         error_writer=self.error_writer,
+    #         pre_run=self.pre_run,
+    #         run=self.run,
+    #         post_run=self.post_run,
+    #         # raising_pre_run=self.raising_pre_run,
+    #         # raising_run=self.raising_run,
+    #         # raising_post_run=self.raising_post_run,
+    #         persistent_pre_run=self.persistent_pre_run,
+    #         persistent_post_run=self.persistent_post_run,
+    #         # persistent_raising_pre_run=self.persistent_raising_pre_run,
+    #         # persistent_raising_post_run=self.persistent_raising_post_run,
+    #         valid_args=self.valid_args.copy(),
+    #         arg_validator=self.arg_validator,
+    #         flags=self.flags.copy(),
+    #         parent=self.parent,
+    #         children=self.children.copy(),
+    #         suggest=self.suggest,
+    #     )
+
     fn __str__(self) -> String:
         """Returns a string representation of the `Command`.
 
@@ -288,11 +296,8 @@ struct Command(Copyable, Movable, Stringable, Writable):
         """
         return String.write(self)
 
-    fn write_to[W: Writer, //](self, mut writer: W):
-        """Write Flag string representation to a `Writer`.
-
-        Parameters:
-            W: The type of writer to write to.
+    fn write_to(self, mut writer: Some[Writer]):
+        """Write string representation to a `Writer`.
 
         Args:
             writer: The formatter to write to.
@@ -323,7 +328,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
             The full command name.
         """
         if self.has_parent():
-            return String.write(self.parent[0][].full_name(), " ", self.name)
+            return String.write(self.parent[].value().full_name(), " ", self.name)
         else:
             return self.name
 
@@ -334,7 +339,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
             The root command in the tree.
         """
         if self.has_parent():
-            return self.parent[0][].root()
+            return self.parent[].value().root()
         return self.copy()
 
     fn inherited_flags(self) -> FlagSet:
@@ -359,7 +364,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
         self.flags.extend(self.inherited_flags())
 
     fn _mark_flag_group_as[annotation: Annotation](mut self, flag_names: List[String]) raises -> None:
-        """Marks the given flags with annotations so that `Prism` errors
+        """Marks the given flags with annotations so that `Prism` errors.
 
         Parameters:
             annotation: The annotation to set on the flags.
@@ -374,7 +379,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
         """
         self._merge_flags()
         for name in flag_names:
-            self.flags.set_annotation[annotation](name, StaticString(" ").join(flag_names))
+            self.flags.set_annotation[annotation](name, " ".join(flag_names))
 
     fn has_parent(self) -> Bool:
         """Returns True if the command has a parent, False otherwise.
@@ -382,7 +387,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
         Returns:
             True if the command has a parent, False otherwise.
         """
-        return Bool(self.parent)
+        return Bool(self.parent[])
 
     fn visit_parents[func: ParentVisitorFn, reverse: Bool = False](self) -> None:
         """Visits all parents of the command and invokes func on each parent.
@@ -399,11 +404,11 @@ struct Command(Copyable, Movable, Stringable, Writable):
         # and invoke the function on each parent in reverse order.
         @parameter
         if reverse:
-            self.parent[0][].visit_parents[func, reverse]()
-            func(self.parent[0][])
+            self.parent[].value().visit_parents[func, reverse]()
+            func(self.parent[].value())
         else:
-            func(self.parent[0][])
-            self.parent[0][].visit_parents[func, reverse]()
+            func(self.parent[].value())
+            self.parent[].value().visit_parents[func, reverse]()
 
     fn visit_parents[func: RaisingParentVisitorFn, reverse: Bool = False](self) raises -> None:
         """Visits all parents of the command and invokes func on each parent.
@@ -420,11 +425,11 @@ struct Command(Copyable, Movable, Stringable, Writable):
         # and invoke the function on each parent in reverse order.
         @parameter
         if reverse:
-            self.parent[0][].visit_parents[func, reverse]()
-            func(self.parent[0][])
+            self.parent[].value().visit_parents[func, reverse]()
+            func(self.parent[].value())
         else:
-            func(self.parent[0][])
-            self.parent[0][].visit_parents[func, reverse]()
+            func(self.parent[].value())
+            self.parent[].value().visit_parents[func, reverse]()
 
     fn _execute_pre_run_hooks(self, cmd: Self, args: List[String]) raises -> None:
         """Runs the pre-run hooks for the command.
@@ -463,7 +468,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
             #     cmd.raising_pre_run.value()(args, cmd.flags)
         except e:
             self.error_writer("Failed to run pre-run hooks for command: " + cmd.name)
-            raise e
+            raise e^
 
     fn _execute_post_run_hooks(self, cmd: Self, args: List[String]) raises -> None:
         """Runs the post-run hooks for the command.
@@ -503,7 +508,7 @@ struct Command(Copyable, Movable, Stringable, Writable):
             #     cmd.raising_post_run.value()(args, cmd.flags)
         except e:
             self.error_writer("Failed to run post-run hooks for command: " + cmd.name)
-            raise e
+            raise e^
 
     fn execute(mut self, var args: List[String]) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
@@ -590,19 +595,14 @@ struct Command(Copyable, Movable, Stringable, Writable):
             cmd[].flags.validate_flag_groups()
 
             # Run flag actions if they have any
-            fn run_action(flag: Flag) raises -> None:
-                if flag.action and flag.value:
-                    flag.action[](flag.value[])
-
-            cmd[].flags.visit_all[run_action]()
+            # cmd[].flags.visit_all[run_action]()
 
             # Validate the remaining arguments
             cmd[].arg_validator(remaining_args, self.valid_args)
 
             # Run the function's commands.
             self._execute_pre_run_hooks(cmd[], remaining_args)
-            if cmd[].run:
-                cmd[].run.value()(remaining_args, cmd[].flags)
+            cmd[].run(remaining_args, cmd[].flags)
             # else:
             #     cmd[].raising_run.value()(remaining_args, cmd[].flags)
             self._execute_post_run_hooks(cmd[], remaining_args)

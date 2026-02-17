@@ -3,7 +3,7 @@ from prism._flag_set import FlagSet, FType
 
 @fieldwise_init
 @register_passable("trivial")
-struct ShorthandParserState:
+struct ShorthandParserState(ImplicitlyCopyable, Equatable):
     """State of the parser when parsing shorthand flags."""
 
     var value: UInt8
@@ -17,7 +17,7 @@ struct ShorthandParserState:
 
 
 @fieldwise_init
-struct ParseFlagResult:
+struct ParseFlagResult(Movable):
     """Result of parsing a flag."""
 
     var name: String
@@ -29,7 +29,7 @@ struct ParseFlagResult:
 
 
 @fieldwise_init
-struct ParseShorthandFlagResult:
+struct ParseShorthandFlagResult(Movable):
     """Result of parsing a flag."""
 
     var names: List[String]

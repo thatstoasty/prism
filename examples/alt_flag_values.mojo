@@ -3,7 +3,7 @@ import os
 from prism import Command, Flag, FlagSet, read_args
 
 
-fn test(args: List[String], flags: FlagSet) raises -> None:
+fn test(args: List[String], flags: FlagSet) -> None:
     var name = flags.get_string("name")
     if name:
         print("Hello", name.value())
@@ -16,7 +16,7 @@ fn main() -> None:
     var cli = Command(
         name="greet",
         usage="Greet a user!",
-        raising_run=test,
+        run=test,
         flags=[
             Flag.string(
                 name="name",

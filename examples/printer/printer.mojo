@@ -29,11 +29,11 @@ fn printer(args: List[String], flags: FlagSet) raises -> None:
     print(style.render(args[0]))
 
 
-fn pre_hook(args: List[String], flags: FlagSet) -> None:
+fn pre_hook(args: List[String], flags: FlagSet) raises -> None:
     print("Pre-hook executed!")
 
 
-fn post_hook(args: List[String], flags: FlagSet) -> None:
+fn post_hook(args: List[String], flags: FlagSet) raises -> None:
     print("Post-hook executed!")
 
 
@@ -41,13 +41,13 @@ fn main() -> None:
     var cli = Command(
         name="printer",
         usage="Base command.",
-        raising_run=printer,
+        run=printer,
         pre_run=pre_hook,
         post_run=post_hook,
         arg_validator=exact_args[1](),
-        flags=List[Flag](
+        flags=[
             Flag.uint32(name="color", shorthand="c", usage="Text color", default=UInt32(0x3464EB)),
             Flag.string(name="formatting", shorthand="f", usage="Text formatting"),
-        ),
+        ],
     )
     cli.execute(read_args())

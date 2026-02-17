@@ -1,5 +1,3 @@
-from memory import ArcPointer
-
 from prism import Command, Flag, FlagSet, read_args
 
 
@@ -21,7 +19,7 @@ fn main() -> None:
     var cli = Command(
         name="my",
         usage="This is a dummy command!",
-        raising_run=test,
+        run=test,
         flags=[
             Flag.bool(
                 name="required",

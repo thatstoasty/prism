@@ -117,19 +117,19 @@ fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
     return range_n_args
 
 
-fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
-    """Returns an error if any of the arg_validators return an error.
+# fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
+#     """Returns an error if any of the arg_validators return an error.
 
-    Parameters:
-        arg_validators: A list of ArgValidatorFn functions that check the arguments.
+#     Parameters:
+#         arg_validators: A list of ArgValidatorFn functions that check the arguments.
 
-    Returns:
-        A function that checks all the arguments using the arg_validators list.
-    """
+#     Returns:
+#         A function that checks all the arguments using the arg_validators list.
+#     """
 
-    fn match_all_args(args: List[String], valid_args: List[String]) raises -> None:
-        @parameter
-        for validator in VariadicList(arg_validators):
-            validator(args, valid_args)
+#     fn match_all_args(args: List[String], valid_args: List[String]) raises -> None:
+#         @parameter
+#         for validator in VariadicList(arg_validators):
+#             validator(args, valid_args)
 
-    return match_all_args
+#     return match_all_args

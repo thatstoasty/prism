@@ -8,7 +8,7 @@ fn test(args: List[String], flags: FlagSet) raises -> None:
 
 
 fn my_exit(e: Error) -> None:
-    if e.as_string_slice() == "Error: Exit Code 2":
+    if String(e) == "Error: Exit Code 2":
         print("Exiting with code 2")
         exit(2)
     else:
@@ -19,7 +19,7 @@ fn main() -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",
-        raising_run=test,
+        run=test,
         exit=my_exit,
     )
     cli.execute(read_args())

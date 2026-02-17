@@ -1,5 +1,3 @@
-from memory import ArcPointer
-
 from prism import Command, Flag, FlagSet, read_args
 
 
@@ -40,42 +38,42 @@ fn main() -> None:
     var cli = Command(
         name="greet",
         usage="Greet a user!",
-        raising_run=test,
+        run=test,
         flags=[
             Flag.string_list(
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
-                default=List[String]("Mikhail", "Tavarez"),
+                default=["Mikhail", "Tavarez"],
             )
         ],
         children=[
-            ArcPointer(Command(
+            Command(
                 name="sum",
                 usage="Add up the numbers passed in with the -n flag!",
-                raising_run=sum,
+                run=sum,
                 flags=[
                     Flag.int_list(
                         name="number",
                         shorthand="n",
                         usage="A number to include in the sum.",
-                        default=List[Int](1, 2),
+                        default=[1, 2],
                     )
                 ],
-            )),
-            ArcPointer(Command(
+            ),
+            Command(
                 name="sum_float",
                 usage="Add up the numbers passed in with the -n flag!",
-                raising_run=sum_float,
+                run=sum_float,
                 flags=[
                     Flag.float64_list(
                         name="number",
                         shorthand="n",
                         usage="A number to include in the sum.",
-                        default=List[Float64](1, 2),
+                        default=[1.0, 2.0],
                     )
                 ],
-            )),
+            ),
         ],
     )
     cli.execute(read_args())
