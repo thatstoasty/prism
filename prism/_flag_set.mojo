@@ -48,7 +48,7 @@ struct Annotation:
         return self.value == other.value
 
 
-struct FlagSet(Boolable, Copyable, Movable, Sized, Stringable, Writable):
+struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
     """A set of flags."""
 
     var flags: List[Flag]
@@ -103,7 +103,7 @@ struct FlagSet(Boolable, Copyable, Movable, Sized, Stringable, Writable):
     fn __str__(self) -> String:
         return String.write(self)
 
-    fn write_to[W: Writer, //](self, mut writer: W) -> None:
+    fn write_to(self, mut writer: Some[Writer]) -> None:
         """Writes the flag set to a writer.
 
         Args:
@@ -134,6 +134,7 @@ struct FlagSet(Boolable, Copyable, Movable, Sized, Stringable, Writable):
                 name,
                 ", with the following annotation: ",
                 annotation.value,
+                " because the flag could not be found.",
             )
 
         try:
@@ -141,7 +142,7 @@ struct FlagSet(Boolable, Copyable, Movable, Sized, Stringable, Writable):
         except:
             flag.value()[].annotations[annotation.value] = [value]
 
-    fn from_args(mut self, arguments: Span[String]) raises -> List[String]:
+    fn from_args(mut self, arguments: Span[mut=False, String]) raises -> List[String]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:

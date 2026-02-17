@@ -9,6 +9,6 @@ version = "0.1.0"
 [tasks]
 
 [dependencies]
-mojo = ">=25.7.0,<26.1.0"
-prism = { path = ".." }
+# mojo = ">=25.7.0,<26.1.0"
+prism = { path = "../.." }
 requests = ">=2.32.3,<3"

@@ -1,3 +1,5 @@
+from prism.flag import Flag
+
 comptime VersionFn = fn (String) -> String
 """The function to call when the version flag is passed."""
 
@@ -14,7 +16,7 @@ fn default_version_writer(version: String) -> String:
     return version.copy()
 
 
-struct Version(Copyable, Movable):
+struct Version(Copyable):
     """A struct representing the version of a command."""
 
     var value: String
@@ -41,11 +43,3 @@ struct Version(Copyable, Movable):
         self.value = version
         self.flag = flag^
         self.action = action
-
-    fn copy(self) -> Self:
-        """Returns a copy of the `Version` instance.
-
-        Returns:
-            A new `Version` instance with the same value, flag, and action.
-        """
-        return Version(self.value.copy(), flag=self.flag.copy(), action=self.action)

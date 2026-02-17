@@ -17,7 +17,7 @@ fn main() -> None:
     var cli = Command(
         name="greet",
         usage="Greet a user!",
-        raising_run=test,
+        run=test,
         flags=[
             Flag.string(
                 name="name",

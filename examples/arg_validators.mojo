@@ -1,5 +1,3 @@
-from memory import ArcPointer
-
 from prism import (
     Command,
     FlagSet,
@@ -28,22 +26,22 @@ fn main() -> None:
         usage="This is a dummy command!",
         run=test,
         children=[
-            ArcPointer(Command(
+            Command(
                 name="minimum_n_args", usage="This is a dummy command!", run=hello, arg_validator=minimum_n_args[4]()
-            )),
-            ArcPointer(Command(
+            ),
+            Command(
                 name="maximum_n_args", usage="This is a dummy command!", run=hello, arg_validator=maximum_n_args[1]()
-            )),
-            ArcPointer(Command(name="exact_args", usage="This is a dummy command!", run=hello, arg_validator=exact_args[1]())),
-            ArcPointer(Command(name="range_args", usage="This is a dummy command!", run=hello, arg_validator=range_args[0, 1]())),
-            ArcPointer(Command(
+            ),
+            Command(name="exact_args", usage="This is a dummy command!", run=hello, arg_validator=exact_args[1]()),
+            Command(name="range_args", usage="This is a dummy command!", run=hello, arg_validator=range_args[0, 1]()),
+            Command(
                 name="valid_args",
                 usage="This is a dummy command!",
                 run=hello,
-                valid_args=List[String]("Pineapple"),
+                valid_args=["Pineapple"],
                 arg_validator=valid_args,
-            )),
-            ArcPointer(Command(name="no_args", usage="This is a dummy command!", run=hello, arg_validator=no_args)),
+            ),
+            Command(name="no_args", usage="This is a dummy command!", run=hello, arg_validator=no_args),
         ],
     )
     cli.execute(read_args())

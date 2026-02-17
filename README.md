@@ -577,7 +577,8 @@ Should error and output writers even be supported for commands? It seems like un
 - Add support for configurable delimiter (default: `--`) to indicate the end of flags.
 - Add suggestion logic for commands.
 - Autocomplete generation.
-- Add persistent flag mutually exclusive and required together checks back in.
+- Add persistent flag mutually exclusive and required together checks back in. Right now, the subcommands are created before
+the parent command, so they can't inherit the persistent flags at construction.
 - Typed arguments.
 - Once the stdlib supports reading from stdin (currently only supports `readline` and `read_until_delimiter`), reading args from stdin will be updated to support newlines.
 

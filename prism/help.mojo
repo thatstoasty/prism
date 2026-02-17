@@ -44,7 +44,7 @@ fn default_help(cmd: OwnedPointer[Command]) raises -> String:
 
         comptime USAGE_PADDING = 4
         option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
-        var options_style = style.set_width(option_width)
+        var options_style = style.width(option_width)
 
         builder.write("\nOptions:")
         for flag in cmd[].flags:
@@ -57,7 +57,7 @@ fn default_help(cmd: OwnedPointer[Command]) raises -> String:
         builder.write("\n")
 
     if cmd[].children:
-        var options_style = style.set_width(option_width - 2)
+        var options_style = style.width(option_width - 2)
         builder.write("\nCommands:")
         for i in range(len(cmd[].children)):
             builder.write("\n  ", options_style.render(cmd[].children[i][].name), cmd[].children[i][].usage)
@@ -75,8 +75,7 @@ fn default_help(cmd: OwnedPointer[Command]) raises -> String:
     return builder^
 
 
-@fieldwise_init
-struct Help(Copyable, Movable):
+struct Help(Copyable):
     """A struct representing the help information for a command."""
 
     var flag: Flag

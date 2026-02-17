@@ -1,7 +1,7 @@
 from sys import exit, stderr
 
 
-fn panic[W: Writable, //](message: W, code: Int = 1) -> None:
+fn panic(message: Some[Writable], code: Int = 1) -> None:
     """Panics with the given message.
 
     Args:

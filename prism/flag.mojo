@@ -1,12 +1,9 @@
-from prism._flag_set import Annotation
-
-
 comptime FlagActionFn = fn (String) raises -> None
 """The type of a function that runs after a flag has been processed."""
 
 
 @fieldwise_init
-struct FType(Copyable, Equatable, ImplicitlyCopyable, Movable):
+struct FType(Equatable, ImplicitlyCopyable):
     """Flag types enum helper."""
 
     var value: UInt8
@@ -30,38 +27,24 @@ struct FType(Copyable, Equatable, ImplicitlyCopyable, Movable):
     comptime IntList = Self(16)
     comptime Float64List = Self(17)
 
-    comptime INT_TYPES = InlineArray[Self, 10](
-        Self.Int,
-        Self.Int8,
-        Self.Int16,
-        Self.Int32,
-        Self.Int64,
-        Self.UInt,
-        Self.UInt8,
-        Self.UInt16,
-        Self.UInt32,
-        Self.UInt64,
-    )
-
-    comptime FLOAT_TYPES = InlineArray[Self, 3](
-        Self.Float16,
-        Self.Float32,
-        Self.Float64,
-    )
-
-    comptime LIST_TYPES = InlineArray[Self, 3](
-        Self.StringList,
-        Self.IntList,
-        Self.Float64List,
-    )
-
     fn is_int_type(self) -> Bool:
         """Returns if the type is an integer type.
 
         Returns:
             True if the type is an integer type, False otherwise.
         """
-        return self in Self.INT_TYPES
+        return self in [
+            Self.Int,
+            Self.Int8,
+            Self.Int16,
+            Self.Int32,
+            Self.Int64,
+            Self.UInt,
+            Self.UInt8,
+            Self.UInt16,
+            Self.UInt32,
+            Self.UInt64,
+        ]
 
     fn is_float_type(self) -> Bool:
         """Returns if the type is an float type.
@@ -69,7 +52,7 @@ struct FType(Copyable, Equatable, ImplicitlyCopyable, Movable):
         Returns:
             True if the type is an float type, False otherwise.
         """
-        return self in Self.FLOAT_TYPES
+        return self in [Self.Float16, Self.Float32, Self.Float64]
 
     fn is_list_type(self) -> Bool:
         """Returns if the type is a list type.
@@ -77,7 +60,7 @@ struct FType(Copyable, Equatable, ImplicitlyCopyable, Movable):
         Returns:
             True if the type is a list type, False otherwise.
         """
-        return self in Self.LIST_TYPES
+        return self in [Self.StringList, Self.IntList, Self.Float64List]
 
     fn __eq__(self, other: Self) -> Bool:
         """Compares two FType objects for equality.
@@ -94,7 +77,7 @@ struct FType(Copyable, Equatable, ImplicitlyCopyable, Movable):
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
 # needing to cast values to and from string.
 @fieldwise_init
-struct Flag(Copyable, Movable, Representable, Stringable, Writable):
+struct Flag(Copyable, Representable, Stringable, Writable):
     """Represents a flag that can be passed via the command line.
     Flags are passed in via `--name` or `-shorthand` and can have a value associated with them.
     """
@@ -182,7 +165,7 @@ struct Flag(Copyable, Movable, Representable, Stringable, Writable):
         Returns:
             The string representation of the Flag.
         """
-        return self.__str__()
+        return String.write(self)
 
     fn __eq__(self, other: Self) -> Bool:
         """Compares two Flags for equality.
@@ -203,16 +186,12 @@ struct Flag(Copyable, Movable, Representable, Stringable, Writable):
             and self.changed == other.changed
         )
 
-    fn write_to[W: Writer, //](self, mut writer: W):
-        """Write Flag string representation to a writer.
-
-        Parameters:
-            W: The type of writer to write to.
+    fn write_to(self, mut writer: Some[Writer]):
+        """Write string representation to a writer.
 
         Args:
             writer: The formatter to write to.
         """
-
         @parameter
         fn write_optional(opt: Optional[String]):
             if opt:
@@ -252,7 +231,7 @@ struct Flag(Copyable, Movable, Representable, Stringable, Writable):
         self.changed = True
 
     fn get_with_transform[
-        T: Movable & ImplicitlyCopyable, //, transform: fn (value: StringSlice) -> T
+        T: ImplicitlyCopyable, //, transform: fn (value: StringSlice) -> T
     ](self) -> Optional[T]:
         """Returns the value of the flag with a transformation applied to it.
 
@@ -1003,7 +982,7 @@ struct Flag(Copyable, Movable, Representable, Stringable, Writable):
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
-        default: Optional[List[String]] = None,
+        default: List[String] = [],
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -1028,7 +1007,7 @@ struct Flag(Copyable, Movable, Representable, Stringable, Writable):
         """
         var default_value: Optional[String]
         if default:
-            default_value = StaticString(" ").join(default.value())
+            default_value = " ".join(default)
         else:
             default_value = None
 
@@ -1050,7 +1029,7 @@ struct Flag(Copyable, Movable, Representable, Stringable, Writable):
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
-        default: Optional[List[Int]] = None,
+        default: List[Int] = [],
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -1075,7 +1054,7 @@ struct Flag(Copyable, Movable, Representable, Stringable, Writable):
         """
         var default_value: Optional[String]
         if default:
-            default_value = StaticString(" ").join(default.value())
+            default_value = " ".join(default)
         else:
             default_value = None
 
@@ -1097,7 +1076,7 @@ struct Flag(Copyable, Movable, Representable, Stringable, Writable):
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
-        default: Optional[List[Float64]] = None,
+        default: List[Float64] = [],
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
@@ -1122,7 +1101,7 @@ struct Flag(Copyable, Movable, Representable, Stringable, Writable):
         """
         var default_value: Optional[String]
         if default:
-            default_value = StaticString(" ").join(default.value())
+            default_value = " ".join(default)
         else:
             default_value = None
 

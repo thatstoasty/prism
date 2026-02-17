@@ -1,7 +1,5 @@
 from sys import exit, stderr
 
-from memory import ArcPointer
-
 from prism import Command, Flag, FlagSet, Version, no_args, read_args
 
 
@@ -18,7 +16,7 @@ fn connect(args: List[String], flags: FlagSet) raises -> None:
 
 fn my_exit(e: Error) -> None:
     print(e, file=stderr)
-    if e.as_string_slice() == "Error: Exit Code 2":
+    if String(e) == "Error: Exit Code 2":
         print("Exiting with code 2")
         exit(2)
     else:
@@ -39,7 +37,7 @@ fn version(version: String) -> String:
 
 
 fn validate_hosts(value: String) raises -> None:
-    var approved_hosts = List[String]("localhost", "0.0.0.0", "192.168.1.1")
+    var approved_hosts: List[String] = ["localhost", "0.0.0.0", "192.168.1.1"]
     var hosts = value.split(" ")
     for host in hosts:
         if String(host) not in approved_hosts:
@@ -91,7 +89,7 @@ fn main() -> None:
         ],
         flags_required_together=["host", "port"],
         children=[
-            ArcPointer(Command(
+            Command(
                 name="connect",
                 usage="Connect to a database.",
                 run=connect,
@@ -111,8 +109,8 @@ fn main() -> None:
                 ],
                 arg_validator=no_args,
                 suggest=True,
-            )),
-            ArcPointer(Command(
+            ),
+            Command(
                 name="allow",
                 usage="Add hosts to the allow list!",
                 run=allow_hosts,
@@ -121,11 +119,11 @@ fn main() -> None:
                         name="hosts",
                         shorthand="hl",
                         usage="Hosts to add to the allowlist.",
-                        default=List[String]("localhost", "0.0.0.0"),
+                        default=["localhost", "0.0.0.0"],
                         action=validate_hosts,
                     )
                 ],
-            )),
+            ),
         ],
     )
     cli.execute(read_args())

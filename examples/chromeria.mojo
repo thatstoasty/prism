@@ -1,9 +1,7 @@
-from memory import ArcPointer
-
 from prism import Command, Flag, FlagSet, read_args
 
 
-fn test(args: List[String], flags: FlagSet) raises -> None:
+fn test(args: List[String], flags: FlagSet) -> None:
     print("Pass chromeria as a subcommand!")
 
 
@@ -16,6 +14,8 @@ fn main() -> None:
         name="hello",
         usage="This is a dummy command!",
         run=test,
-        children=[ArcPointer(Command(name="chromeria", usage="This is a dummy command!", run=hello))],
+        children=[
+            Command(name="chromeria", usage="This is a dummy command!", run=hello)
+        ],
     )
     cli.execute(read_args())
