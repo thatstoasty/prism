@@ -1,4 +1,4 @@
-import math.math
+from std.math import math
 from prism.flag import Flag
 
 
@@ -27,7 +27,7 @@ fn jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
     var hash_a = List[Bool](length=len(a), fill=False)
     var hash_b = List[Bool](length=len(b), fill=False)
 
-    var max_distance = Int(max(Float64(0), math.floor(max(len(a), len(b)) / 2.0) - 1))
+    var max_distance = Int(max(Float64(0), math.floor(Float64(max(len(a), len(b))) / 2.0) - 1))
     var matches: Float64 = 0.0
     for i in range(len(a)):
         var start = Int(max(Float64(0), Float64(i - max_distance)))
@@ -36,7 +36,7 @@ fn jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
         for j in range(start, end + 1):
             if hash_b[j]:
                 continue
-            if a[i:i+1] == b[j:j+1]:
+            if a[byte=i:i+1] == b[byte=j:j+1]:
                 hash_a[i] = True
                 hash_b[j] = True
                 matches += 1.0
@@ -52,12 +52,12 @@ fn jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
             continue
         while not hash_b[j]:
             j += 1
-        if a[i:i+1] != b[j:j+1]:
+        if a[byte=i:i+1] != b[byte=j:j+1]:
             transpositions += 1.0
         j += 1
 
     transpositions /= 2.0
-    return ((matches / len(a)) + (matches / len(b)) + ((matches - transpositions) / matches)) / 3.0
+    return ((matches / Float64(len(a))) + (matches / Float64(len(b))) + ((matches - transpositions) / matches)) / 3.0
 
 
 fn jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
@@ -86,7 +86,7 @@ fn jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
     var prefix = Int(min(len(a), min(PREFIX_SIZE, len(b))))
     var prefix_match: Float64 = 0.0
     for i in range(prefix):
-        if a[i:i+1] == b[i:i+1]:
+        if a[byte=i:i+1] == b[byte=i:i+1]:
             prefix_match += 1.0
         else:
             break
@@ -94,7 +94,7 @@ fn jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
     return jaro_dist + 0.1 * prefix_match * (1.0 - jaro_dist)
 
 
-fn suggest_flag(flags: Span[mut=False, Flag], flag_name: StringSlice, *, hide_help: Bool = False) -> String:
+fn suggest_flag[origin: ImmutOrigin, //](flags: Span[Flag, origin], flag_name: StringSlice, *, hide_help: Bool = False) -> String:
     """Suggests a flag based on the provided string.
 
     Args:
@@ -138,4 +138,4 @@ fn flag_from_error(error: Error) -> Optional[String]:
     if index == -1:
         return None
 
-    return String(error_str[index + 6 :])
+    return String(error_str[byte=index + 6 :])

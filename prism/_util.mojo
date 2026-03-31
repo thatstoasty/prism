@@ -1,4 +1,4 @@
-from sys import exit, stderr
+from std.sys import exit, stderr
 
 
 fn panic(message: Some[Writable], code: Int = 1) -> None:
@@ -21,4 +21,5 @@ fn string_to_bool(value: String) -> Bool:
     Returns:
         The boolean equivalent of the string.
     """
-    return value in InlineArray[String, 3]("true", "True", "1")
+    var truthy: List[String] = ["true", "True", "1"]
+    return value in truthy

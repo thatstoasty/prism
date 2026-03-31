@@ -1,4 +1,4 @@
-import os
+from std import os
 
 from prism import Command, Flag, FlagSet, read_args
 

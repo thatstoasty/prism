@@ -1,5 +1,5 @@
 import mog
-from memory import OwnedPointer
+from std.memory import OwnedPointer
 from prism.command import Command
 from prism.flag import Flag
 
@@ -21,16 +21,16 @@ fn default_help(cmd: OwnedPointer[Command]) raises -> String:
         Any error that occurs while generating the help information.
     """
     comptime style = mog.Style(mog.Profile.ASCII)
-    var builder = String("Usage: ", cmd[].full_name())
+    var builder = String(t"Usage: {cmd[].full_name()}")
 
     if len(cmd[].flags) > 0:
         builder.write(" [OPTIONS]")
     if len(cmd[].children) > 0:
         builder.write(" COMMAND")
-    builder.write(" [ARGS]...", "\n\n", cmd[].usage, "\n")
+    builder.write(t" [ARGS]...\n\n{cmd[].usage}\n")
 
     if cmd[].args_usage:
-        builder.write("\nArguments:\n  ", cmd[].args_usage.value(), "\n")
+        builder.write(t"\nArguments:\n  {cmd[].args_usage.value()}\n")
 
     var option_width = 0
     if cmd[].flags:
@@ -44,7 +44,7 @@ fn default_help(cmd: OwnedPointer[Command]) raises -> String:
 
         comptime USAGE_PADDING = 4
         option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
-        var options_style = style.width(option_width)
+        var options_style = style.width(UInt16(option_width))
 
         builder.write("\nOptions:")
         for flag in cmd[].flags:
@@ -57,10 +57,10 @@ fn default_help(cmd: OwnedPointer[Command]) raises -> String:
         builder.write("\n")
 
     if cmd[].children:
-        var options_style = style.width(option_width - 2)
+        var options_style = style.width(UInt16(option_width) - 2)
         builder.write("\nCommands:")
         for i in range(len(cmd[].children)):
-            builder.write("\n  ", options_style.render(cmd[].children[i][].name), cmd[].children[i][].usage)
+            builder.write(t"\n  {options_style.render(cmd[].children[i][].name)}{cmd[].children[i][].usage}")
         builder.write("\n")
 
     if cmd[].aliases:

@@ -2,6 +2,43 @@ comptime FlagActionFn = fn (String) raises -> None
 """The type of a function that runs after a flag has been processed."""
 
 
+# Flag Group annotations
+@fieldwise_init
+struct Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
+    """An annotation for a flag or a group of flags."""
+    var value: UInt8
+    """The value of the annotation."""
+
+    # Individual flag annotations
+    comptime REQUIRED = Self(0)
+    """Annotation to mark a flag as required."""
+
+    # Flag Group annotations
+    comptime REQUIRED_AS_GROUP = Self(1)
+    """Annotation to mark a group of flags as required as a group. All flags in the group must be set for it to be valid."""
+    comptime ONE_REQUIRED = Self(2)
+    """Annotation to mark a group of flags as required. At least one flag in the group must be set for it to be valid."""
+    comptime MUTUALLY_EXCLUSIVE = Self(3)
+    """Annotation to mark a group of flags as mutually exclusive. Only one flag in the group can be set for it to be valid."""
+
+    fn write_to(self, mut writer: Some[Writer]) -> None:
+        """Writes the annotation to a writer.
+
+        Args:
+            writer: The writer to write the annotation to.
+        """
+        if self == Self.REQUIRED:
+            writer.write("REQUIRED")
+        elif self == Self.REQUIRED_AS_GROUP:
+            writer.write("REQUIRED_AS_GROUP")
+        elif self == Self.ONE_REQUIRED:
+            writer.write("ONE_REQUIRED")
+        elif self == Self.MUTUALLY_EXCLUSIVE:
+            writer.write("MUTUALLY_EXCLUSIVE")
+        else:
+            writer.write("unknown_annotation")
+
+
 @fieldwise_init
 struct FType(Equatable, ImplicitlyCopyable):
     """Flag types enum helper."""
@@ -77,7 +114,7 @@ struct FType(Equatable, ImplicitlyCopyable):
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
 # needing to cast values to and from string.
 @fieldwise_init
-struct Flag(Copyable, Representable, Stringable, Writable):
+struct Flag(Copyable, Writable):
     """Represents a flag that can be passed via the command line.
     Flags are passed in via `--name` or `-shorthand` and can have a value associated with them.
     """
@@ -98,7 +135,7 @@ struct Flag(Copyable, Representable, Stringable, Writable):
     """The default value of the flag."""
     var type: FType
     """The type of the flag."""
-    var annotations: Dict[String, List[String]]
+    var annotations: Dict[Annotation, List[String]]
     """The annotations of the flag which are used to determine grouping."""
     var action: Optional[FlagActionFn]
     """Function to run after the flag has been processed."""
@@ -145,27 +182,11 @@ struct Flag(Copyable, Representable, Stringable, Writable):
         self.file_path = file_path
         self.default = default
         self.type = type
-        self.annotations = Dict[String, List[String]]()
+        self.annotations = Dict[Annotation, List[String]]()
         self.action = action
         self.changed = False
         self.required = required
         self.persistent = persistent
-
-    fn __str__(self) -> String:
-        """Returns a string representation of the Flag.
-
-        Returns:
-            The string representation of the Flag.
-        """
-        return String.write(self)
-
-    fn __repr__(self) -> String:
-        """Returns a string representation of the Flag.
-
-        Returns:
-            The string representation of the Flag.
-        """
-        return String.write(self)
 
     fn __eq__(self, other: Self) -> Bool:
         """Compares two Flags for equality.

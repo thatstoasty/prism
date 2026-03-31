@@ -2,22 +2,21 @@ from prism._flag_set import FlagSet, FType
 
 
 @fieldwise_init
-@register_passable("trivial")
-struct ShorthandParserState(ImplicitlyCopyable, Equatable):
+struct ShorthandParserState(ImplicitlyCopyable, Equatable, Writable, TrivialRegisterPassable):
     """State of the parser when parsing shorthand flags."""
 
     var value: UInt8
     """Internal value."""
     comptime START = Self(0)
+    """State when the parser is trying to parse the full shorthand flag name."""
     comptime MULTIPLE_BOOLS = Self(1)
+    """State when the parser is trying to parse a combination of multiple bool flags."""
     comptime CHECK_FLAG = Self(2)
-
-    fn __eq__(self, other: Self) -> Bool:
-        return self.value == other.value
+    """State when the parser has found a match for the full shorthand flag name and is checking if it's a bool flag or not."""
 
 
 @fieldwise_init
-struct ParseFlagResult(Movable):
+struct ParseFlagResult(Movable, Writable):
     """Result of parsing a flag."""
 
     var name: String
@@ -29,8 +28,8 @@ struct ParseFlagResult(Movable):
 
 
 @fieldwise_init
-struct ParseShorthandFlagResult(Movable):
-    """Result of parsing a flag."""
+struct ParseShorthandFlagResult(Movable, Writable):
+    """Result of parsing a shorthand flag."""
 
     var names: List[String]
     """The names of the flag."""
@@ -40,7 +39,7 @@ struct ParseShorthandFlagResult(Movable):
     """The index to increment by."""
 
 
-struct FlagParser[origin: ImmutOrigin]:
+struct FlagParser[origin: ImmutOrigin](Writable):
     """Parses flags from the command line arguments."""
 
     var index: Int
@@ -73,15 +72,15 @@ struct FlagParser[origin: ImmutOrigin]:
         # Flag with value set like "--flag=<value>"
         var sep_index = argument.find("=")
         if sep_index != -1:
-            var name = String(argument[2:sep_index])
+            var name = String(argument[byte=2:sep_index])
             if name not in flags.names():
                 raise Error("Command does not accept the flag supplied. Name: ", name)
 
-            var value = String(argument[sep_index + 1 :])
+            var value = String(argument[byte=sep_index + 1 :])
             return ParseFlagResult(name=name^, value=value^, increment=1)
 
         # Flag with value set like "--flag <value>"
-        var name = String(argument[2:])
+        var name = String(argument[byte=2:])
         if name not in flags.names():
             raise Error("Command does not accept the flag supplied. Name: ", name)
 
@@ -114,8 +113,8 @@ struct FlagParser[origin: ImmutOrigin]:
         # Flag with value set like "-f=<value>"
         var sep_index = argument.find("=")
         if sep_index != -1:
-            var shorthand = argument[1:sep_index]
-            var value = argument[sep_index:]
+            var shorthand = argument[byte=1:sep_index]
+            var value = argument[byte=sep_index:]
             var name = flags.lookup_name(shorthand)
             if not name or name[] not in flags.names():
                 raise Error("Command does not accept the shorthand flag supplied: ", shorthand)
@@ -128,7 +127,7 @@ struct FlagParser[origin: ImmutOrigin]:
         var end = len(argument)
         var flag_names = List[String]()
         while start != end:
-            var shorthand = argument[start:end]
+            var shorthand = argument[byte=start:end]
 
             # Try to find the flag with the full shorthand flag name.
             # If that doesn't work, then slice off the last character and check again, until we find a match.
@@ -202,7 +201,7 @@ struct FlagParser[origin: ImmutOrigin]:
 
         raise Error(
             "FlagParser._parse_shorthand_flag: Parsed out the following flag: ",
-            flag_names.__str__(),
+            flag_names,
             ". Could not find a match for the remaining flags: ",
-            argument[start : len(argument)],
+            argument[byte=start : len(argument)],
         )

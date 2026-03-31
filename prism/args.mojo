@@ -36,10 +36,7 @@ fn minimum_n_args[n: Int]() -> ArgValidatorFn:
     fn less_than_n_args(args: List[String], valid_args: List[String]) raises -> None:
         if len(args) < n:
             raise Error(
-                "This command accepts at least ",
-                n,
-                " argument(s). Received: ",
-                len(args),
+                t"This command accepts at least {n} argument(s). Received: {len(args)}."
             )
 
     return less_than_n_args
@@ -57,7 +54,7 @@ fn maximum_n_args[n: UInt]() -> ArgValidatorFn:
 
     fn more_than_n_args(args: List[String], valid_args: List[String]) raises -> None:
         if UInt(len(args)) > n:
-            raise Error("This command accepts at most ", n, " argument(s). Received: ", len(args))
+            raise Error(t"This command accepts at most {n} argument(s). Received: {len(args)}.")
 
     return more_than_n_args
 
@@ -74,7 +71,7 @@ fn exact_args[n: UInt]() -> ArgValidatorFn:
 
     fn exactly_n_args(args: List[String], valid_args: List[String]) raises -> None:
         if UInt(len(args)) != n:
-            raise Error("This command accepts exactly ", n, " argument(s). Received: ", len(args))
+            raise Error(t"This command accepts exactly {n} argument(s). Received: {len(args)}.")
 
     return exactly_n_args
 
@@ -89,7 +86,7 @@ fn valid_args(args: List[String], valid_args: List[String]) raises -> None:
     if valid_args:
         for arg in args:
             if arg not in valid_args:
-                raise Error("Invalid argument: `", arg, "`, for This command .")
+                raise Error(t"Invalid argument: `{arg}`, for This command .")
 
 
 fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
@@ -106,30 +103,24 @@ fn range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
     fn range_n_args(args: List[String], valid_args: List[String]) raises -> None:
         if UInt(len(args)) < minimum or UInt(len(args)) > maximum:
             raise Error(
-                "This command accepts between ",
-                minimum,
-                " to ",
-                maximum,
-                " argument(s). Received: ",
-                len(args),
+                t"This command accepts between {minimum} and {maximum} argument(s). Received: {len(args)}.",
             )
 
     return range_n_args
 
 
-# fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
-#     """Returns an error if any of the arg_validators return an error.
+fn match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
+    """Returns an error if any of the arg_validators return an error.
 
-#     Parameters:
-#         arg_validators: A list of ArgValidatorFn functions that check the arguments.
+    Parameters:
+        arg_validators: A list of ArgValidatorFn functions that check the arguments.
 
-#     Returns:
-#         A function that checks all the arguments using the arg_validators list.
-#     """
+    Returns:
+        A function that checks all the arguments using the arg_validators list.
+    """
 
-#     fn match_all_args(args: List[String], valid_args: List[String]) raises -> None:
-#         @parameter
-#         for validator in VariadicList(arg_validators):
-#             validator(args, valid_args)
+    fn match_all_args(args: List[String], valid_args: List[String]) raises -> None:
+        comptime for i in range(Variadic.size(arg_validators)):
+            arg_validators[i](args, valid_args)
 
-#     return match_all_args
+    return match_all_args

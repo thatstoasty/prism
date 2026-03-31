@@ -1,4 +1,4 @@
-name: Create package
+name: Test package creation
 
 on:
   pull_request:
@@ -13,12 +13,14 @@ jobs:
     name: Package
     runs-on: ubuntu-latest
     steps:
-        - name: Checkout code
-          uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v6
 
-        - uses: prefix-dev/setup-pixi@v0.8.10
-          with:
-            pixi-version: v0.47.0
+      - name: Set up Pixi
+        uses: prefix-dev/setup-pixi@main
+        with:
+          pixi-version: latest
+          cache: true
 
-        - name: Run the package command
-          run: pixi run mojo package prism -o prism.mojopkg
+      - name: Try Building The Package
+        run: pixi run build
