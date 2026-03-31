@@ -8,6 +8,7 @@ from prism.args import ArgValidatorFn, arbitrary_args
 from prism.exit import ExitFn, default_exit
 from prism.flag import Flag
 from prism.help import Help
+from prism.completion import Completion
 from prism.suggest import flag_from_error, suggest_flag
 from prism.version import Version
 from prism.writer import WriterFn, default_error_writer, default_output_writer
@@ -159,6 +160,9 @@ struct Command(Copyable, Writable):
     var suggest: Bool
     """If True, the command will suggest flags when an unknown flag is passed."""
 
+    var completion: Optional[Completion]
+    """Completion configuration. When set on the root command, a `completion` subcommand is auto-added."""
+
     fn __init__(
         out self,
         name: String,
@@ -169,6 +173,7 @@ struct Command(Copyable, Writable):
         var aliases: List[String] = [],
         help: Help = Help(),
         version: Optional[Version] = None,
+        completion: Optional[Completion] = None,
         exit: ExitFn = default_exit,
         output_writer: WriterFn = default_output_writer,
         error_writer: WriterFn = default_error_writer,
@@ -210,6 +215,7 @@ struct Command(Copyable, Writable):
             one_required_flags: The flags where at least one is required.
             arg_validator: The function to validate arguments passed to the command.
             suggest: If True, the command will suggest flags when an unknown flag is passed.
+            completion: Completion configuration. When set, a `completion` subcommand is auto-added.
         """
         self.name = name
         self.usage = usage
@@ -229,6 +235,7 @@ struct Command(Copyable, Writable):
         self.persistent_pre_run = persistent_pre_run
         self.persistent_post_run = persistent_post_run
         self.suggest = suggest
+        self.completion = completion.copy()
 
         self.arg_validator = arg_validator
 
@@ -244,6 +251,24 @@ struct Command(Copyable, Writable):
         self.flags.append(help.flag.copy())
         if self.version:
             self.flags.append(self.version.value().flag.copy())
+
+        # Auto-add completion subcommand if completion is configured
+        if self.completion:
+            fn _completion_noop(args: List[String], flags: FlagSet) raises -> None:
+                pass
+
+            self.children.append(
+                ArcPointer(
+                    Command(
+                        name="completion",
+                        usage="Generate shell completion scripts.",
+                        run=_completion_noop,
+                        args_usage=String("SHELL"),
+                        valid_args=["zsh"],
+                    )
+                )
+            )
+            self.children[len(self.children) - 1][].parent = ArcPointer(Optional(self.copy()))
         try:
             if flags_required_together:
                 self._mark_flag_group_as[Annotation.REQUIRED_AS_GROUP](flags_required_together)
@@ -567,6 +592,19 @@ struct Command(Copyable, Writable):
                 if version_flag_passed and version_flag_passed.value() == True:
                     self.output_writer(self.version.value().action(self.version.value().value))
                     return
+
+            # Check if the completion subcommand was invoked
+            if self.completion and cmd[].name == "completion":
+                if not remaining_args:
+                    self.error_writer(
+                        "Usage: " + self.name + " completion <shell>\nSupported shells: zsh"
+                    )
+                    return
+                var root = OwnedPointer[Command](self.copy())
+                self.output_writer(
+                    self.completion.value().action(root, remaining_args[0])
+                )
+                return
 
             # Validate individual required flags (eg: flag is required)
             cmd[].flags.validate_required_flags()
