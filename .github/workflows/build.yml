@@ -1,43 +1,54 @@
-name: build
+name: release
 
 on:
   push:
     branches:
       - main
     paths:
-      - src/**
+      - prism/**
+      - pixi.toml
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - { target: linux-64, os: ubuntu-latest }
-          - { target: osx-arm64, os: macos-latest }
-          - { target: linux-aarch64, os: ubuntu-24.04-arm }
-      fail-fast: false
-
-    runs-on: ${{ matrix.os }}
+  release:
+    runs-on: ubuntu-latest
     timeout-minutes: 5
-
-    defaults:
-      run:
-        shell: bash
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - uses: prefix-dev/setup-pixi@v0.8.10
+        uses: actions/checkout@v6
         with:
-          pixi-version: v0.47.0
+          fetch-depth: 0
 
-      - name: Build package for target platform
-        env:
-          TARGET_PLATFORM: ${{ matrix.target }}
-          PREFIX_API_KEY: ${{ secrets.PREFIX_API_KEY }}
-
+      - name: Extract version from pixi.toml
+        id: version
         run: |
-          # Build and publish
-          pixi auth login prefix.dev --token "$PREFIX_API_KEY"
-          pixi run build_and_publish
+          VERSION=$(grep -m1 '^version' pixi.toml | sed 's/.*= *"\(.*\)"/\1/')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and push tag
+        if: steps.check_tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Create GitHub release
+        if: steps.check_tag.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true

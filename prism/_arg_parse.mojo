@@ -1,43 +1,32 @@
-from io.io import _fdopen
-from sys import argv, stdin
+from std.io.io import _fdopen
+from std.sys import argv, stdin
 
 
-fn parse_args_from_command_line(args: VariadicList[StaticString]) -> List[String]:
+fn parse_args_from_command_line(args: Span[StaticString, StaticConstantOrigin]) -> List[String]:
     """Returns the arguments passed to the executable as a list of strings.
 
     Returns:
         The arguments passed to the executable as a list of strings.
     """
-    var result = List[String](capacity=len(args))
-    var i = 1
-    while i < len(args):
-        result.append(String(args[i]))
-        i += 1
-
-    return result^
+    return [ String(arg) for arg in args[1:] ]
 
 
 @fieldwise_init
-@register_passable("trivial")
-struct STDINParserState(ImplicitlyCopyable, Equatable):
+struct STDINParserState(ImplicitlyCopyable, Equatable, TrivialRegisterPassable):
     """State of the parser when reading from stdin."""
 
     var value: UInt8
     """Internal value representing the state of the parser."""
     comptime FIND_TOKEN = Self(0)
+    """State when the parser is looking for the start of a token."""
     comptime FIND_ARG = Self(1)
+    """State when the parser is looking for the end of a token."""
 
-    fn __eq__(self, other: Self) -> Bool:
-        """Compares two `STDINParserState` instances for equality.
 
-        Args:
-            other: The other `STDINParserState` instance to compare to.
-
-        Returns:
-            True if the two instances are equal, False otherwise.
-        """
-        return self.value == other.value
-
+comptime DOUBLE_QUOTE = '"'
+"""A constant representing a double quote character."""
+comptime DOUBLE_DASH = "--"
+"""A constant representing a double dash string."""
 
 fn parse_args_from_stdin(str: StringSlice) -> List[String]:
     """Reads arguments from stdin and returns them as a list of strings.
@@ -55,20 +44,20 @@ fn parse_args_from_stdin(str: StringSlice) -> List[String]:
 
     for char in str.codepoint_slices():
         if state == STDINParserState.FIND_TOKEN:
-            if char.isspace() or char == '"':
+            if char.isspace() or char == DOUBLE_QUOTE:
                 if char == "\n":
                     line_number += 1
                 if token != "":
-                    if token == "--":
+                    if token == DOUBLE_DASH:
                         break
                     args.append(token)
                     token = ""
-                if char == '"':
+                if char == DOUBLE_QUOTE:
                     state = STDINParserState.FIND_ARG
                 continue
             token.write(char)
         else:
-            if char != '"':
+            if char != StringSlice(DOUBLE_QUOTE):
                 token.write(char)
             else:
                 if token != "":
@@ -77,7 +66,7 @@ fn parse_args_from_stdin(str: StringSlice) -> List[String]:
                 state = STDINParserState.FIND_TOKEN
 
     if state == STDINParserState.FIND_TOKEN:
-        if token and token != "--":
+        if token and token != DOUBLE_DASH:
             args.append(token)
     else:
         # Not an empty string and not a space

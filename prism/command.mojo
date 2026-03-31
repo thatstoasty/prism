@@ -1,6 +1,6 @@
-from sys import env_get_bool
-
-from memory import ArcPointer, OwnedPointer
+from std.sys import env_get_bool
+from std.memory import ArcPointer, OwnedPointer
+from std.sys import get_defined_bool
 from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
 from prism._flag_set import Annotation, FlagSet
 from prism._util import panic
@@ -13,7 +13,7 @@ from prism.version import Version
 from prism.writer import WriterFn, default_error_writer, default_output_writer
 
 
-comptime ENABLE_TRAVERSE_RUN_HOOKS = env_get_bool["PRISM_TRAVERSE_RUN_HOOKS", False]()
+comptime ENABLE_TRAVERSE_RUN_HOOKS = get_defined_bool["PRISM_TRAVERSE_RUN_HOOKS", False]()
 """Set to True to traverse all parents' persistent pre and post run hooks. If False, it'll only run the first match.
 If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
 
@@ -82,7 +82,7 @@ fn run_action(flag: Flag) raises -> None:
 
 
 @fieldwise_init
-struct Command(Copyable, Stringable, Writable):
+struct Command(Copyable, Writable):
     """A struct representing a command that can be executed from the command line.
 
     ```mojo
@@ -288,35 +288,19 @@ struct Command(Copyable, Stringable, Writable):
     #         suggest=self.suggest,
     #     )
 
-    fn __str__(self) -> String:
-        """Returns a string representation of the `Command`.
-
-        Returns:
-            The string representation of the `Command`.
-        """
-        return String.write(self)
-
     fn write_to(self, mut writer: Some[Writer]):
         """Write string representation to a `Writer`.
 
         Args:
             writer: The formatter to write to.
         """
-
-        @parameter
-        fn write_optional(opt: Optional[String]):
-            if opt:
-                writer.write(repr(opt.value()))
-            else:
-                writer.write(repr(None))
-
         writer.write("Command(Name: ", self.name, ", Usage: ", self.usage)
 
         if self.aliases:
-            writer.write(", Aliases: ", self.aliases.__str__())
+            writer.write(", Aliases: ", self.aliases)
 
         if self.valid_args:
-            writer.write(", Valid Args: ", self.valid_args.__str__())
+            writer.write(", Valid Args: ", self.valid_args)
         if self.flags:
             writer.write(", Flags: ", self.flags)
         writer.write(")")
@@ -402,8 +386,7 @@ struct Command(Copyable, Stringable, Writable):
         # If reverse is True, we traverse up the command tree first until we each the root
         # once the base case is reached, we make our way back down the command tree
         # and invoke the function on each parent in reverse order.
-        @parameter
-        if reverse:
+        comptime if reverse:
             self.parent[].value().visit_parents[func, reverse]()
             func(self.parent[].value())
         else:
@@ -423,8 +406,7 @@ struct Command(Copyable, Stringable, Writable):
         # If reverse is True, we traverse up the command tree first until we each the root
         # once the base case is reached, we make our way back down the command tree
         # and invoke the function on each parent in reverse order.
-        @parameter
-        if reverse:
+        comptime if reverse:
             self.parent[].value().visit_parents[func, reverse]()
             func(self.parent[].value())
         else:
@@ -453,8 +435,7 @@ struct Command(Copyable, Stringable, Writable):
             if parent.persistent_post_run:
                 parent.persistent_post_run.value()(args, cmd.flags)
 
-                @parameter
-                if not ENABLE_TRAVERSE_RUN_HOOKS:
+                comptime if not ENABLE_TRAVERSE_RUN_HOOKS:
                     return
 
         try:
@@ -492,8 +473,7 @@ struct Command(Copyable, Stringable, Writable):
             if parent.persistent_post_run:
                 parent.persistent_post_run.value()(args, cmd.flags)
 
-                @parameter
-                if not ENABLE_TRAVERSE_RUN_HOOKS:
+                comptime if not ENABLE_TRAVERSE_RUN_HOOKS:
                     return
 
         try:
@@ -518,7 +498,7 @@ struct Command(Copyable, Stringable, Writable):
         """
         self._execute(args^)
 
-    fn execute(mut self, args: VariadicList[StaticString]) -> None:
+    fn execute(mut self, args: Span[StaticString, StaticConstantOrigin]) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
 
         This is an overload that accepts a variadic list of static strings, which is generally used for the
@@ -570,7 +550,7 @@ struct Command(Copyable, Stringable, Writable):
                 self.exit(e)
                 return
 
-            self.error_writer(String("Unknown flag: ", flag_name.value(), "\nDid you mean: ", suggestion))
+            self.error_writer(String(t"Unknown flag: {flag_name.value()}\nDid you mean: {suggestion}?"))
             return
 
         var cmd = OwnedPointer[Command](command^)

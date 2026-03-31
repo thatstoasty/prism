@@ -1,4 +1,4 @@
-from sys import stderr
+from std.sys import stderr
 
 
 comptime WriterFn = fn (String) -> None

@@ -1,6 +1,6 @@
-import os
-from collections.dict import DictEntry
-from collections.list import _ListIter
+from std import os
+from std.collections.dict import DictEntry
+from std.collections.list import _ListIter
 
 from prism._flag_group import (
     validate_mutually_exclusive_flag_group,
@@ -9,8 +9,7 @@ from prism._flag_group import (
 )
 from prism._flag_parser import FlagParser
 from prism._util import string_to_bool
-from prism.flag import Flag, FlagActionFn, FType
-from utils import Variant
+from prism.flag import Flag, FlagActionFn, FType, Annotation
 
 
 comptime FlagVisitorFn = fn (Flag) -> None
@@ -20,36 +19,45 @@ comptime FlagVisitorRaisingFn = fn (Flag) raises -> None
 
 
 @fieldwise_init
-@register_passable("trivial")
-struct ParserState:
+struct ParserState(TrivialRegisterPassable, Writable, Equatable):
+    """State of the parser when parsing flags from the command line."""
     var value: UInt8
+    """Internal value representing the state of the parser."""
     comptime FIND_FLAG = Self(0)
+    """State when the parser is trying to find the next flag in the arguments."""
     comptime PARSE_FLAG = Self(1)
+    """State when the parser is trying to parse a flag that starts with '--' and is in the format of either '--flag=value' or '--flag value'."""
     comptime PARSE_SHORTHAND_FLAG = Self(2)
-
-    fn __eq__(self, other: Self) -> Bool:
-        return self.value == other.value
+    """State when the parser is trying to parse a shorthand flag that starts with '-' and can be in the format of either '-f=value', '-f value', or a combination of multiple bool shorthand flags like '-abc' which is equivalent to '-a -b -c'."""
 
 
-# Flag Group annotations
 @fieldwise_init
-struct Annotation:
-    var value: String
+struct _FlagSetIter[mut: Bool, //, origin: Origin[mut=mut]](Copyable, Iterator):
+    comptime Element = Flag
+    comptime IteratorType[
+        iterable_mut: Bool, //, iterable_origin: Origin[mut=iterable_mut]
+    ]: Iterator = Self
+    var iter: _ListIter[Flag, Self.origin]
 
-    # Individual flag annotations
-    comptime REQUIRED = Self("REQUIRED")
+    fn __iter__(ref self) -> Self.IteratorType[origin_of(self)]:
+        return self.copy()
 
-    # Flag Group annotations
-    comptime REQUIRED_AS_GROUP = Self("REQUIRED_AS_GROUP")
-    comptime ONE_REQUIRED = Self("ONE_REQUIRED")
-    comptime MUTUALLY_EXCLUSIVE = Self("MUTUALLY_EXCLUSIVE")
+    fn __next__(mut self) raises StopIteration -> ref[Self.origin] Self.Element:
+        return self.iter.__next__()
 
-    fn __eq__(self, other: Self) -> Bool:
-        return self.value == other.value
+    @always_inline
+    fn bounds(self) -> Tuple[Int, Optional[Int]]:
+        return self.iter.bounds()
 
 
-struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
+
+struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
     """A set of flags."""
+
+    comptime Element = Flag
+    comptime IteratorType[
+        iterable_mut: Bool, //, iterable_origin: Origin[mut=iterable_mut]
+    ]: Iterator = _ListIter[Flag, iterable_origin, True]
 
     var flags: List[Flag]
     """The flags in the set."""
@@ -79,8 +87,9 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
     fn __len__(self) -> Int:
         return len(self.flags)
 
-    fn __iter__(ref self) -> _ListIter[Flag, origin_of(self.flags)]:
-        return self.flags.__iter__()
+    fn __iter__(ref self) -> Self.IteratorType[origin_of(self)]:
+        # TODO: Fix up the origins here.
+        return rebind[Self.IteratorType[origin_of(self)]](iter(self.flags))
 
     fn append(mut self, var flag: Flag):
         """Adds a flag to the flag set.
@@ -100,16 +109,13 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         """
         self.flags.extend(other.flags.copy())
 
-    fn __str__(self) -> String:
-        return String.write(self)
-
     fn write_to(self, mut writer: Some[Writer]) -> None:
         """Writes the flag set to a writer.
 
         Args:
             writer: The writer to write the flag set to.
         """
-        writer.write(self.flags.__str__())
+        writer.write(self.flags)
 
     fn set_annotation[annotation: Annotation](mut self, name: StringSlice, var value: String) raises -> None:
         """Sets an annotation for a flag.
@@ -130,19 +136,15 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         var flag = self.lookup(name)
         if not flag:
             raise Error(
-                "FlagSet.set_annotation: Failed to set flag, ",
-                name,
-                ", with the following annotation: ",
-                annotation.value,
-                " because the flag could not be found.",
+                t"FlagSet.set_annotation: Failed to set flag, {name}, with the following annotation: {annotation}, because the flag could not be found."
             )
 
         try:
-            flag.value()[].annotations[annotation.value].append(value^)
+            flag.value()[].annotations[annotation].append(value^)
         except:
-            flag.value()[].annotations[annotation.value] = [value]
+            flag.value()[].annotations[annotation] = [value]
 
-    fn from_args(mut self, arguments: Span[mut=False, String]) raises -> List[String]:
+    fn from_args[origin: ImmutOrigin, //](mut self, arguments: Span[String, origin]) raises -> List[String]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
@@ -161,11 +163,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
             var flag = flags.lookup(name)
             if not flag:
                 raise Error(
-                    "FlagSet.from_args: Failed to set flag, ",
-                    name,
-                    ", with value: ",
-                    value,
-                    ". Flag could not be found.",
+                    t"FlagSet.from_args: Failed to set flag, {name}, with value: {value}. Flag could not be found."
                 )
             if not flag.value()[].changed:
                 flag.value()[].set(value)
@@ -176,7 +174,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         var state = ParserState.FIND_FLAG
         var parser = FlagParser(arguments)
         while parser.index < len(arguments):
-            var argument = arguments[parser.index].as_string_slice()
+            var argument = StringSlice(arguments[parser.index])
 
             # Find the next flag in the set of arguments.
             if state == ParserState.FIND_FLAG:
@@ -226,10 +224,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Returns:
             A list of names of all flags in the flag set.
         """
-        var result = List[String](capacity=len(self.flags))
-        for flag in self.flags:
-            result.append(flag.name)
-        return result^
+        return [ flag.name for flag in self.flags ]
 
     fn shorthands(self) -> List[String]:
         """Returns a list of shorthands of all flags in the flag set.
@@ -237,11 +232,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Returns:
             A list of shorthands of all flags in the flag set.
         """
-        var result = List[String](capacity=len(self.flags))
-        for flag in self.flags:
-            if flag.shorthand:
-                result.append(flag.shorthand)
-        return result^
+        return [ flag.shorthand for flag in self.flags if flag.shorthand ]
 
     fn visit_all[visitor: FlagVisitorFn](self) -> None:
         """Visits all flags in the flag set.
@@ -276,7 +267,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
                 missing_flag_names.append(flag.name)
 
         if len(missing_flag_names) > 0:
-            raise Error("Required flag(s): " + missing_flag_names.__str__() + " not set.")
+            raise Error(t"Required flag(s): {missing_flag_names} not set.")
 
     fn lookup(ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
@@ -289,7 +280,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
             Optional Pointer to the Flag.
         """
         for ref flag in self.flags:
-            if flag.name.as_string_slice() == name:
+            if flag.name == name:
                 return Pointer(to=flag)
 
         return None
@@ -308,7 +299,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
             Optional Pointer to the Flag.
         """
         for ref flag in self.flags:
-            if flag.name.as_string_slice() == name and flag.type == type:
+            if flag.name == name and flag.type == type:
                 return Pointer(to=flag)
 
         return None
@@ -324,7 +315,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
             Optional Pointer to the Flag.
         """
         for ref flag in self.flags:
-            if flag.shorthand.as_string_slice() == name:
+            if flag.shorthand == name:
                 return Pointer(to=flag)
 
         return None
@@ -343,7 +334,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
             Optional Pointer to the Flag.
         """
         for ref flag in self.flags:
-            if flag.shorthand.as_string_slice() == name and flag.type == type:
+            if flag.shorthand == name and flag.type == type:
                 return Pointer(to=flag)
 
         return None
@@ -358,12 +349,12 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
             The name of the flag.
         """
         for flag in self.flags:
-            if flag.shorthand and flag.shorthand.as_string_slice() == shorthand:
+            if flag.shorthand and flag.shorthand == shorthand:
                 return flag.name
 
         return None
 
-    fn has_all_flags(self, flag_names: Span[String]) -> Bool:
+    fn has_all_flags[origin: ImmutOrigin, //](self, flag_names: Span[String, origin]) -> Bool:
         """Checks if all flags are defined in the flag set.
 
         Args:
@@ -393,7 +384,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If an error occurred while processing the flag.
         """
-        var fg_annotations = flag.annotations.get(annotation.value, List[String]())
+        var fg_annotations = flag.annotations.get(annotation, List[String]())
         if not fg_annotations:
             return
 
@@ -513,7 +504,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.Int8.is_int_type()
+        comptime assert FType.Int8.is_int_type()
         var result = self.get_int[FType.Int8](name)
         if not result:
             return None
@@ -531,7 +522,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.Int16.is_int_type()
+        comptime assert FType.Int16.is_int_type()
         var result = self.get_int[FType.Int16](name)
         if not result:
             return None
@@ -549,7 +540,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.Int32.is_int_type()
+        comptime assert FType.Int32.is_int_type()
         var result = self.get_int[FType.Int32](name)
         if not result:
             return None
@@ -567,7 +558,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.Int64.is_int_type()
+        comptime assert FType.Int64.is_int_type()
         var result = self.get_int[FType.Int64](name)
         if not result:
             return None
@@ -585,7 +576,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.UInt.is_int_type()
+        comptime assert FType.UInt.is_int_type()
         var result = self.get_int[FType.UInt](name)
         if not result:
             return None
@@ -603,7 +594,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.UInt8.is_int_type()
+        comptime assert FType.UInt8.is_int_type()
         var result = self.get_int[FType.UInt8](name)
         if not result:
             return None
@@ -621,7 +612,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.UInt16.is_int_type()
+        comptime assert FType.UInt16.is_int_type()
         var result = self.get_int[FType.UInt16](name)
         if not result:
             return None
@@ -639,7 +630,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.UInt32.is_int_type()
+        comptime assert FType.UInt32.is_int_type()
         var result = self.get_int[FType.UInt32](name)
         if not result:
             return None
@@ -657,7 +648,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.UInt64.is_int_type()
+        comptime assert FType.UInt64.is_int_type()
         var result = self.get_int[FType.UInt64](name)
         if not result:
             return None
@@ -678,7 +669,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert type.is_float_type()
+        comptime assert type.is_float_type()
         var flag = self.lookup[type](name)
         if not flag:
             return None
@@ -700,7 +691,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.Float16.is_float_type()
+        comptime assert FType.Float16.is_float_type()
         var result = self.get_float[FType.Float16](name)
         if not result:
             return None
@@ -718,7 +709,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.Float32.is_float_type()
+        comptime assert FType.Float32.is_float_type()
         var result = self.get_float[FType.Float32](name)
         if not result:
             return None
@@ -736,7 +727,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.Float64.is_float_type()
+        comptime assert FType.Float64.is_float_type()
         var result = self.get_float[FType.Float64](name)
         if not result:
             return None
@@ -779,7 +770,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.StringList.is_list_type()
+        comptime assert FType.StringList.is_list_type()
         var result = self._get_list[FType.StringList](name)
         if not result:
             return None
@@ -797,7 +788,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.IntList.is_list_type()
+        comptime assert FType.IntList.is_list_type()
         var result = self._get_list[FType.IntList](name)
         if not result:
             return None
@@ -819,7 +810,7 @@ struct FlagSet(Boolable, Copyable, Sized, Stringable, Writable):
         Raises:
             Error: If the flag is not found.
         """
-        __comptime_assert FType.Float64List.is_list_type()
+        comptime assert FType.Float64List.is_list_type()
         var result = self._get_list[FType.Float64List](name)
         if not result:
             return None

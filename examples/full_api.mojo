@@ -1,4 +1,4 @@
-from sys import exit, stderr
+from std.sys import exit, stderr
 
 from prism import Command, Flag, FlagSet, Version, no_args, read_args
 

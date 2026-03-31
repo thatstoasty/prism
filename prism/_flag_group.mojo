@@ -1,4 +1,4 @@
-from collections.dict import DictEntry
+from std.collections.dict import DictEntry
 
 
 fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
@@ -22,44 +22,33 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -
         if len(unset) == len(pair.value) or len(unset) == 0:
             continue
 
-        var keys = extract_keys(pair)
         raise Error(
-            "If any flags in the group, ",
-            keys.__str__(),
-            " are set they must all be set; missing ",
-            unset.__str__(),
-            ".",
+            t"If any flags in the group, {extract_keys(pair.value)}, are set then all of the flags in the group must be set; missing {unset}.",
         )
 
 
-fn get_set_flags(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:
+fn get_set_flags(flags: Dict[String, Bool]) -> List[String]:
     """Returns a list of flags that are set.
 
     Args:
-        pair: The key value pair to check.
+        flags: The dictionary of flag names to if they're set or not.
 
     Returns:
         A list of flags that are set.
     """
-    var set = List[String]()
-    for flag in pair.value.items():
-        if flag.value:
-            set.append(flag.key)
-    return set^
+    return [ flag.key for flag in flags.items() if flag.value ]
 
 
-fn extract_keys(pair: DictEntry[String, Dict[String, Bool]]) -> List[String]:
+fn extract_keys(flags: Dict[String, Bool]) -> List[String]:
     """Extracts the keys from a dictionary entry.
 
     Args:
-        pair: The key value pair to extract the keys from.
+        flags: The dictionary of flag names to if they're set or not.
 
     Returns:
         A list of keys.
     """
-    var keys = List[String]()
-    for key in pair.value.keys():
-        keys.append(key)
+    var keys = [ key for key in flags.keys() ]
     sort(keys)
     return keys^
 
@@ -76,12 +65,11 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) rais
     """
     # Check if at least one key is set.
     for pair in data.items():
-        var set = get_set_flags(pair)
+        var set = get_set_flags(pair.value)
         if len(set) >= 1:
             continue
 
-        var keys = extract_keys(pair)
-        raise Error("At least one of the flags in the group ", keys.__str__(), " is required.")
+        raise Error(t"At least one of the flags in the group, {extract_keys(pair.value)}, is required.")
 
 
 fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
@@ -96,15 +84,10 @@ fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]
     """
     # Check if more than one mutually exclusive flag is set.
     for pair in data.items():
-        var set = get_set_flags(pair)
+        var set = get_set_flags(pair.value)
         if len(set) == 0 or len(set) == 1:
             continue
 
-        var keys = extract_keys(pair)
         raise Error(
-            "If any flags in the group, ",
-            keys.__str__(),
-            " are set none of the others can be; ",
-            set.__str__(),
-            " were all set.",
+            t"If any flags in the group, {extract_keys(pair.value)}, are set none of the others can be; {set} were all set.",
         )
