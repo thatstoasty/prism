@@ -56,15 +56,15 @@ fn _zsh_flag_spec(flag: Flag) -> String:
         # Flag has both long and short forms
         var exclusion = t"(-{flag.shorthand} --{flag.name})"
         if is_bool:
-            return String(t"'{exclusion}'{{-{flag.shorthand},--{flag.name}}'[{escaped_usage}]'")
+            return String(t"'{exclusion}'", "{", t"-{flag.shorthand},--{flag.name}", "}", t"'[{escaped_usage}]'")
 
         return String(
-            t"{prefix}{exclusion}'{{-{flag.shorthand},--{flag.name}}'=[{escaped_usage}]:{flag.name}:'"
+            t"{prefix}{exclusion}'", "{", t"-{flag.shorthand},--{flag.name}", "}", t"'=[{escaped_usage}]:{flag.name}:'"
         )
 
     # Flag has only long form
     if is_bool:
-        return String(t"'--{flag.name}'[{escaped_usage}]'")
+        return String(t"'--{flag.name}[{escaped_usage}]'")
 
     return String(t"{prefix}--{flag.name}=[{escaped_usage}]:{flag.name}:'")
 
