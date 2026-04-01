@@ -264,7 +264,7 @@ struct Command(Copyable, Writable):
                         usage="Generate shell completion scripts.",
                         run=_completion_noop,
                         args_usage=String("SHELL"),
-                        valid_args=["zsh"],
+                        valid_args=["zsh", "bash"],
                     )
                 )
             )
@@ -597,7 +597,7 @@ struct Command(Copyable, Writable):
             if self.completion and cmd[].name == "completion":
                 if not remaining_args:
                     self.error_writer(
-                        "Usage: " + self.name + " completion <shell>\nSupported shells: zsh"
+                        "Usage: " + self.name + " completion <shell>\nSupported shells: zsh, bash"
                     )
                     return
                 var root = OwnedPointer[Command](self.copy())
