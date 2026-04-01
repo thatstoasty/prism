@@ -1,29 +1,28 @@
 from std.memory import OwnedPointer
 from prism.command import Command
 from prism.flag import Flag, FType
+from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER
 
 
-fn _bash_escape(s: String) -> String:
+fn _bash_escape(s: String, mut writer: Some[Writer]):
     """Escapes special characters in a string for use in bash completion descriptions.
 
     Single quotes in descriptions need to be escaped for bash.
 
     Args:
         s: The string to escape.
-
-    Returns:
-        The escaped string safe for bash completion descriptions.
+        writer: A Writer to write the escaped string to.
     """
-    var result = String()
-    for c in s.codepoint_slices():
-        if c == "'":
-            result.write("'\\''")
+    comptime QUOTE = Codepoint.ord("'")
+    comptime ESCAPED_QUOTE = "'\\''"
+    for c in s.codepoints():
+        if c == QUOTE:
+            writer.write(ESCAPED_QUOTE)
         else:
-            result.write(c)
-    return result^
+            writer.write(c)
 
 
-fn _bash_function_name(root_name: String, prefix: String) -> String:
+fn _bash_function_name(root_name: StringSlice, prefix: StringSlice) -> String:
     """Builds the bash function name for a command.
 
     Uses double-underscore as separator between command levels.
@@ -35,11 +34,11 @@ fn _bash_function_name(root_name: String, prefix: String) -> String:
     Returns:
         The bash function name.
     """
-    return String("__", root_name, prefix)
+    return String(t"__{root_name}{prefix}")
 
 
 fn _bash_command_function(
-    cmd: Command, prefix: String, root_name: String, is_root: Bool
+    cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
 ) raises -> String:
     """Generates a bash completion function for a single command.
 
@@ -57,13 +56,15 @@ fn _bash_command_function(
     """
     var func_name = _bash_function_name(root_name, prefix)
     var has_children = Bool(cmd.children)
-    var builder = String()
+    var builder = String(capacity=DEFAULT_BUFFER_SIZE)
 
-    builder.write(func_name, "() {\n")
-    builder.write("    local cur prev opts cmds\n")
-    builder.write("    COMPREPLY=()\n")
-    builder.write('    cur="${COMP_WORDS[COMP_CWORD]}"\n')
-    builder.write('    prev="${COMP_WORDS[COMP_CWORD-1]}"\n')
+    builder.write(
+        t"{func_name}() {{\n",
+        "    local cur prev opts cmds\n",
+        "    COMPREPLY=()\n",
+        '    cur="${COMP_WORDS[COMP_CWORD]}"\n',
+        '    prev="${COMP_WORDS[COMP_CWORD-1]}"\n'
+    )
 
     # Collect flags
     var seen_flags = Dict[String, Bool]()
@@ -72,9 +73,9 @@ fn _bash_command_function(
     for flag in cmd.flags:
         if flag.name not in seen_flags:
             seen_flags[flag.name] = True
-            flag_names.append(String("--", flag.name))
+            flag_names.append(String(t"--{flag.name}"))
             if flag.shorthand:
-                flag_names.append(String("-", flag.shorthand))
+                flag_names.append(String(t"-{flag.shorthand}"))
 
     # Add inherited persistent flags from ancestors (if not root)
     if not is_root and cmd.has_parent():
@@ -82,9 +83,9 @@ fn _bash_command_function(
         for flag in inherited:
             if flag.name not in seen_flags:
                 seen_flags[flag.name] = True
-                flag_names.append(String("--", flag.name))
+                flag_names.append(String(t"--{flag.name}"))
                 if flag.shorthand:
-                    flag_names.append(String("-", flag.shorthand))
+                    flag_names.append(String(t"-{flag.shorthand}"))
 
     # Build opts string
     var opts = String()
@@ -117,40 +118,43 @@ fn _bash_command_function(
         builder.write("        case \"${COMP_WORDS[i]}\" in\n")
 
         for i in range(len(cmd.children)):
-            var child_name = cmd.children[i][].name
-            var child_aliases = cmd.children[i][].aliases.copy()
-            var child_prefix = String(prefix, "__", child_name)
+            ref child_name = cmd.children[i][].name
+            ref child_aliases = cmd.children[i][].aliases
+            var child_prefix = String(t"{prefix}__{child_name}")
             var child_func = _bash_function_name(root_name, child_prefix)
 
             var pattern = child_name
             for j in range(len(child_aliases)):
                 pattern.write("|", child_aliases[j])
 
-            builder.write("            ", pattern, ")\n")
-            builder.write("                ", child_func, "\n")
-            builder.write("                return\n")
-            builder.write("                ;;\n")
+            builder.write(
+                t"            {pattern})\n",
+                t"                {child_func}\n",
+                t"                return\n",
+                "                ;;\n"
+            )
 
-        builder.write("        esac\n")
-        builder.write("    done\n\n")
+        builder.write("        esac\n", "    done\n\n")
 
         # If no subcommand matched, complete commands and flags
-        builder.write('    if [[ "${cur}" == -* ]]; then\n')
-        builder.write('        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )\n')
-        builder.write("    else\n")
-        builder.write('        COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )\n')
-        builder.write("    fi\n")
+        builder.write(
+            '    if [[ "${cur}" == -* ]]; then\n',
+            '        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )\n',
+            "    else\n",
+            '        COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )\n',
+            "    fi\n"
+        )
     else:
         # Leaf command
         if cmd.valid_args:
-            var args_list = String()
+            var args_list = String(capacity=SMALL_BUFFER_SIZE)
             for i in range(len(cmd.valid_args)):
                 if i > 0:
                     args_list.write(" ")
                 args_list.write(cmd.valid_args[i])
-            builder.write('    opts="', opts, " ", args_list, '"\n')
+            builder.write(t'    opts="{opts} {args_list}"\n')
         else:
-            builder.write('    opts="', opts, '"\n')
+            builder.write(t'    opts="{opts}"\n')
         builder.write('    COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )\n')
 
     builder.write("}\n")
@@ -158,7 +162,7 @@ fn _bash_command_function(
 
 
 fn _bash_functions_recursive(
-    cmd: Command, prefix: String, root_name: String, is_root: Bool
+    cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
 ) raises -> String:
     """Recursively generates bash completion functions for a command and all its children.
 
@@ -177,10 +181,9 @@ fn _bash_functions_recursive(
     var builder = _bash_command_function(cmd, prefix, root_name, is_root)
 
     for i in range(len(cmd.children)):
-        var child_name = cmd.children[i][].name
-        var child_prefix = String(prefix, "__", child_name)
-        builder.write("\n")
-        builder.write(_bash_functions_recursive(cmd.children[i][].copy(), child_prefix, root_name, is_root=False))
+        ref child_name = cmd.children[i][].name
+        ref child_prefix = String(prefix, "__", child_name)
+        builder.write("\n", _bash_functions_recursive(cmd.children[i][].copy(), child_prefix, root_name, is_root=False))
 
     return builder^
 
@@ -201,13 +204,11 @@ fn generate_bash_completion(cmd: OwnedPointer[Command]) raises -> String:
     Raises:
         If an error occurs during generation.
     """
-    var root_name = cmd[].name
-    var builder = String()
+    ref root_name = cmd[].name
+    var builder = String(capacity=DEFAULT_BUFFER_SIZE)
 
     # Header
-    builder.write("#!/usr/bin/env bash\n")
-    builder.write("# Generated by prism - https://github.com/thatstoasty/prism\n")
-    builder.write("# Do not edit manually.\n\n")
+    builder.write("#!/usr/bin/env bash\n", SCRIPT_HEADER)
 
     # Generate all functions recursively
     builder.write(_bash_functions_recursive(cmd[], "", root_name, is_root=True))

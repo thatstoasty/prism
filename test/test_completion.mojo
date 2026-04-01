@@ -1,6 +1,6 @@
 import std.testing
 from std.memory import OwnedPointer
-from prism import Completion, FlagSet
+from prism import FlagSet
 from prism.command import Command
 from prism.flag import Flag
 from prism.completion.zsh import _zsh_escape, _zsh_flag_spec
