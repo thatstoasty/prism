@@ -59,7 +59,7 @@ fn _bash_command_function(
     var builder = String(capacity=DEFAULT_BUFFER_SIZE)
 
     builder.write(
-        t"{func_name}() {{\n",
+        t"{func_name}() ", "{", "\n",
         "    local cur prev opts cmds\n",
         "    COMPREPLY=()\n",
         '    cur="${COMP_WORDS[COMP_CWORD]}"\n',

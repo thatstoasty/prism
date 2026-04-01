@@ -13,19 +13,27 @@ def dummy(args: List[String], flags: FlagSet) raises -> None:
 
 
 def test_zsh_escape_plain_text() raises:
-    std.testing.assert_equal(_zsh_escape("simple text"), "simple text")
+    var result = String()
+    _zsh_escape("simple text", result)
+    std.testing.assert_equal(result, "simple text")
 
 
 def test_zsh_escape_single_quotes() raises:
-    std.testing.assert_equal(_zsh_escape("it's"), "it'\\''s")
+    var result = String()
+    _zsh_escape("it's", result)
+    std.testing.assert_equal(result, "it'\\''s")
 
 
 def test_zsh_escape_colons() raises:
-    std.testing.assert_equal(_zsh_escape("key:value"), "key\\:value")
+    var result = String()
+    _zsh_escape("key:value", result)
+    std.testing.assert_equal(result, "key\\:value")
 
 
 def test_zsh_escape_brackets() raises:
-    std.testing.assert_equal(_zsh_escape("[option]"), "\\[option\\]")
+    var result = String()
+    _zsh_escape("[option]", result)
+    std.testing.assert_equal(result, "\\[option\\]")
 
 
 def test_zsh_flag_spec_bool_with_shorthand() raises:
