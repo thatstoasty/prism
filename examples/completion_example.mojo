@@ -12,7 +12,7 @@ Install Bash completions:
     ./completion_example completion bash > ~/.local/share/bash-completion/completions/completion_example
     # Or source directly: source <(./completion_example completion bash)
 """
-from prism import Command, Completion, FlagSet, Flag, read_args
+from prism import Command, FlagSet, Flag, read_args
 
 
 fn serve(args: List[String], flags: FlagSet) raises -> None:
@@ -36,7 +36,7 @@ fn main():
         name="myapp",
         usage="An example CLI with shell completions.",
         run=base,
-        completion=Completion(),
+        enable_completion=True,
         flags=[
             Flag.string(name="config", shorthand="c", usage="Path to config file.", persistent=True),
             Flag.bool(name="verbose", shorthand="v", usage="Enable verbose output.", persistent=True),

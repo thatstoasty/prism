@@ -1,9 +1,10 @@
 from std.memory import OwnedPointer
 from prism.command import Command
 from prism.flag import Flag, FType
+from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER
 
 
-fn _zsh_escape(s: String) -> String:
+fn _zsh_escape(s: StringSlice, mut writer: Some[Writer]):
     """Escapes special characters in a string for use in ZSH completion specs.
 
     ZSH completion descriptions need certain characters escaped:
@@ -13,23 +14,27 @@ fn _zsh_escape(s: String) -> String:
 
     Args:
         s: The string to escape.
-
-    Returns:
-        The escaped string safe for ZSH completion specs.
+        writer: A Writer to write the escaped string to.
     """
-    var result = String()
-    for c in s.codepoint_slices():
-        if c == "'":
-            result.write("'\\''")
-        elif c == ":":
-            result.write("\\:")
-        elif c == "[":
-            result.write("\\[")
-        elif c == "]":
-            result.write("\\]")
+    comptime QUOTE = Codepoint.ord("'")
+    comptime ESCAPED_QUOTE = "'\\''"
+    comptime COLON = Codepoint.ord(":")
+    comptime ESCAPED_COLON = "\\:"
+    comptime LEFT_BRACKET = Codepoint.ord("[")
+    comptime ESCAPED_LEFT_BRACKET = "\\["
+    comptime RIGHT_BRACKET = Codepoint.ord("]")
+    comptime ESCAPED_RIGHT_BRACKET = "\\]"
+    for c in s.codepoints():
+        if c == QUOTE:
+            writer.write(ESCAPED_QUOTE)
+        elif c == COLON:
+            writer.write(ESCAPED_COLON)
+        elif c == LEFT_BRACKET:
+            writer.write(ESCAPED_LEFT_BRACKET)
+        elif c == RIGHT_BRACKET:
+            writer.write(ESCAPED_RIGHT_BRACKET)
         else:
-            result.write(c)
-    return result^
+            writer.write(c)
 
 
 fn _zsh_flag_spec(flag: Flag) -> String:
@@ -41,40 +46,30 @@ fn _zsh_flag_spec(flag: Flag) -> String:
     Returns:
         A ZSH _arguments spec string for the flag.
     """
-    var escaped_usage = _zsh_escape(flag.usage)
+    var escaped_usage = String(capacity=DEFAULT_BUFFER_SIZE)
+    _zsh_escape(flag.usage, escaped_usage)
     var is_bool = flag.type == FType.Bool
     var is_list = flag.type.is_list_type()
+    var prefix = "'*" if is_list else "'"
 
     if flag.shorthand:
         # Flag has both long and short forms
-        var exclusion = String("(-", flag.shorthand, " --", flag.name, ")")
+        var exclusion = t"(-{flag.shorthand} --{flag.name})"
         if is_bool:
-            return String(
-                "'", exclusion, "'{-", flag.shorthand, ",--", flag.name, "}'[", escaped_usage, "]'"
-            )
-        else:
-            var prefix: String
-            if is_list:
-                prefix = String("'*")
-            else:
-                prefix = String("'")
-            return String(
-                prefix, exclusion, "'{-", flag.shorthand, ",--", flag.name, "}'=[", escaped_usage, "]:", flag.name, ":'"
-            )
-    else:
-        # Flag has only long form
-        if is_bool:
-            return String("'--", flag.name, "[", escaped_usage, "]'")
-        else:
-            var prefix: String
-            if is_list:
-                prefix = String("'*")
-            else:
-                prefix = String("'")
-            return String(prefix, "--", flag.name, "=[", escaped_usage, "]:", flag.name, ":'")
+            return String(t"'{exclusion}'{{-{flag.shorthand},--{flag.name}}'[{escaped_usage}]'")
+
+        return String(
+            t"{prefix}{exclusion}'{{-{flag.shorthand},--{flag.name}}'=[{escaped_usage}]:{flag.name}:'"
+        )
+
+    # Flag has only long form
+    if is_bool:
+        return String(t"'--{flag.name}'[{escaped_usage}]'")
+
+    return String(t"{prefix}--{flag.name}=[{escaped_usage}]:{flag.name}:'")
 
 
-fn _zsh_function_name(root_name: String, prefix: String) -> String:
+fn _zsh_function_name(root_name: StringSlice, prefix: StringSlice) -> String:
     """Builds the ZSH function name for a command.
 
     Uses double-underscore as separator between command levels.
@@ -88,11 +83,11 @@ fn _zsh_function_name(root_name: String, prefix: String) -> String:
     Returns:
         The ZSH function name.
     """
-    return String("_", root_name, prefix)
+    return String(t"_{root_name}{prefix}")
 
 
 fn _zsh_command_function(
-    cmd: Command, prefix: String, root_name: String, is_root: Bool
+    cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
 ) raises -> String:
     """Generates a ZSH completion function for a single command.
 
@@ -110,14 +105,16 @@ fn _zsh_command_function(
     """
     var func_name = _zsh_function_name(root_name, prefix)
     var has_children = Bool(cmd.children)
-    var builder = String()
+    var builder = String(capacity=DEFAULT_BUFFER_SIZE)
 
     builder.write(func_name, "() {\n")
 
     if has_children:
-        builder.write("    local curcontext=\"$curcontext\" state line\n")
-        builder.write("    typeset -A opt_args\n")
-        builder.write("    _arguments -C \\\n")
+        builder.write(
+            "    local curcontext=\"$curcontext\" state line\n",
+            "    typeset -A opt_args\n",
+            "    _arguments -C \\\n"
+        )
     else:
         builder.write("    _arguments \\\n")
 
@@ -144,33 +141,39 @@ fn _zsh_command_function(
                 flag_specs.append(_zsh_flag_spec(flag))
 
     for i in range(len(flag_specs)):
-        builder.write("        ", flag_specs[i], " \\\n")
+        builder.write(t"        {flag_specs[i]} \\\n")
 
     if has_children:
-        builder.write("        '1: :->cmd' \\\n")
-        builder.write("        '*:: :->args'\n")
+        builder.write(
+            "        '1: :->cmd' \\\n",
+            "        '*:: :->args'\n"
+        )
 
         # Generate case statement for subcommands
-        builder.write("    case $state in\n")
-        builder.write("    cmd)\n")
-        builder.write("        local -a commands\n")
-        builder.write("        commands=(\n")
+        builder.write(
+            "    case $state in\n",
+            "    cmd)\n",
+            "        local -a commands\n",
+            "        commands=(\n"
+        )
 
         for i in range(len(cmd.children)):
-            var escaped_child_usage = _zsh_escape(cmd.children[i][].usage)
-            builder.write("            '", cmd.children[i][].name, ":", escaped_child_usage, "'\n")
+            builder.write(t"            '{cmd.children[i][].name}:")
+            _zsh_escape(cmd.children[i][].usage, builder)
+            builder.write("'\n")
 
-        builder.write("        )\n")
-        builder.write("        _describe -t commands '", cmd.name, " commands' commands\n")
-        builder.write("        ;;\n")
-
-        builder.write("    args)\n")
-        builder.write("        case $line[1] in\n")
+        builder.write(
+            "        )\n",
+            t"        _describe -t commands '{cmd.name} commands' commands\n",
+            "        ;;\n",
+            "    args)\n",
+            "        case $line[1] in\n"
+        )
 
         for i in range(len(cmd.children)):
-            var child_name = cmd.children[i][].name
-            var child_aliases = cmd.children[i][].aliases.copy()
-            var child_prefix = String(prefix, "__", child_name)
+            ref child_name = cmd.children[i][].name
+            ref child_aliases = cmd.children[i][].aliases
+            var child_prefix = String(t"{prefix}__{child_name}")
             var child_func = _zsh_function_name(root_name, child_prefix)
 
             # Build case pattern: name|alias1|alias2
@@ -180,13 +183,15 @@ fn _zsh_command_function(
 
             builder.write("        ", pattern, ") ", child_func, " ;;\n")
 
-        builder.write("        esac\n")
-        builder.write("        ;;\n")
-        builder.write("    esac\n")
+        builder.write(
+            "        esac\n",
+            "        ;;\n",
+            "    esac\n"
+        )
     else:
         # Leaf command - add valid_args completion if present
         if cmd.valid_args:
-            var args_list = String()
+            var args_list = String(capacity=SMALL_BUFFER_SIZE)
             for i in range(len(cmd.valid_args)):
                 if i > 0:
                     args_list.write(" ")
@@ -201,7 +206,7 @@ fn _zsh_command_function(
 
 
 fn _zsh_functions_recursive(
-    cmd: Command, prefix: String, root_name: String, is_root: Bool
+    cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
 ) raises -> String:
     """Recursively generates ZSH completion functions for a command and all its children.
 
@@ -218,12 +223,13 @@ fn _zsh_functions_recursive(
         If an error occurs during generation.
     """
     var builder = _zsh_command_function(cmd, prefix, root_name, is_root)
-
     for i in range(len(cmd.children)):
         var child_name = cmd.children[i][].name
-        var child_prefix = String(prefix, "__", child_name)
-        builder.write("\n")
-        builder.write(_zsh_functions_recursive(cmd.children[i][].copy(), child_prefix, root_name, is_root=False))
+        var child_prefix = String(t"{prefix}__{child_name}")
+        builder.write(
+            "\n",
+            _zsh_functions_recursive(cmd.children[i][].copy(), child_prefix, root_name, is_root=False)
+        )
 
     return builder^
 
@@ -244,13 +250,11 @@ fn generate_zsh_completion(cmd: OwnedPointer[Command]) raises -> String:
     Raises:
         If an error occurs during generation.
     """
-    var root_name = cmd[].name
-    var builder = String()
+    ref root_name = cmd[].name
+    var builder = String(capacity=DEFAULT_BUFFER_SIZE)
 
     # Header
-    builder.write("#compdef ", root_name, "\n")
-    builder.write("# Generated by prism - https://github.com/thatstoasty/prism\n")
-    builder.write("# Do not edit manually.\n\n")
+    builder.write(t"#compdef {root_name}\n", SCRIPT_HEADER)
 
     # Generate all functions recursively
     builder.write(_zsh_functions_recursive(cmd[], "", root_name, is_root=True))
@@ -260,11 +264,11 @@ fn generate_zsh_completion(cmd: OwnedPointer[Command]) raises -> String:
     # so we call it directly in the completion context. Otherwise we register
     # the function with compdef so `source`-ing the script works too.
     builder.write(
-        "\nif [ \"$funcstack[1]\" = \"_", root_name, "\" ]; then\n"
+        t"\nif [ \"$funcstack[1]\" = \"_{root_name}\" ]; then\n",
+        t"    _{root_name} \"$@\"\n",
+        "else\n",
+        t"    compdef _{root_name} {root_name}\n",
+        "fi\n"
     )
-    builder.write("    _", root_name, " \"$@\"\n")
-    builder.write("else\n")
-    builder.write("    compdef _", root_name, " ", root_name, "\n")
-    builder.write("fi\n")
 
     return builder^
