@@ -8,7 +8,7 @@ from prism.args import ArgValidatorFn, arbitrary_args
 from prism.exit import ExitFn, default_exit
 from prism.flag import Flag
 from prism.help import Help
-from prism.completion import Completion
+from prism.completion import default_completion
 from prism.suggest import flag_from_error, suggest_flag
 from prism.version import Version
 from prism.writer import WriterFn, default_error_writer, default_output_writer
@@ -160,9 +160,6 @@ struct Command(Copyable, Writable):
     var suggest: Bool
     """If True, the command will suggest flags when an unknown flag is passed."""
 
-    var completion: Optional[Completion]
-    """Completion configuration. When set on the root command, a `completion` subcommand is auto-added."""
-
     fn __init__(
         out self,
         name: String,
@@ -173,7 +170,6 @@ struct Command(Copyable, Writable):
         var aliases: List[String] = [],
         help: Help = Help(),
         version: Optional[Version] = None,
-        completion: Optional[Completion] = None,
         exit: ExitFn = default_exit,
         output_writer: WriterFn = default_output_writer,
         error_writer: WriterFn = default_error_writer,
@@ -189,6 +185,7 @@ struct Command(Copyable, Writable):
         one_required_flags: List[String] = [],
         arg_validator: ArgValidatorFn = arbitrary_args,
         suggest: Bool = False,
+        enable_completion: Bool = False,
     ):
         """Constructs a new `Command`.
 
@@ -215,7 +212,7 @@ struct Command(Copyable, Writable):
             one_required_flags: The flags where at least one is required.
             arg_validator: The function to validate arguments passed to the command.
             suggest: If True, the command will suggest flags when an unknown flag is passed.
-            completion: Completion configuration. When set, a `completion` subcommand is auto-added.
+            enable_completion: If True, the command will have a completion subcommand.
         """
         self.name = name
         self.usage = usage
@@ -235,7 +232,6 @@ struct Command(Copyable, Writable):
         self.persistent_pre_run = persistent_pre_run
         self.persistent_post_run = persistent_post_run
         self.suggest = suggest
-        self.completion = completion.copy()
 
         self.arg_validator = arg_validator
 
@@ -252,8 +248,8 @@ struct Command(Copyable, Writable):
         if self.version:
             self.flags.append(self.version.value().flag.copy())
 
-        # Auto-add completion subcommand if completion is configured
-        if self.completion:
+        # Auto-add completion subcommand
+        if enable_completion:
             fn _completion_noop(args: List[String], flags: FlagSet) raises -> None:
                 pass
 
@@ -263,12 +259,14 @@ struct Command(Copyable, Writable):
                         name="completion",
                         usage="Generate shell completion scripts.",
                         run=_completion_noop,
-                        args_usage=String("SHELL"),
+                        args_usage="SHELL",
                         valid_args=["zsh", "bash"],
+                        enable_completion=False,
                     )
                 )
             )
             self.children[len(self.children) - 1][].parent = ArcPointer(Optional(self.copy()))
+
         try:
             if flags_required_together:
                 self._mark_flag_group_as[Annotation.REQUIRED_AS_GROUP](flags_required_together)
@@ -277,7 +275,7 @@ struct Command(Copyable, Writable):
             if one_required_flags:
                 self._mark_flag_group_as[Annotation.ONE_REQUIRED](one_required_flags)
         except e:
-            panic(String("Failed to set flag annotations due to following reason: ", e))
+            panic(t"Failed to set flag annotations due to following reason: {e}")
 
     # fn copy(self) -> Self:
     #     """Returns a copy of the `Command`.
@@ -594,7 +592,7 @@ struct Command(Copyable, Writable):
                     return
 
             # Check if the completion subcommand was invoked
-            if self.completion and cmd[].name == "completion":
+            if cmd[].name == "completion":
                 if not remaining_args:
                     self.error_writer(
                         "Usage: " + self.name + " completion <shell>\nSupported shells: zsh, bash"
@@ -602,7 +600,7 @@ struct Command(Copyable, Writable):
                     return
                 var root = OwnedPointer[Command](self.copy())
                 self.output_writer(
-                    self.completion.value().action(root, remaining_args[0])
+                    default_completion(root, remaining_args[0])
                 )
                 return
 

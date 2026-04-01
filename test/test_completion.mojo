@@ -1,12 +1,14 @@
 import std.testing
 from std.memory import OwnedPointer
-from prism import Command, Completion, FlagSet
+from prism import Completion, FlagSet
+from prism.command import Command
 from prism.flag import Flag
-from prism.completion import generate_zsh_completion, generate_bash_completion, _zsh_escape, _zsh_flag_spec
+from prism.completion.zsh import _zsh_escape, _zsh_flag_spec
+from prism.completion import default_completion, generate_bash_completion, generate_zsh_completion
 from std.testing import TestSuite
 
 
-fn dummy(args: List[String], flags: FlagSet) raises -> None:
+def dummy(args: List[String], flags: FlagSet) raises -> None:
     pass
 
 
@@ -153,6 +155,7 @@ def test_zsh_command_with_valid_args() raises:
         valid_args=["start", "stop", "restart"],
     ))
     var script = generate_zsh_completion(cmd)
+
     # Verify valid args appear as completions
     std.testing.assert_true("(start stop restart)" in script)
 
@@ -179,7 +182,7 @@ def test_zsh_completion_subcommand_auto_added() raises:
         name="myapp",
         usage="My application",
         run=dummy,
-        completion=Completion(),
+        enable_completion=True,
     )
     # Verify completion subcommand was auto-added
     var found = False
@@ -195,7 +198,7 @@ def test_zsh_completion_subcommand_in_script() raises:
         name="myapp",
         usage="My application",
         run=dummy,
-        completion=Completion(),
+        enable_completion=True,
     ))
     var script = generate_zsh_completion(cmd)
     # The completion subcommand should appear in the generated script
@@ -204,8 +207,6 @@ def test_zsh_completion_subcommand_in_script() raises:
 
 
 def test_unsupported_shell() raises:
-    from prism.completion import default_completion
-
     var cmd = OwnedPointer(Command(
         name="myapp",
         usage="My application",
@@ -307,6 +308,7 @@ def test_bash_command_with_valid_args() raises:
         valid_args=["start", "stop", "restart"],
     ))
     var script = generate_bash_completion(cmd)
+    print(script)
     # Verify valid args appear in opts
     std.testing.assert_true("start" in script)
     std.testing.assert_true("stop" in script)
@@ -337,15 +339,13 @@ def test_bash_completion_subcommand_in_script() raises:
         name="myapp",
         usage="My application",
         run=dummy,
-        completion=Completion(),
+        enable_completion=True,
     ))
     var script = generate_bash_completion(cmd)
     std.testing.assert_true("__myapp__completion()" in script)
 
 
 def test_bash_dispatch() raises:
-    from prism.completion import default_completion
-
     var cmd = OwnedPointer(Command(
         name="myapp",
         usage="My application",
@@ -361,7 +361,6 @@ def test_completion_valid_args_includes_bash() raises:
         name="myapp",
         usage="My application",
         run=dummy,
-        completion=Completion(),
     )
     # Find the completion subcommand and check valid_args
     for child in cmd.children:
