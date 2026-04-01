@@ -2,10 +2,15 @@
 
 Build and run:
     mojo build completion_example.mojo && ./completion_example completion zsh
+    mojo build completion_example.mojo && ./completion_example completion bash
 
 Install ZSH completions:
     ./completion_example completion zsh > ~/.zsh/completions/_completion_example
     # Then restart your shell or run: source ~/.zsh/completions/_completion_example
+
+Install Bash completions:
+    ./completion_example completion bash > ~/.local/share/bash-completion/completions/completion_example
+    # Or source directly: source <(./completion_example completion bash)
 """
 from prism import Command, Completion, FlagSet, Flag, read_args
 
