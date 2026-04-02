@@ -12,9 +12,9 @@ from prism._util import string_to_bool
 from prism.flag import Flag, FlagActionFn, FType, Annotation
 
 
-comptime FlagVisitorFn = fn (Flag) -> None
+comptime FlagVisitorFn = def (Flag) -> None
 """Function perform some action while visiting all flags."""
-comptime FlagVisitorRaisingFn = fn (Flag) raises -> None
+comptime FlagVisitorRaisingFn = def (Flag) raises -> None
 """Function perform some action while visiting all flags. Can raise."""
 
 
@@ -39,14 +39,14 @@ struct _FlagSetIter[mut: Bool, //, origin: Origin[mut=mut]](Copyable, Iterator):
     ]: Iterator = Self
     var iter: _ListIter[Flag, Self.origin]
 
-    fn __iter__(ref self) -> Self.IteratorType[origin_of(self)]:
+    def __iter__(ref self) -> Self.IteratorType[origin_of(self)]:
         return self.copy()
 
-    fn __next__(mut self) raises StopIteration -> ref[Self.origin] Self.Element:
+    def __next__(mut self) raises StopIteration -> ref[Self.origin] Self.Element:
         return self.iter.__next__()
 
     @always_inline
-    fn bounds(self) -> Tuple[Int, Optional[Int]]:
+    def bounds(self) -> Tuple[Int, Optional[Int]]:
         return self.iter.bounds()
 
 
@@ -63,7 +63,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
     """The flags in the set."""
 
     @implicit
-    fn __init__(out self, var flags: List[Flag] = List[Flag]()):
+    def __init__(out self, var flags: List[Flag] = List[Flag]()):
         """Initializes a new FlagSet.
 
         Args:
@@ -72,7 +72,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         self.flags = flags^
 
     @always_inline
-    fn __init__(out self, var *values: Flag, __list_literal__: () = ()):
+    def __init__(out self, var *values: Flag, __list_literal__: () = ()):
         """Constructs a list from the given values.
 
         Args:
@@ -81,17 +81,17 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         """
         self.flags = List[Flag](elements=values^)
 
-    fn __bool__(self) -> Bool:
+    def __bool__(self) -> Bool:
         return Bool(self.flags)
 
-    fn __len__(self) -> Int:
+    def __len__(self) -> Int:
         return len(self.flags)
 
-    fn __iter__(ref self) -> Self.IteratorType[origin_of(self)]:
+    def __iter__(ref self) -> Self.IteratorType[origin_of(self)]:
         # TODO: Fix up the origins here.
         return rebind[Self.IteratorType[origin_of(self)]](iter(self.flags))
 
-    fn append(mut self, var flag: Flag):
+    def append(mut self, var flag: Flag):
         """Adds a flag to the flag set.
 
         Args:
@@ -100,7 +100,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         """
         self.flags.append(flag^)
 
-    fn extend(mut self, other: FlagSet):
+    def extend(mut self, other: FlagSet):
         """Adds a flag to the flag set.
 
         Args:
@@ -109,7 +109,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         """
         self.flags.extend(other.flags.copy())
 
-    fn write_to(self, mut writer: Some[Writer]) -> None:
+    def write_to(self, mut writer: Some[Writer]) -> None:
         """Writes the flag set to a writer.
 
         Args:
@@ -117,7 +117,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         """
         writer.write(self.flags)
 
-    fn set_annotation[annotation: Annotation](mut self, name: StringSlice, var value: String) raises -> None:
+    def set_annotation[annotation: Annotation](mut self, name: StringSlice, var value: String) raises -> None:
         """Sets an annotation for a flag.
 
         Parameters:
@@ -144,7 +144,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         except:
             flag.value()[].annotations[annotation] = [value]
 
-    fn from_args[origin: ImmutOrigin, //](mut self, arguments: Span[String, origin]) raises -> List[String]:
+    def from_args[origin: ImmutOrigin, //](mut self, arguments: Span[String, origin]) raises -> List[String]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
@@ -158,7 +158,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         """
 
         @parameter
-        fn set_flag_value(mut flags: FlagSet, name: StringSlice, value: StringSlice) raises -> None:
+        def set_flag_value(mut flags: FlagSet, name: StringSlice, value: StringSlice) raises -> None:
             # Set the value of the flag.
             var flag = flags.lookup(name)
             if not flag:
@@ -218,7 +218,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return remaining_args^
 
-    fn names(self) -> List[String]:
+    def names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set.
 
         Returns:
@@ -226,7 +226,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         """
         return [ flag.name for flag in self.flags ]
 
-    fn shorthands(self) -> List[String]:
+    def shorthands(self) -> List[String]:
         """Returns a list of shorthands of all flags in the flag set.
 
         Returns:
@@ -234,7 +234,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         """
         return [ flag.shorthand for flag in self.flags if flag.shorthand ]
 
-    fn visit_all[visitor: FlagVisitorFn](self) -> None:
+    def visit_all[visitor: FlagVisitorFn](self) -> None:
         """Visits all flags in the flag set.
 
         Parameters:
@@ -243,7 +243,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         for flag in self.flags:
             visitor(flag)
 
-    fn visit_all[visitor: FlagVisitorRaisingFn](self) raises -> None:
+    def visit_all[visitor: FlagVisitorRaisingFn](self) raises -> None:
         """Visits all flags in the flag set.
 
         Parameters:
@@ -255,7 +255,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         for flag in self.flags:
             visitor(flag)
 
-    fn validate_required_flags(self) raises -> None:
+    def validate_required_flags(self) raises -> None:
         """Validates all required flags are present and returns an error otherwise.
 
         Raises:
@@ -269,7 +269,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         if len(missing_flag_names) > 0:
             raise Error(t"Required flag(s): {missing_flag_names} not set.")
 
-    fn lookup(ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup(ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -285,7 +285,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    fn lookup[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -304,7 +304,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    fn lookup_shorthand(ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup_shorthand(ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -320,7 +320,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    fn lookup_shorthand[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup_shorthand[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -339,7 +339,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    fn lookup_name(self, shorthand: StringSlice) -> Optional[String]:
+    def lookup_name(self, shorthand: StringSlice) -> Optional[String]:
         """Returns the name of a flag given its shorthand.
 
         Args:
@@ -354,7 +354,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    fn has_all_flags[origin: ImmutOrigin, //](self, flag_names: Span[String, origin]) -> Bool:
+    def has_all_flags[origin: ImmutOrigin, //](self, flag_names: Span[String, origin]) -> Bool:
         """Checks if all flags are defined in the flag set.
 
         Args:
@@ -369,7 +369,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 return False
         return True
 
-    fn process_group_annotations[
+    def process_group_annotations[
         annotation: Annotation
     ](self, flag: Flag, mut group_status: Dict[String, Dict[String, Bool]]) raises -> None:
         """Processes a flag for a group annotation.
@@ -409,7 +409,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                     "process_group_annotations: Failed to set group status for annotation ", annotation.value, ": ", e
                 )
 
-    fn validate_flag_groups(self) raises -> None:
+    def validate_flag_groups(self) raises -> None:
         """Validates the status of flag groups.
         Checks for flags annotated with the `REQUIRED_AS_GROUP`, `ONE_REQUIRED`, or `MUTUALLY_EXCLUSIVE` annotations.
         Then validates if the flags in the group are set correctly to satisfy the annotation.
@@ -431,7 +431,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         validate_one_required_flag_group(one_required_group_status)
         validate_mutually_exclusive_flag_group(mutually_exclusive_group_status)
 
-    fn get_string(self, name: StringSlice) -> Optional[String]:
+    def get_string(self, name: StringSlice) -> Optional[String]:
         """Returns the value of a flag as a `String`. If it isn't set, then return the default value.
 
         Args:
@@ -446,7 +446,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return flag.value()[].value_or_default()
 
-    fn get_bool(self, name: StringSlice) raises -> Optional[Bool]:
+    def get_bool(self, name: StringSlice) raises -> Optional[Bool]:
         """Returns the value of a flag as a `Bool`. If it isn't set, then return the default value.
 
         Args:
@@ -468,7 +468,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return string_to_bool(result.value())
 
-    fn get_int[type: FType = FType.Int](self, name: StringSlice) raises -> Optional[Int] where type.is_int_type():
+    def get_int[type: FType = FType.Int](self, name: StringSlice) raises -> Optional[Int] where type.is_int_type():
         """Returns the value of a flag as an `Int`. If it isn't set, then return the default value.
 
         Parameters:
@@ -492,7 +492,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return atol(result.value())
 
-    fn get_int8(self, name: StringSlice) raises -> Optional[Int8]:
+    def get_int8(self, name: StringSlice) raises -> Optional[Int8]:
         """Returns the value of a flag as a `Int8`. If it isn't set, then return the default value.
 
         Args:
@@ -510,7 +510,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return Int8(result.value())
 
-    fn get_int16(self, name: StringSlice) raises -> Optional[Int16]:
+    def get_int16(self, name: StringSlice) raises -> Optional[Int16]:
         """Returns the value of a flag as a `Int16`. If it isn't set, then return the default value.
 
         Args:
@@ -528,7 +528,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return Int16(result.value())
 
-    fn get_int32(self, name: StringSlice) raises -> Optional[Int32]:
+    def get_int32(self, name: StringSlice) raises -> Optional[Int32]:
         """Returns the value of a flag as a `Int32`. If it isn't set, then return the default value.
 
         Args:
@@ -546,7 +546,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return Int32(result.value())
 
-    fn get_int64(self, name: StringSlice) raises -> Optional[Int64]:
+    def get_int64(self, name: StringSlice) raises -> Optional[Int64]:
         """Returns the value of a flag as a `Int64`. If it isn't set, then return the default value.
 
         Args:
@@ -564,7 +564,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return Int64(result.value())
 
-    fn get_uint(self, name: StringSlice) raises -> Optional[UInt]:
+    def get_uint(self, name: StringSlice) raises -> Optional[UInt]:
         """Returns the value of a flag as a `UInt`. If it isn't set, then return the default value.
 
         Args:
@@ -582,7 +582,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return UInt(result.value())
 
-    fn get_uint8(self, name: StringSlice) raises -> Optional[UInt8]:
+    def get_uint8(self, name: StringSlice) raises -> Optional[UInt8]:
         """Returns the value of a flag as a `UInt8`. If it isn't set, then return the default value.
 
         Args:
@@ -600,7 +600,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return UInt8(result.value())
 
-    fn get_uint16(self, name: StringSlice) raises -> Optional[UInt16]:
+    def get_uint16(self, name: StringSlice) raises -> Optional[UInt16]:
         """Returns the value of a flag as a `UInt16`. If it isn't set, then return the default value.
 
         Args:
@@ -618,7 +618,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return UInt16(result.value())
 
-    fn get_uint32(self, name: StringSlice) raises -> Optional[UInt32]:
+    def get_uint32(self, name: StringSlice) raises -> Optional[UInt32]:
         """Returns the value of a flag as a `UInt32`. If it isn't set, then return the default value.
 
         Args:
@@ -636,7 +636,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return UInt32(result.value())
 
-    fn get_uint64(self, name: StringSlice) raises -> Optional[UInt64]:
+    def get_uint64(self, name: StringSlice) raises -> Optional[UInt64]:
         """Returns the value of a flag as a `UInt64`. If it isn't set, then return the default value.
 
         Args:
@@ -654,7 +654,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return UInt64(result.value())
 
-    fn get_float[type: FType](self, name: StringSlice) raises -> Optional[Float64] where type.is_float_type():
+    def get_float[type: FType](self, name: StringSlice) raises -> Optional[Float64] where type.is_float_type():
         """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
 
         Parameters:
@@ -679,7 +679,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return atof(result.value())
 
-    fn get_float16(self, name: StringSlice) raises -> Optional[Float16]:
+    def get_float16(self, name: StringSlice) raises -> Optional[Float16]:
         """Returns the value of a flag as a `Float16`. If it isn't set, then return the default value.
 
         Args:
@@ -697,7 +697,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return result.value().cast[DType.float16]()
 
-    fn get_float32(self, name: StringSlice) raises -> Optional[Float32]:
+    def get_float32(self, name: StringSlice) raises -> Optional[Float32]:
         """Returns the value of a flag as a `Float32`. If it isn't set, then return the default value.
 
         Args:
@@ -715,7 +715,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return result.value().cast[DType.float32]()
 
-    fn get_float64(self, name: StringSlice) raises -> Optional[Float64]:
+    def get_float64(self, name: StringSlice) raises -> Optional[Float64]:
         """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
 
         Args:
@@ -733,7 +733,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return result.value()
 
-    fn _get_list[type: FType](self, name: StringSlice) raises -> Optional[List[String]] where type.is_list_type():
+    def _get_list[type: FType](self, name: StringSlice) raises -> Optional[List[String]] where type.is_list_type():
         """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
 
         Parameters:
@@ -758,7 +758,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return Optional([String(item) for item in result.value().split(sep=" ")])
 
-    fn get_string_list(self, name: StringSlice) raises -> Optional[List[String]]:
+    def get_string_list(self, name: StringSlice) raises -> Optional[List[String]]:
         """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
 
         Args:
@@ -776,7 +776,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
         return result^
 
-    fn get_int_list(self, name: StringSlice) raises -> Optional[List[Int]]:
+    def get_int_list(self, name: StringSlice) raises -> Optional[List[Int]]:
         """Returns the value of a flag as a `List[Int]`. If it isn't set, then return the default value.
 
         Args:
@@ -798,7 +798,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             ints.append(atol(value))
         return ints^
 
-    fn get_float64_list(self, name: StringSlice) raises -> Optional[List[Float64]]:
+    def get_float64_list(self, name: StringSlice) raises -> Optional[List[Float64]]:
         """Returns the value of a flag as a `List[Float64]`. If it isn't set, then return the default value.
 
         Args:

@@ -47,7 +47,7 @@ struct FlagParser[origin: ImmutOrigin](Writable):
     var arguments: Span[String, Self.origin]
     """The arguments passed to the command."""
 
-    fn __init__(out self, arguments: Span[String, Self.origin]):
+    def __init__(out self, arguments: Span[String, Self.origin]):
         """Initializes the FlagParser.
 
         Args:
@@ -56,7 +56,7 @@ struct FlagParser[origin: ImmutOrigin](Writable):
         self.index = 0
         self.arguments = arguments
 
-    fn parse_flag(self, argument: StringSlice, flags: FlagSet) raises -> ParseFlagResult:
+    def parse_flag(self, argument: StringSlice, flags: FlagSet) raises -> ParseFlagResult:
         """Parses a flag and returns the name, value, and the index to increment by.
 
         Args:
@@ -97,7 +97,7 @@ struct FlagParser[origin: ImmutOrigin](Writable):
         # Increment index by 2 because 2 args were used (one for name and value).
         return ParseFlagResult(name=name^, value=String(self.arguments[self.index + 1]), increment=2)
 
-    fn parse_shorthand_flag(self, argument: StringSlice, flags: FlagSet) raises -> ParseShorthandFlagResult:
+    def parse_shorthand_flag(self, argument: StringSlice, flags: FlagSet) raises -> ParseShorthandFlagResult:
         """Parses a shorthand flag and returns the name, value, and the index to increment by.
 
         Args:

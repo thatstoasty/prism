@@ -1,4 +1,4 @@
-comptime FlagActionFn = fn (String) raises -> None
+comptime FlagActionFn = def (String) raises -> None
 """The type of a function that runs after a flag has been processed."""
 
 
@@ -21,7 +21,7 @@ struct Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
     comptime MUTUALLY_EXCLUSIVE = Self(3)
     """Annotation to mark a group of flags as mutually exclusive. Only one flag in the group can be set for it to be valid."""
 
-    fn write_to(self, mut writer: Some[Writer]) -> None:
+    def write_to(self, mut writer: Some[Writer]) -> None:
         """Writes the annotation to a writer.
 
         Args:
@@ -64,7 +64,7 @@ struct FType(Equatable, ImplicitlyCopyable):
     comptime IntList = Self(16)
     comptime Float64List = Self(17)
 
-    fn is_int_type(self) -> Bool:
+    def is_int_type(self) -> Bool:
         """Returns if the type is an integer type.
 
         Returns:
@@ -83,7 +83,7 @@ struct FType(Equatable, ImplicitlyCopyable):
             Self.UInt64,
         ]
 
-    fn is_float_type(self) -> Bool:
+    def is_float_type(self) -> Bool:
         """Returns if the type is an float type.
 
         Returns:
@@ -91,7 +91,7 @@ struct FType(Equatable, ImplicitlyCopyable):
         """
         return self in [Self.Float16, Self.Float32, Self.Float64]
 
-    fn is_list_type(self) -> Bool:
+    def is_list_type(self) -> Bool:
         """Returns if the type is a list type.
 
         Returns:
@@ -99,7 +99,7 @@ struct FType(Equatable, ImplicitlyCopyable):
         """
         return self in [Self.StringList, Self.IntList, Self.Float64List]
 
-    fn __eq__(self, other: Self) -> Bool:
+    def __eq__(self, other: Self) -> Bool:
         """Compares two FType objects for equality.
 
         Args:
@@ -146,7 +146,7 @@ struct Flag(Copyable, Writable):
     var persistent: Bool
     """If the flag should persist to children commands."""
 
-    fn __init__(
+    def __init__(
         out self,
         name: String,
         type: FType,
@@ -188,7 +188,7 @@ struct Flag(Copyable, Writable):
         self.required = required
         self.persistent = persistent
 
-    fn __eq__(self, other: Self) -> Bool:
+    def __eq__(self, other: Self) -> Bool:
         """Compares two Flags for equality.
 
         Args:
@@ -207,14 +207,14 @@ struct Flag(Copyable, Writable):
             and self.changed == other.changed
         )
 
-    fn write_to(self, mut writer: Some[Writer]):
+    def write_to(self, mut writer: Some[Writer]):
         """Write string representation to a writer.
 
         Args:
             writer: The formatter to write to.
         """
         @parameter
-        fn write_optional(opt: Optional[String]):
+        def write_optional(opt: Optional[String]):
             if opt:
                 writer.write(repr(opt.value()))
             else:
@@ -242,7 +242,7 @@ struct Flag(Copyable, Writable):
             ")",
         )
 
-    fn set(mut self, value: StringSlice) -> None:
+    def set(mut self, value: StringSlice) -> None:
         """Sets the value of the flag.
 
         Args:
@@ -251,8 +251,8 @@ struct Flag(Copyable, Writable):
         self.value = String(value)
         self.changed = True
 
-    fn get_with_transform[
-        T: ImplicitlyCopyable, //, transform: fn (value: StringSlice) -> T
+    def get_with_transform[
+        T: ImplicitlyCopyable, //, transform: def (value: StringSlice) -> T
     ](self) -> Optional[T]:
         """Returns the value of the flag with a transformation applied to it.
 
@@ -270,7 +270,7 @@ struct Flag(Copyable, Writable):
 
         return None
 
-    fn value_or_default(self) -> Optional[String]:
+    def value_or_default(self) -> Optional[String]:
         """Returns the value of the flag or the default value if it isn't set.
 
         Returns:
@@ -283,7 +283,7 @@ struct Flag(Copyable, Writable):
 
         return None
 
-    fn names(self) -> List[String]:
+    def names(self) -> List[String]:
         """Returns the names of the flag.
 
         Returns:
@@ -294,7 +294,7 @@ struct Flag(Copyable, Writable):
         return names^
 
     @staticmethod
-    fn string(
+    def string(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -341,7 +341,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn bool(
+    def bool(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -388,7 +388,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn int(
+    def int(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -435,7 +435,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn int8(
+    def int8(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -482,7 +482,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn int16(
+    def int16(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -529,7 +529,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn int32(
+    def int32(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -576,7 +576,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn int64(
+    def int64(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -623,7 +623,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn uint(
+    def uint(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -670,7 +670,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn uint8(
+    def uint8(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -717,7 +717,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn uint16(
+    def uint16(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -764,7 +764,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn uint32(
+    def uint32(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -811,7 +811,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn uint64(
+    def uint64(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -858,7 +858,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn float16(
+    def float16(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -905,7 +905,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn float32(
+    def float32(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -952,7 +952,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn float64(
+    def float64(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -999,7 +999,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn string_list(
+    def string_list(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -1046,7 +1046,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn int_list(
+    def int_list(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",
@@ -1093,7 +1093,7 @@ struct Flag(Copyable, Writable):
         )
 
     @staticmethod
-    fn float64_list(
+    def float64_list(
         name: StringSlice,
         usage: StringSlice,
         shorthand: String = "",

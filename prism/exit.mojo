@@ -1,11 +1,11 @@
 from prism._util import panic
 
 
-comptime ExitFn = fn (Error) -> None
+comptime ExitFn = def (Error) -> None
 """The function to call when an error occurs."""
 
 
-fn default_exit(e: Error) -> None:
+def default_exit(e: Error) -> None:
     """The default function to call when an error occurs.
 
     Args:

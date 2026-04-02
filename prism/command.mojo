@@ -1,6 +1,7 @@
 from std.sys import env_get_bool
 from std.memory import ArcPointer, OwnedPointer
 from std.sys import get_defined_bool
+from std.utils import Variant
 from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
 from prism._flag_set import Annotation, FlagSet
 from prism._util import panic
@@ -19,15 +20,15 @@ comptime ENABLE_TRAVERSE_RUN_HOOKS = get_defined_bool["PRISM_TRAVERSE_RUN_HOOKS"
 If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
 
 
-comptime CmdFn = fn (args: List[String], flags: FlagSet) raises -> None
+comptime CmdFn = def (args: List[String], flags: FlagSet) raises -> None
 """The function for a command to run."""
-comptime ParentVisitorFn = fn (Command) capturing -> None
+comptime ParentVisitorFn = def (Command) capturing -> None
 """The function for visiting parents of a command."""
-comptime RaisingParentVisitorFn = fn (Command) capturing raises -> None
+comptime RaisingParentVisitorFn = def (Command) capturing raises -> None
 """The function for visiting parents of a command."""
 
 
-fn _parse_command(command: Command, arg: StringSlice, mut leftover_start: Int) -> Command:
+def _parse_command(command: Command, arg: StringSlice, mut leftover_start: Int) -> Optional[ArcPointer[Command]]:
     """Traverses the command tree to find the command that matches the given argument.
 
     Args:
@@ -38,16 +39,21 @@ fn _parse_command(command: Command, arg: StringSlice, mut leftover_start: Int) -
     Returns:
         The command that matches the argument.
     """
-    var argument = String(arg)
+    def contains_arg(aliases: List[String], arg: StringSlice) -> Bool:
+        for name in aliases:
+            if name == arg:
+                return True
+        return False
+
     for cmd in command.children:
-        if cmd[].name == argument or argument in cmd[].aliases:
+        if cmd[].name == arg or contains_arg(cmd[].aliases, arg):
             leftover_start += 1
-            return cmd[].copy()
+            return cmd
 
-    return command.copy()
+    return None
 
 
-fn _parse_command_from_args(var command: Command, var args: List[String]) -> Tuple[Command, List[String]]:
+def _parse_command_from_args(command: Command, args: List[String]) -> Variant[NoneType, Tuple[ArcPointer[Command], Int]]:
     """Traverses the command tree to find the command that matches the given arguments.
 
     Args:
@@ -57,27 +63,25 @@ fn _parse_command_from_args(var command: Command, var args: List[String]) -> Tup
     Returns:
         The command that matches the arguments and the remaining arguments to pass to that command.
     """
-    # If there's no children, then the root command is used.
-    if not command.children or not args:
-        return command^, args^
-
+    var new_command: Optional[ArcPointer[Command]] = None
     var leftover_start = 0  # Start at 1 to start slice at the first remaining arg, not the last child command.
     for arg in args:
-        command = _parse_command(command, arg, leftover_start)
+        var result = _parse_command(command, arg, leftover_start)
+        if not result:
+            break
 
-    if leftover_start == 0:
-        return command^, args^
+        new_command = result.value()
+
+    # No subcommands matched, this is a root command execution.
+    if not new_command:
+        return None
 
     # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
-    var remaining_args = List[String]()
-    if len(args) >= leftover_start:
-        remaining_args = List[String](args[leftover_start : len(args)])
-
-    return command^, remaining_args^
+    return new_command^, leftover_start
 
 
 # Run flag actions if they have any
-fn run_action(flag: Flag) raises -> None:
+def run_action(flag: Flag) raises -> None:
     if flag.action and flag.value:
         flag.action[](flag.value[])
 
@@ -89,10 +93,10 @@ struct Command(Copyable, Writable):
     ```mojo
      from prism import Command, FlagSet, read_args
 
-     fn test(args: List[String], flags: FlagSet) -> None:
+     def test(args: List[String], flags: FlagSet) -> None:
          print("Hello from Chromeria!")
 
-     fn main():
+     def main():
          var cli = Command(
              name="hello",
              usage="This is a dummy command!",
@@ -160,7 +164,7 @@ struct Command(Copyable, Writable):
     var suggest: Bool
     """If True, the command will suggest flags when an unknown flag is passed."""
 
-    fn __init__(
+    def __init__(
         out self,
         name: String,
         usage: String,
@@ -250,7 +254,7 @@ struct Command(Copyable, Writable):
 
         # Auto-add completion subcommand
         if enable_completion:
-            fn _completion_noop(args: List[String], flags: FlagSet) raises -> None:
+            def _completion_noop(args: List[String], flags: FlagSet) raises -> None:
                 pass
 
             self.children.append(
@@ -277,7 +281,7 @@ struct Command(Copyable, Writable):
         except e:
             panic(t"Failed to set flag annotations due to following reason: {e}")
 
-    # fn copy(self) -> Self:
+    # def copy(self) -> Self:
     #     """Returns a copy of the `Command`.
 
     #     Returns:
@@ -311,7 +315,7 @@ struct Command(Copyable, Writable):
     #         suggest=self.suggest,
     #     )
 
-    fn write_to(self, mut writer: Some[Writer]):
+    def write_to(self, mut writer: Some[Writer]):
         """Write string representation to a `Writer`.
 
         Args:
@@ -328,7 +332,7 @@ struct Command(Copyable, Writable):
             writer.write(", Flags: ", self.flags)
         writer.write(")")
 
-    fn full_name(self) -> String:
+    def full_name(self) -> String:
         """Traverses up the parent command tree to build the full command as a string.
 
         Returns:
@@ -339,7 +343,7 @@ struct Command(Copyable, Writable):
         else:
             return self.name
 
-    fn root(self) -> Self:
+    def root(self) -> Self:
         """Returns the root command of the command tree.
 
         Returns:
@@ -349,7 +353,7 @@ struct Command(Copyable, Writable):
             return self.parent[].value().root()
         return self.copy()
 
-    fn inherited_flags(self) -> FlagSet:
+    def inherited_flags(self) -> FlagSet:
         """Returns the flags for the command and inherited flags from its parent.
 
         Returns:
@@ -358,7 +362,7 @@ struct Command(Copyable, Writable):
         var flags = List[Flag]()
 
         @parameter
-        fn add_parent_persistent_flags(parent: Self) capturing -> None:
+        def add_parent_persistent_flags(parent: Self) capturing -> None:
             for flag in parent.flags:
                 if flag.persistent:
                     flags.append(flag.copy())
@@ -366,11 +370,11 @@ struct Command(Copyable, Writable):
         self.visit_parents[add_parent_persistent_flags]()
         return FlagSet(flags^)
 
-    fn _merge_flags(mut self) -> None:
+    def _merge_flags(mut self) -> None:
         """Returns all flags for the command and inherited flags from its parent."""
         self.flags.extend(self.inherited_flags())
 
-    fn _mark_flag_group_as[annotation: Annotation](mut self, flag_names: List[String]) raises -> None:
+    def _mark_flag_group_as[annotation: Annotation](mut self, flag_names: List[String]) raises -> None:
         """Marks the given flags with annotations so that `Prism` errors.
 
         Parameters:
@@ -388,7 +392,7 @@ struct Command(Copyable, Writable):
         for name in flag_names:
             self.flags.set_annotation[annotation](name, " ".join(flag_names))
 
-    fn has_parent(self) -> Bool:
+    def has_parent(self) -> Bool:
         """Returns True if the command has a parent, False otherwise.
 
         Returns:
@@ -396,7 +400,7 @@ struct Command(Copyable, Writable):
         """
         return Bool(self.parent[])
 
-    fn visit_parents[func: ParentVisitorFn, reverse: Bool = False](self) -> None:
+    def visit_parents[func: ParentVisitorFn, reverse: Bool = False](self) -> None:
         """Visits all parents of the command and invokes func on each parent.
 
         Parameters:
@@ -416,7 +420,7 @@ struct Command(Copyable, Writable):
             func(self.parent[].value())
             self.parent[].value().visit_parents[func, reverse]()
 
-    fn visit_parents[func: RaisingParentVisitorFn, reverse: Bool = False](self) raises -> None:
+    def visit_parents[func: RaisingParentVisitorFn, reverse: Bool = False](self) raises -> None:
         """Visits all parents of the command and invokes func on each parent.
 
         Parameters:
@@ -436,7 +440,7 @@ struct Command(Copyable, Writable):
             func(self.parent[].value())
             self.parent[].value().visit_parents[func, reverse]()
 
-    fn _execute_pre_run_hooks(self, cmd: Self, args: List[String]) raises -> None:
+    def _execute_pre_run_hooks(self, cmd: Self, args: List[String]) raises -> None:
         """Runs the pre-run hooks for the command.
 
         Args:
@@ -448,7 +452,7 @@ struct Command(Copyable, Writable):
         """
 
         @parameter
-        fn run_action(parent: Self) raises -> None:
+        def run_action(parent: Self) raises -> None:
             # if parent.persistent_raising_post_run:
             #     parent.persistent_raising_post_run.value()(args, cmd.flags)
 
@@ -474,7 +478,7 @@ struct Command(Copyable, Writable):
             self.error_writer("Failed to run pre-run hooks for command: " + cmd.name)
             raise e^
 
-    fn _execute_post_run_hooks(self, cmd: Self, args: List[String]) raises -> None:
+    def _execute_post_run_hooks(self, cmd: Self, args: List[String]) raises -> None:
         """Runs the post-run hooks for the command.
 
         Args:
@@ -486,7 +490,7 @@ struct Command(Copyable, Writable):
         """
 
         @parameter
-        fn run_action(parent: Self) raises -> None:
+        def run_action(parent: Self) raises -> None:
             # if parent.persistent_raising_post_run:
             #     parent.persistent_raising_post_run.value()(args, cmd.flags)
 
@@ -513,7 +517,7 @@ struct Command(Copyable, Writable):
             self.error_writer("Failed to run post-run hooks for command: " + cmd.name)
             raise e^
 
-    fn execute(mut self, var args: List[String]) -> None:
+    def execute(mut self, var args: List[String]) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
 
         Args:
@@ -521,7 +525,7 @@ struct Command(Copyable, Writable):
         """
         self._execute(args^)
 
-    fn execute(mut self, args: Span[StaticString, StaticConstantOrigin]) -> None:
+    def execute(mut self, args: Span[StaticString, StaticConstantOrigin]) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
 
         This is an overload that accepts a variadic list of static strings, which is generally used for the
@@ -532,7 +536,7 @@ struct Command(Copyable, Writable):
         """
         self._execute(parse_args_from_command_line(args))
 
-    fn _execute(mut self, var input_args: List[String]) -> None:
+    def _execute(mut self, var input_args: List[String]) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
 
         Args:
@@ -547,9 +551,22 @@ struct Command(Copyable, Writable):
             var root = self.root()
             return root._execute(input_args^)
 
-        var result = _parse_command_from_args(self.copy(), input_args.copy())
-        var command = result[0].copy()
-        var args = result[1].copy()
+        var command = self.copy()
+        var args = Span(input_args)
+
+        # If there's no children, then the root command is used.
+        # Otherwise, we traverse the command tree to find the command that matches the arguments.
+        if self.children and args:
+            var result = _parse_command_from_args(command, input_args)
+            if result.isa[Tuple[ArcPointer[Command], Int]]():
+                ref cmd_args = result[Tuple[ArcPointer[Command], Int]]
+                command = cmd_args[0][].copy()
+                var leftover_start = cmd_args[1]
+                if len(args) >= leftover_start:
+                    args = args[leftover_start : len(args)]
+            else:
+                # No subcommand matched, use the root command.
+                pass
 
         # Merge persistent flags from ancestors.
         command._merge_flags()

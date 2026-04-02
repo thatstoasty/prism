@@ -1,15 +1,15 @@
-import testing
+from std import testing
 from prism.flag import Flag, FType
-from testing import TestSuite
+from std.testing import TestSuite
 
 from prism import Command, FlagSet
 
 
-fn dummy(args: List[String], flags: FlagSet) -> None:
+def dummy(args: List[String], flags: FlagSet) -> None:
     return None
 
 
-def test_string():
+def test_string() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -24,7 +24,7 @@ def test_string():
     testing.assert_equal(cmd.flags.get_string("key").value(), "default")
 
 
-def test_bool():
+def test_bool() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -39,7 +39,7 @@ def test_bool():
     testing.assert_equal(cmd.flags.get_bool("flag").value(), False)
 
 
-def test_int():
+def test_int() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -54,7 +54,7 @@ def test_int():
     testing.assert_equal(cmd.flags.get_int("num").value(), 0)
 
 
-def test_int8():
+def test_int8() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -69,7 +69,7 @@ def test_int8():
     testing.assert_equal(cmd.flags.get_int8("num").value(), Int8(0))
 
 
-def test_int16():
+def test_int16() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -84,7 +84,7 @@ def test_int16():
     testing.assert_equal(cmd.flags.get_int16("num").value(), Int16(0))
 
 
-def test_int32():
+def test_int32() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -99,7 +99,7 @@ def test_int32():
     testing.assert_equal(cmd.flags.get_int32("num").value(), Int32(0))
 
 
-def test_int64():
+def test_int64() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -114,7 +114,7 @@ def test_int64():
     testing.assert_equal(cmd.flags.get_int64("num").value(), Int64(0))
 
 
-def test_uint():
+def test_uint() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -129,7 +129,7 @@ def test_uint():
     testing.assert_equal(cmd.flags.get_uint("num").value(), UInt(0))
 
 
-def test_uint8():
+def test_uint8() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -144,7 +144,7 @@ def test_uint8():
     testing.assert_equal(cmd.flags.get_uint8("num").value(), UInt8(0))
 
 
-def test_uint16():
+def test_uint16() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -159,7 +159,7 @@ def test_uint16():
     testing.assert_equal(cmd.flags.get_uint16("num").value(), UInt16(0))
 
 
-def test_uint32():
+def test_uint32() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -174,7 +174,7 @@ def test_uint32():
     testing.assert_equal(cmd.flags.get_uint32("num").value(), UInt32(0))
 
 
-def test_uint64():
+def test_uint64() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -189,7 +189,7 @@ def test_uint64():
     testing.assert_equal(cmd.flags.get_uint64("num").value(), UInt64(0))
 
 
-def test_float16():
+def test_float16() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -204,7 +204,7 @@ def test_float16():
     testing.assert_equal(cmd.flags.get_float16("num").value(), Float16(0))
 
 
-def test_float32():
+def test_float32() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -219,7 +219,7 @@ def test_float32():
     testing.assert_equal(cmd.flags.get_float32("num").value(), Float32(0))
 
 
-def test_float64():
+def test_float64() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -234,28 +234,28 @@ def test_float64():
     testing.assert_equal(cmd.flags.get_float64("num").value(), Float64(0))
 
 
-def test_string_list():
+def test_string_list() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.string_list(name="num", usage="usage", default=List[String]("a", "b")),
+            Flag.string_list(name="num", usage="usage", default=["a", "b"]),
         ],
     )
 
     var flag = cmd.flags.lookup[FType.StringList]("num")
     testing.assert_equal(flag.value()[].type.value, FType.StringList.value)
-    testing.assert_equal(cmd.flags.get_string_list("num").value(), List[String]("a", "b"))
+    testing.assert_equal(cmd.flags.get_string_list("num").value(), ["a", "b"])
 
 
-def test_int_list():
+def test_int_list() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.int_list(name="num", usage="usage", default=List[Int](0, 1)),
+            Flag.int_list(name="num", usage="usage", default=[0, 1]),
         ],
     )
 
@@ -267,13 +267,13 @@ def test_int_list():
     testing.assert_equal(result[1], 1)
 
 
-def test_float64_list():
+def test_float64_list() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.float64_list(name="num", usage="usage", default=List[Float64](0, 1)),
+            Flag.float64_list(name="num", usage="usage", default=[0.0, 1.0]),
         ],
     )
 
@@ -285,5 +285,5 @@ def test_float64_list():
     testing.assert_equal(result[1], Float64(1))
 
 
-fn main() raises:
+def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()
