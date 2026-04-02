@@ -1,15 +1,15 @@
-import testing
+from std import testing
 from prism.flag import Flag
-from testing import TestSuite
+from std.testing import TestSuite
 
 from prism import Command, FlagSet
 
 
-fn dummy(args: List[String], flags: FlagSet) -> None:
+def dummy(args: List[String], flags: FlagSet) -> None:
     return None
 
 
-def test_gets():
+def test_gets() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -26,7 +26,7 @@ def test_gets():
     testing.assert_equal(cmd.flags.get_bool("flag").value(), True)
 
 
-def test_parse():
+def test_parse() raises:
     var cmd = Command(
         name="root",
         usage="Base command.",
@@ -41,5 +41,5 @@ def test_parse():
     testing.assert_equal(len(remaining_args), 0)
 
 
-fn main() raises:
+def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

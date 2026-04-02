@@ -4,11 +4,11 @@ from prism.command import Command
 from prism.flag import Flag
 
 
-comptime HelpFn = fn (OwnedPointer[Command]) raises -> String
+comptime HelpFn = def (OwnedPointer[Command]) raises -> String
 """The function to generate help output."""
 
 
-fn default_help(cmd: OwnedPointer[Command]) raises -> String:
+def default_help(cmd: OwnedPointer[Command]) raises -> String:
     """Prints the help information for the command.
 
     Args:
@@ -83,7 +83,7 @@ struct Help(Copyable):
     var action: HelpFn
     """The function to call when the help flag is passed."""
 
-    fn __init__(
+    def __init__(
         out self,
         *,
         var flag: Flag = Flag.bool(name="help", shorthand="h", usage="Displays help information about the command."),

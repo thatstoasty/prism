@@ -1,7 +1,7 @@
 from std.collections.dict import DictEntry
 
 
-fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
+def validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
     """Validates that all flags in a group are set if any are set.
     This is for flags that are marked as required via `Command(flags_required_together=...)`.
 
@@ -27,7 +27,7 @@ fn validate_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -
         )
 
 
-fn get_set_flags(flags: Dict[String, Bool]) -> List[String]:
+def get_set_flags(flags: Dict[String, Bool]) -> List[String]:
     """Returns a list of flags that are set.
 
     Args:
@@ -39,7 +39,7 @@ fn get_set_flags(flags: Dict[String, Bool]) -> List[String]:
     return [ flag.key for flag in flags.items() if flag.value ]
 
 
-fn extract_keys(flags: Dict[String, Bool]) -> List[String]:
+def extract_keys(flags: Dict[String, Bool]) -> List[String]:
     """Extracts the keys from a dictionary entry.
 
     Args:
@@ -53,7 +53,7 @@ fn extract_keys(flags: Dict[String, Bool]) -> List[String]:
     return keys^
 
 
-fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
+def validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
     """Validates that at least one flag in a group is set.
     This is for flags that are marked as required via `Command(one_required_flags=...)`.
 
@@ -72,7 +72,7 @@ fn validate_one_required_flag_group(data: Dict[String, Dict[String, Bool]]) rais
         raise Error(t"At least one of the flags in the group, {extract_keys(pair.value)}, is required.")
 
 
-fn validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
+def validate_mutually_exclusive_flag_group(data: Dict[String, Dict[String, Bool]]) raises -> None:
     """Validates that only one flag in a group is set.
     This is for flags that are marked as required via `Command(mutually_exclusive_flags=...)`.
 

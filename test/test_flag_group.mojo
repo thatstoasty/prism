@@ -1,4 +1,4 @@
-import testing
+from std import testing
 from prism._flag_group import (
     extract_keys,
     get_set_flags,
@@ -6,47 +6,47 @@ from prism._flag_group import (
     validate_one_required_flag_group,
     validate_required_flag_group,
 )
-from testing import TestSuite
+from std.testing import TestSuite
 
 
 fn make_test_data(required: Bool, alternative: Bool) -> Dict[String, Dict[String, Bool]]:
     return {"group1": {"required": required, "alternative": alternative}}
 
 
-fn test_validate_required_flag_group() raises -> None:
+def test_validate_required_flag_group() raises -> None:
     var data = make_test_data(True, True)
     validate_required_flag_group(data)
 
 
-fn test_validate_required_flag_group_not_all_set() raises -> None:
+def test_validate_required_flag_group_not_all_set() raises -> None:
     var data = make_test_data(True, False)
     with testing.assert_raises(contains="If any flags in the group"):
         validate_required_flag_group(data)
 
 
-fn test_validate_one_required_flag_group() raises -> None:
+def test_validate_one_required_flag_group() raises -> None:
     var data = make_test_data(True, False)
     validate_one_required_flag_group(data)
 
 
-fn test_validate_one_required_flag_group_none_set() raises -> None:
+def test_validate_one_required_flag_group_none_set() raises -> None:
     var data = make_test_data(False, False)
     with testing.assert_raises(contains="At least one of the flags in the group"):
         validate_one_required_flag_group(data)
 
 
-fn test_validate_mutually_exclusive_flag_group() raises -> None:
+def test_validate_mutually_exclusive_flag_group() raises -> None:
     var data = make_test_data(True, False)
     validate_mutually_exclusive_flag_group(data)
 
 
-fn test_validate_mutually_exclusive_flag_group_multiple_set() raises -> None:
+def test_validate_mutually_exclusive_flag_group_multiple_set() raises -> None:
     var data = make_test_data(True, True)
     with testing.assert_raises(contains="If any flags in the group"):
         validate_mutually_exclusive_flag_group(data)
 
 
-fn test_get_set_flags() raises -> None:
+def test_get_set_flags() raises -> None:
     var data = make_test_data(False, False)
     for pair in data.items():
         testing.assert_equal(get_set_flags(pair), [], "Expected no flags to be set.")
@@ -64,7 +64,7 @@ fn test_get_set_flags() raises -> None:
         )
 
 
-fn test_extract_keys() raises -> None:
+def test_extract_keys() raises -> None:
     var data = make_test_data(False, False)
 
     for pair in data.items():
@@ -75,5 +75,5 @@ fn test_extract_keys() raises -> None:
         )
 
 
-fn main() raises:
+def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

@@ -1,12 +1,12 @@
-import testing
-from memory import ArcPointer
+from std import testing
+from std.memory import ArcPointer
 from prism.command import Command, Flag, FlagSet
-from testing import TestSuite
+from std.testing import TestSuite
 
 import prism
 
 
-def test_command_operations():
+def test_command_operations() raises:
     fn dummy(args: List[String], flags: FlagSet) -> None:
         return None
 
@@ -15,12 +15,12 @@ def test_command_operations():
         usage="Base command.",
         run=dummy,
         children=[
-            ArcPointer(Command(
+            Command(
                 name="child",
                 usage="Child command.",
                 run=dummy,
                 flags=[Flag.uint32(name="color", shorthand="c", usage="Text color", default=UInt32(0x3464EB))],
-            ))
+            )
         ],
     )
     for flag in cmd.flags:
@@ -29,5 +29,5 @@ def test_command_operations():
     # testing.assert_equal(child_cmd[].full_name(), "root child")
 
 
-fn main() raises:
+def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

@@ -1,10 +1,10 @@
 from prism.flag import Flag
 
-comptime VersionFn = fn (String) -> String
+comptime VersionFn = def (String) -> String
 """The function to call when the version flag is passed."""
 
 
-fn default_version_writer(version: String) -> String:
+def default_version_writer(version: String) -> String:
     """Writes the version information for the CLI.
 
     Args:
@@ -26,7 +26,7 @@ struct Version(Copyable):
     var action: VersionFn
     """The function to call when the version flag is passed."""
 
-    fn __init__(
+    def __init__(
         out self,
         version: String,
         *,

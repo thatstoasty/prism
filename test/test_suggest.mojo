@@ -1,7 +1,7 @@
-import testing
+from std import testing
 from prism.flag import Flag, FType
 from prism.suggest import flag_from_error, jaro_distance, jaro_winkler, suggest_flag
-from testing import TestSuite
+from std.testing import TestSuite
 
 
 @fieldwise_init
@@ -11,8 +11,8 @@ struct TestCase(ImplicitlyCopyable, Movable):
     var expected: Float64
 
 
-fn test_jaro_distance() raises:
-    var test_cases = List[TestCase](
+def test_jaro_distance() raises:
+    var test_cases: List[TestCase] = [
         TestCase(
             a="",
             b="",
@@ -43,7 +43,7 @@ fn test_jaro_distance() raises:
             b="SMELLYFISH",
             expected=0.8962962963,
         ),
-    )
+    ]
 
     for test_case in test_cases:
         var result = jaro_distance(test_case.a, test_case.b)
@@ -54,8 +54,8 @@ fn test_jaro_distance() raises:
         )
 
 
-fn test_jaro_winkler() raises:
-    var test_cases = List[TestCase](
+def test_jaro_winkler() raises:
+    var test_cases: List[TestCase] = [
         TestCase(
             a="",
             b="",
@@ -116,7 +116,7 @@ fn test_jaro_winkler() raises:
             b="aa",
             expected=0.6666666666666666,
         ),
-    )
+    ]
 
     for test_case in test_cases:
         var result = jaro_winkler(test_case.a, test_case.b)
@@ -133,7 +133,7 @@ struct SuggestTestCase(ImplicitlyCopyable, Movable):
     var expected: String
 
 
-fn test_suggest_flag() raises:
+def test_suggest_flag() raises:
     var flags = List[Flag](
         Flag(name="another-flag", shorthand="b", usage="Another flag", type=FType.String),
         Flag(name="help", shorthand="h", usage="Help flag", type=FType.Bool),
@@ -141,7 +141,7 @@ fn test_suggest_flag() raises:
         Flag(name="short-flag", shorthand="s", usage="Short flag", type=FType.String),
     )
 
-    var test_cases = List[SuggestTestCase](
+    var test_cases: List[SuggestTestCase] = [
         SuggestTestCase(
             provided="",
             expected="",
@@ -162,7 +162,7 @@ fn test_suggest_flag() raises:
             provided="s",
             expected="-s",
         ),
-    )
+    ]
 
     for test_case in test_cases:
         var result = suggest_flag(Span(flags), test_case.provided)
@@ -173,17 +173,17 @@ fn test_suggest_flag() raises:
         )
 
 
-fn test_flag_from_error() raises:
+def test_flag_from_error() raises:
     var error = Error("An Error Occurred. Name: unknown")
     var result = flag_from_error(error)
     testing.assert_equal(result.value(), String("unknown"))
 
 
-fn test_flag_from_error_wrong_error() raises:
+def test_flag_from_error_wrong_error() raises:
     var error = Error("Some other error.")
     result = flag_from_error(error)
     testing.assert_false(Bool(result))
 
 
-fn main() raises:
+def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

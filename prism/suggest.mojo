@@ -2,7 +2,7 @@ from std.math import math
 from prism.flag import Flag
 
 
-fn jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
+def jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
     """Measure of similarity between two strings. It returns a
     value between 0 and 1, where 1 indicates identical strings and 0 indicates
     completely different strings.
@@ -60,7 +60,7 @@ fn jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
     return ((matches / Float64(len(a))) + (matches / Float64(len(b))) + ((matches - transpositions) / matches)) / 3.0
 
 
-fn jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
+def jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
     """Jaro-Winkler distance between two strings. It returns a value between 0 and 1,
     where 1 indicates identical strings and 0 indicates completely different strings.
 
@@ -94,7 +94,7 @@ fn jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
     return jaro_dist + 0.1 * prefix_match * (1.0 - jaro_dist)
 
 
-fn suggest_flag[origin: ImmutOrigin, //](flags: Span[Flag, origin], flag_name: StringSlice, *, hide_help: Bool = False) -> String:
+def suggest_flag[origin: ImmutOrigin, //](flags: Span[Flag, origin], flag_name: StringSlice, *, hide_help: Bool = False) -> String:
     """Suggests a flag based on the provided string.
 
     Args:
@@ -124,7 +124,7 @@ fn suggest_flag[origin: ImmutOrigin, //](flags: Span[Flag, origin], flag_name: S
     return suggestion^
 
 
-fn flag_from_error(error: Error) -> Optional[String]:
+def flag_from_error(error: Error) -> Optional[String]:
     """Returns the flag from the error message.
 
     Args:

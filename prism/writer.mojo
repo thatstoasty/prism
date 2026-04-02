@@ -1,11 +1,11 @@
 from std.sys import stderr
 
 
-comptime WriterFn = fn (String) -> None
+comptime WriterFn = def (String) -> None
 """The function to call when writing output or errors."""
 
 
-fn default_output_writer(arg: String) -> None:
+def default_output_writer(arg: String) -> None:
     """Writes an output message to stdout.
 
     Args:
@@ -14,7 +14,7 @@ fn default_output_writer(arg: String) -> None:
     print(arg)
 
 
-fn default_error_writer(arg: String) -> None:
+def default_error_writer(arg: String) -> None:
     """Writes an error message to stderr.
 
     Args:

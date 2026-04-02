@@ -1,7 +1,7 @@
 from std.sys import exit, stderr
 
 
-fn panic(message: Some[Writable], code: Int = 1) -> None:
+def panic(message: Some[Writable], code: Int = 1) -> None:
     """Panics with the given message.
 
     Args:
@@ -12,7 +12,7 @@ fn panic(message: Some[Writable], code: Int = 1) -> None:
     exit(code)
 
 
-fn string_to_bool(value: String) -> Bool:
+def string_to_bool(value: String) -> Bool:
     """Converts a string to a boolean.
 
     Args:

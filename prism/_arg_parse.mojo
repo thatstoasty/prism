@@ -2,7 +2,7 @@ from std.io.io import _fdopen
 from std.sys import argv, stdin
 
 
-fn parse_args_from_command_line(args: Span[StaticString, StaticConstantOrigin]) -> List[String]:
+def parse_args_from_command_line(args: Span[StaticString, StaticConstantOrigin]) -> List[String]:
     """Returns the arguments passed to the executable as a list of strings.
 
     Returns:
@@ -28,7 +28,7 @@ comptime DOUBLE_QUOTE = '"'
 comptime DOUBLE_DASH = "--"
 """A constant representing a double dash string."""
 
-fn parse_args_from_stdin(str: StringSlice) -> List[String]:
+def parse_args_from_stdin(str: StringSlice) -> List[String]:
     """Reads arguments from stdin and returns them as a list of strings.
 
     Args:
@@ -76,7 +76,7 @@ fn parse_args_from_stdin(str: StringSlice) -> List[String]:
     return args^
 
 
-fn read_args() -> List[String]:
+def read_args() -> List[String]:
     """Reads arguments from command line and returns them as a list of strings.
 
     Returns:
@@ -85,7 +85,7 @@ fn read_args() -> List[String]:
     return parse_args_from_command_line(argv())
 
 
-fn read_args_from_stdin() raises -> List[String]:
+def read_args_from_stdin() raises -> List[String]:
     """Reads arguments from stdin and returns them as a list of strings.
 
     Returns:
