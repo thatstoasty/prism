@@ -100,14 +100,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         """
         self.flags.append(flag^)
 
-    def extend(mut self, other: FlagSet):
+    def extend(mut self, deinit other: FlagSet):
         """Adds a flag to the flag set.
 
         Args:
             other: The flag to add to the flag set.
-
         """
-        self.flags.extend(other.flags.copy())
+        self.flags.extend(other.flags^)
 
     def write_to(self, mut writer: Some[Writer]) -> None:
         """Writes the flag set to a writer.
@@ -144,7 +143,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         except:
             flag.value()[].annotations[annotation] = [value]
 
-    def from_args[origin: ImmutOrigin, //](mut self, arguments: Span[String, origin]) raises -> List[String]:
+    def from_args[origin: ImmutOrigin, //](mut self, arguments: Span[String, origin]) raises -> Span[String, origin]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
@@ -156,7 +155,6 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Raises:
             Error: If a flag is not recognized.
         """
-
         @parameter
         def set_flag_value(mut flags: FlagSet, name: StringSlice, value: StringSlice) raises -> None:
             # Set the value of the flag.
@@ -170,17 +168,17 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             else:
                 flag.value()[].value.value().write(" ", value)
 
-        var remaining_args = List[String](capacity=len(arguments))
+        # var remaining_args = List[String](capacity=len(arguments))
         var state = ParserState.FIND_FLAG
         var parser = FlagParser(arguments)
         while parser.index < len(arguments):
-            var argument = StringSlice(arguments[parser.index])
+            ref argument = arguments[parser.index]
 
             # Find the next flag in the set of arguments.
             if state == ParserState.FIND_FLAG:
                 # Positional argument
                 if not argument.startswith("-", 0, 1):
-                    remaining_args.append(String(argument))
+                    # remaining_args.append(String(argument))
                     parser.index += 1
                     continue
 
@@ -216,7 +214,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                     with open(os.path.expanduser(flag.file_path.value()), "r") as f:
                         flag.set(f.read())
 
-        return remaining_args^
+        return arguments[parser.index:]
 
     def names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set.

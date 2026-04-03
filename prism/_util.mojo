@@ -21,5 +21,4 @@ def string_to_bool(value: String) -> Bool:
     Returns:
         The boolean equivalent of the string.
     """
-    var truthy: List[String] = ["true", "True", "1"]
-    return value in truthy
+    return value == "true" or value == "True" or value == "1"

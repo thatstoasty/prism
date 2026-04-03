@@ -1,14 +1,14 @@
 import mog
-from std.memory import OwnedPointer
+from std.memory import ArcPointer
 from prism.command import Command
 from prism.flag import Flag
 
 
-comptime HelpFn = def (OwnedPointer[Command]) raises -> String
+comptime HelpFn = def (ArcPointer[Command]) raises -> String
 """The function to generate help output."""
 
 
-def default_help(cmd: OwnedPointer[Command]) raises -> String:
+def default_help(cmd: ArcPointer[Command]) raises -> String:
     """Prints the help information for the command.
 
     Args:

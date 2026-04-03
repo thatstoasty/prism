@@ -53,7 +53,7 @@ def _parse_command(command: Command, arg: StringSlice, mut leftover_start: Int) 
     return None
 
 
-def _parse_command_from_args(command: Command, args: List[String]) -> Variant[NoneType, Tuple[ArcPointer[Command], Int]]:
+def _parse_command_from_args(command: Command, args: List[String]) -> Optional[Tuple[ArcPointer[Command], Int]]:
     """Traverses the command tree to find the command that matches the given arguments.
 
     Args:
@@ -77,7 +77,7 @@ def _parse_command_from_args(command: Command, args: List[String]) -> Variant[No
         return None
 
     # If the there are more or equivalent args to the index, then there are remaining args to pass to the command.
-    return new_command^, leftover_start
+    return new_command.take(), leftover_start
 
 
 # Run flag actions if they have any
@@ -242,9 +242,7 @@ struct Command(Copyable, Writable):
         self.valid_args = valid_args^
         self.flags = flags^
         self.parent = ArcPointer(Optional[Self](None))
-        self.children = List[ArcPointer[Self]](capacity=len(children))
-        for child in children:
-            self.children.append(ArcPointer(child.copy()))
+        self.children = [ArcPointer(child.copy()) for child in children]
         for command in self.children:
             command[].parent = ArcPointer(Optional(self.copy()))
 
@@ -272,6 +270,12 @@ struct Command(Copyable, Writable):
             self.children[len(self.children) - 1][].parent = ArcPointer(Optional(self.copy()))
 
         try:
+            if not flags_required_together and not mutually_exclusive_flags and not one_required_flags:
+                return
+
+            # TODO: Children are created before the parent, so inherited flags aren't working for
+            # these flag groups. Will revisit this at some point.
+            # self._merge_flags()
             if flags_required_together:
                 self._mark_flag_group_as[Annotation.REQUIRED_AS_GROUP](flags_required_together)
             if mutually_exclusive_flags:
@@ -280,40 +284,6 @@ struct Command(Copyable, Writable):
                 self._mark_flag_group_as[Annotation.ONE_REQUIRED](one_required_flags)
         except e:
             panic(t"Failed to set flag annotations due to following reason: {e}")
-
-    # def copy(self) -> Self:
-    #     """Returns a copy of the `Command`.
-
-    #     Returns:
-    #         A copy of the `Command`.
-    #     """
-    #     return Command(
-    #         name=self.name,
-    #         usage=self.usage,
-    #         args_usage=self.args_usage,
-    #         aliases=self.aliases.copy(),
-    #         help=self.help.copy(),
-    #         version=self.version.copy(),
-    #         exit=self.exit,
-    #         output_writer=self.output_writer,
-    #         error_writer=self.error_writer,
-    #         pre_run=self.pre_run,
-    #         run=self.run,
-    #         post_run=self.post_run,
-    #         # raising_pre_run=self.raising_pre_run,
-    #         # raising_run=self.raising_run,
-    #         # raising_post_run=self.raising_post_run,
-    #         persistent_pre_run=self.persistent_pre_run,
-    #         persistent_post_run=self.persistent_post_run,
-    #         # persistent_raising_pre_run=self.persistent_raising_pre_run,
-    #         # persistent_raising_post_run=self.persistent_raising_post_run,
-    #         valid_args=self.valid_args.copy(),
-    #         arg_validator=self.arg_validator,
-    #         flags=self.flags.copy(),
-    #         parent=self.parent,
-    #         children=self.children.copy(),
-    #         suggest=self.suggest,
-    #     )
 
     def write_to(self, mut writer: Some[Writer]):
         """Write string representation to a `Writer`.
@@ -342,16 +312,6 @@ struct Command(Copyable, Writable):
             return String.write(self.parent[].value().full_name(), " ", self.name)
         else:
             return self.name
-
-    def root(self) -> Self:
-        """Returns the root command of the command tree.
-
-        Returns:
-            The root command in the tree.
-        """
-        if self.has_parent():
-            return self.parent[].value().root()
-        return self.copy()
 
     def inherited_flags(self) -> FlagSet:
         """Returns the flags for the command and inherited flags from its parent.
@@ -388,7 +348,6 @@ struct Command(Copyable, Writable):
         - If the annotation is `ONE_REQUIRED`, then at least one flag in the group must be set.
         - If the annotation is `MUTUALLY_EXCLUSIVE`, then only one flag in the group can be set.
         """
-        self._merge_flags()
         for name in flag_names:
             self.flags.set_annotation[annotation](name, " ".join(flag_names))
 
@@ -453,12 +412,6 @@ struct Command(Copyable, Writable):
 
         @parameter
         def run_action(parent: Self) raises -> None:
-            # if parent.persistent_raising_post_run:
-            #     parent.persistent_raising_post_run.value()(args, cmd.flags)
-
-            #     @parameter
-            #     if not ENABLE_TRAVERSE_RUN_HOOKS:
-            #         return
             if parent.persistent_post_run:
                 parent.persistent_post_run.value()(args, cmd.flags)
 
@@ -472,8 +425,6 @@ struct Command(Copyable, Writable):
             # Run the pre-run hooks.
             if cmd.pre_run:
                 cmd.pre_run.value()(args, cmd.flags)
-            # elif cmd.raising_pre_run:
-            #     cmd.raising_pre_run.value()(args, cmd.flags)
         except e:
             self.error_writer("Failed to run pre-run hooks for command: " + cmd.name)
             raise e^
@@ -491,12 +442,6 @@ struct Command(Copyable, Writable):
 
         @parameter
         def run_action(parent: Self) raises -> None:
-            # if parent.persistent_raising_post_run:
-            #     parent.persistent_raising_post_run.value()(args, cmd.flags)
-
-            #     @parameter
-            #     if not ENABLE_TRAVERSE_RUN_HOOKS:
-            #         return
             if parent.persistent_post_run:
                 parent.persistent_post_run.value()(args, cmd.flags)
 
@@ -511,8 +456,6 @@ struct Command(Copyable, Writable):
             # Run the post-run hooks.
             if cmd.post_run:
                 cmd.post_run.value()(args, cmd.flags)
-            # elif cmd.raising_post_run:
-            #     cmd.raising_post_run.value()(args, cmd.flags)
         except e:
             self.error_writer("Failed to run post-run hooks for command: " + cmd.name)
             raise e^
@@ -544,24 +487,20 @@ struct Command(Copyable, Writable):
         """
         # Traverse from the root command through the children to find a match for the current argument.
         # Any additional arguments past the last matched command name are considered arguments.
-        # TODO: Tree traversal is new to me, there's probably a better way to do this.
-
-        # Always execute from the root command, regardless of what command was executed in main.
         if self.has_parent():
-            var root = self.root()
-            return root._execute(input_args^)
+            self.exit(Error("Cannot execute from a non-root command. Please execute from the root command."))
+            return
 
-        var command = self.copy()
+        var cmd = ArcPointer(self.copy())
         var args = Span(input_args)
 
         # If there's no children, then the root command is used.
         # Otherwise, we traverse the command tree to find the command that matches the arguments.
         if self.children and args:
-            var result = _parse_command_from_args(command, input_args)
-            if result.isa[Tuple[ArcPointer[Command], Int]]():
-                ref cmd_args = result[Tuple[ArcPointer[Command], Int]]
-                command = cmd_args[0][].copy()
-                var leftover_start = cmd_args[1]
+            var result = _parse_command_from_args(cmd[], input_args)
+            if result:
+                cmd = result.value()[0]
+                var leftover_start = result.value()[1]
                 if len(args) >= leftover_start:
                     args = args[leftover_start : len(args)]
             else:
@@ -569,14 +508,14 @@ struct Command(Copyable, Writable):
                 pass
 
         # Merge persistent flags from ancestors.
-        command._merge_flags()
+        cmd[]._merge_flags()
 
-        var remaining_args: List[String]
+        var remaining_args: Span[String, origin_of(input_args)].Immutable
         try:
-            remaining_args = command.flags.from_args(args)
+            remaining_args = cmd[].flags.from_args(args)
         except e:
             # TODO: Move the suggestion checking into a separate function.
-            if not command.suggest:
+            if not cmd[].suggest:
                 self.exit(e)
                 return
 
@@ -585,7 +524,7 @@ struct Command(Copyable, Writable):
                 self.exit(e)
                 return
 
-            var suggestion = suggest_flag(command.flags.flags, flag_name.value())
+            var suggestion = suggest_flag(cmd[].flags.flags, flag_name.value())
             if suggestion == "":
                 self.exit(e)
                 return
@@ -593,7 +532,6 @@ struct Command(Copyable, Writable):
             self.error_writer(String(t"Unknown flag: {flag_name.value()}\nDid you mean: {suggestion}?"))
             return
 
-        var cmd = OwnedPointer[Command](command^)
         try:
             # Check if the help flag was passed
             if cmd[].flags.get_bool(self.help.flag.name):
@@ -611,14 +549,9 @@ struct Command(Copyable, Writable):
             # Check if the completion subcommand was invoked
             if cmd[].name == "completion":
                 if not remaining_args:
-                    self.error_writer(
-                        "Usage: " + self.name + " completion <shell>\nSupported shells: zsh, bash"
-                    )
+                    self.error_writer(String(t"Usage: {self.name} completion <shell>\nSupported shells: zsh, bash"))
                     return
-                var root = OwnedPointer[Command](self.copy())
-                self.output_writer(
-                    default_completion(root, remaining_args[0])
-                )
+                self.output_writer(default_completion(self, remaining_args[0]))
                 return
 
             # Validate individual required flags (eg: flag is required)
@@ -628,16 +561,16 @@ struct Command(Copyable, Writable):
             cmd[].flags.validate_flag_groups()
 
             # Run flag actions if they have any
+            # TODO: Renable flag actions
             # cmd[].flags.visit_all[run_action]()
 
             # Validate the remaining arguments
-            cmd[].arg_validator(remaining_args, self.valid_args)
+            var final_args = List[String](remaining_args)
+            cmd[].arg_validator(final_args, self.valid_args)
 
             # Run the function's commands.
-            self._execute_pre_run_hooks(cmd[], remaining_args)
-            cmd[].run(remaining_args, cmd[].flags)
-            # else:
-            #     cmd[].raising_run.value()(remaining_args, cmd[].flags)
-            self._execute_post_run_hooks(cmd[], remaining_args)
+            self._execute_pre_run_hooks(cmd[], final_args)
+            cmd[].run(final_args, cmd[].flags)
+            self._execute_post_run_hooks(cmd[], final_args)
         except e:
             self.exit(e)
