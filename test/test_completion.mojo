@@ -1,5 +1,4 @@
 import std.testing
-from std.memory import OwnedPointer
 from prism import FlagSet
 from prism.command import Command
 from prism.flag import Flag
@@ -73,11 +72,11 @@ def test_zsh_flag_spec_string_list() raises:
 
 
 def test_zsh_basic_root_command() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
-    ))
+    )
     var script = generate_zsh_completion(cmd)
     # Verify header
     std.testing.assert_true("#compdef myapp" in script)
@@ -92,7 +91,7 @@ def test_zsh_basic_root_command() raises:
 
 
 def test_zsh_command_with_children() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
@@ -100,7 +99,7 @@ def test_zsh_command_with_children() raises:
             Command(name="serve", usage="Start server", run=dummy),
             Command(name="build", usage="Build project", run=dummy),
         ],
-    ))
+    )
     var script = generate_zsh_completion(cmd)
     # Verify child functions exist
     std.testing.assert_true("_myapp__serve()" in script)
@@ -114,7 +113,7 @@ def test_zsh_command_with_children() raises:
 
 
 def test_zsh_nested_commands() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
@@ -128,7 +127,7 @@ def test_zsh_nested_commands() raises:
                 ],
             ),
         ],
-    ))
+    )
     var script = generate_zsh_completion(cmd)
     # Verify deeply nested function name uses double-underscore separator
     std.testing.assert_true("_myapp__sub__nested()" in script)
@@ -137,7 +136,7 @@ def test_zsh_nested_commands() raises:
 
 
 def test_zsh_command_with_aliases() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
@@ -149,19 +148,19 @@ def test_zsh_command_with_aliases() raises:
                 aliases=["conn", "db-connect"],
             ),
         ],
-    ))
+    )
     var script = generate_zsh_completion(cmd)
     # Verify aliases appear in case pattern
     std.testing.assert_true("connect|conn|db-connect) _myapp__connect" in script)
 
 
 def test_zsh_command_with_valid_args() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
         valid_args=["start", "stop", "restart"],
-    ))
+    )
     var script = generate_zsh_completion(cmd)
 
     # Verify valid args appear as completions
@@ -169,7 +168,7 @@ def test_zsh_command_with_valid_args() raises:
 
 
 def test_zsh_command_with_flags() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
@@ -178,7 +177,7 @@ def test_zsh_command_with_flags() raises:
             Flag.bool(name="verbose", shorthand="v", usage="Verbose output"),
             Flag.int(name="port", usage="Port number"),
         ],
-    ))
+    )
     var script = generate_zsh_completion(cmd)
     std.testing.assert_true("--config" in script)
     std.testing.assert_true("--verbose" in script)
@@ -202,12 +201,12 @@ def test_zsh_completion_subcommand_auto_added() raises:
 
 
 def test_zsh_completion_subcommand_in_script() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
         enable_completion=True,
-    ))
+    )
     var script = generate_zsh_completion(cmd)
     # The completion subcommand should appear in the generated script
     std.testing.assert_true("'completion:Generate shell completion scripts.'" in script)
@@ -215,11 +214,11 @@ def test_zsh_completion_subcommand_in_script() raises:
 
 
 def test_unsupported_shell() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
-    ))
+    )
     var raised = False
     try:
         _ = default_completion(cmd, "fish")
@@ -229,11 +228,11 @@ def test_unsupported_shell() raises:
 
 
 def test_bash_basic_root_command() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
-    ))
+    )
     var script = generate_bash_completion(cmd)
     # Verify header
     std.testing.assert_true("#!/usr/bin/env bash" in script)
@@ -247,7 +246,7 @@ def test_bash_basic_root_command() raises:
 
 
 def test_bash_command_with_children() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
@@ -255,7 +254,7 @@ def test_bash_command_with_children() raises:
             Command(name="serve", usage="Start server", run=dummy),
             Command(name="build", usage="Build project", run=dummy),
         ],
-    ))
+    )
     var script = generate_bash_completion(cmd)
     # Verify child functions exist
     std.testing.assert_true("__myapp__serve()" in script)
@@ -266,7 +265,7 @@ def test_bash_command_with_children() raises:
 
 
 def test_bash_nested_commands() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
@@ -280,14 +279,14 @@ def test_bash_nested_commands() raises:
                 ],
             ),
         ],
-    ))
+    )
     var script = generate_bash_completion(cmd)
     # Verify deeply nested function name
     std.testing.assert_true("__myapp__sub__nested()" in script)
 
 
 def test_bash_command_with_aliases() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
@@ -299,7 +298,7 @@ def test_bash_command_with_aliases() raises:
                 aliases=["conn", "db-connect"],
             ),
         ],
-    ))
+    )
     var script = generate_bash_completion(cmd)
     # Verify aliases appear in case pattern
     std.testing.assert_true("connect|conn|db-connect)" in script)
@@ -309,14 +308,13 @@ def test_bash_command_with_aliases() raises:
 
 
 def test_bash_command_with_valid_args() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
         valid_args=["start", "stop", "restart"],
-    ))
+    )
     var script = generate_bash_completion(cmd)
-    print(script)
     # Verify valid args appear in opts
     std.testing.assert_true("start" in script)
     std.testing.assert_true("stop" in script)
@@ -324,7 +322,7 @@ def test_bash_command_with_valid_args() raises:
 
 
 def test_bash_command_with_flags() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
@@ -333,7 +331,7 @@ def test_bash_command_with_flags() raises:
             Flag.bool(name="verbose", shorthand="v", usage="Verbose output"),
             Flag.int(name="port", usage="Port number"),
         ],
-    ))
+    )
     var script = generate_bash_completion(cmd)
     std.testing.assert_true("--config" in script)
     std.testing.assert_true("-c" in script)
@@ -343,22 +341,22 @@ def test_bash_command_with_flags() raises:
 
 
 def test_bash_completion_subcommand_in_script() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
         enable_completion=True,
-    ))
+    )
     var script = generate_bash_completion(cmd)
     std.testing.assert_true("__myapp__completion()" in script)
 
 
 def test_bash_dispatch() raises:
-    var cmd = OwnedPointer(Command(
+    var cmd = Command(
         name="myapp",
         usage="My application",
         run=dummy,
-    ))
+    )
     var script = default_completion(cmd, "bash")
     std.testing.assert_true("#!/usr/bin/env bash" in script)
     std.testing.assert_true("complete -F __myapp myapp" in script)

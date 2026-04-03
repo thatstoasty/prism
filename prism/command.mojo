@@ -1,5 +1,5 @@
 from std.sys import env_get_bool
-from std.memory import ArcPointer, OwnedPointer
+from std.memory import ArcPointer
 from std.sys import get_defined_bool
 from std.utils import Variant
 from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
@@ -172,8 +172,8 @@ struct Command(Copyable, Writable):
         *,
         var args_usage: Optional[String] = None,
         var aliases: List[String] = [],
-        help: Help = Help(),
-        version: Optional[Version] = None,
+        var help: Help = Help(),
+        var version: Optional[Version] = None,
         exit: ExitFn = default_exit,
         output_writer: WriterFn = default_output_writer,
         error_writer: WriterFn = default_error_writer,
@@ -224,8 +224,8 @@ struct Command(Copyable, Writable):
         self.aliases = aliases^
 
         self.exit = exit
-        self.help = help.copy()
-        self.version = version.copy()
+        self.help = help^
+        self.version = version^
         self.output_writer = output_writer
         self.error_writer = error_writer
 
@@ -246,7 +246,7 @@ struct Command(Copyable, Writable):
         for command in self.children:
             command[].parent = ArcPointer(Optional(self.copy()))
 
-        self.flags.append(help.flag.copy())
+        self.flags.append(self.help.flag.copy())
         if self.version:
             self.flags.append(self.version.value().flag.copy())
 

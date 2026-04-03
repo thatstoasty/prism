@@ -36,8 +36,8 @@ def test_parse() raises:
             Flag.bool(name="flag", usage="usage"),
         ],
     )
-
-    remaining_args = cmd.flags.from_args(List[String]("--key=value"))
+    var args: List[String] = ["--key=value"]
+    remaining_args = cmd.flags.from_args(args)
     testing.assert_equal(len(remaining_args), 0)
 
 
