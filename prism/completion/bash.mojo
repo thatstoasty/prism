@@ -3,7 +3,7 @@ from prism.flag import Flag, FType
 from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER
 
 
-fn _bash_escape(s: String, mut writer: Some[Writer]):
+fn _bash_escape(s: StringSlice, mut writer: Some[Writer]):
     """Escapes special characters in a string for use in bash completion descriptions.
 
     Single quotes in descriptions need to be escaped for bash.
@@ -89,7 +89,7 @@ fn _bash_command_function(
         var subcmds = List[String]()
         for i in range(len(cmd.children)):
             subcmds.append(cmd.children[i][].name)
-            var child_aliases = cmd.children[i][].aliases.copy()
+            ref child_aliases = cmd.children[i][].aliases
             for j in range(len(child_aliases)):
                 subcmds.append(child_aliases[j])
 

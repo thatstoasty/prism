@@ -49,16 +49,16 @@ def test_validate_mutually_exclusive_flag_group_multiple_set() raises -> None:
 def test_get_set_flags() raises -> None:
     var data = make_test_data(False, False)
     for pair in data.items():
-        testing.assert_equal(get_set_flags(pair), [], "Expected no flags to be set.")
+        testing.assert_equal(get_set_flags(pair.value), [], "Expected no flags to be set.")
 
     data["group1"]["required"] = True
     for pair in data.items():
-        testing.assert_equal(get_set_flags(pair), ["required"], "Expected the required flag to be set.")
+        testing.assert_equal(get_set_flags(pair.value), ["required"], "Expected the required flag to be set.")
 
     data["group1"]["alternative"] = True
     for pair in data.items():
         testing.assert_equal(
-            get_set_flags(pair),
+            get_set_flags(pair.value),
             ["required", "alternative"],
             "Expected the required and alternative flag to be set.",
         )
@@ -69,7 +69,7 @@ def test_extract_keys() raises -> None:
 
     for pair in data.items():
         testing.assert_equal(
-            extract_keys(pair),
+            extract_keys(pair.value),
             ["alternative", "required"],
             "Expected the alternative and required flag names.",
         )

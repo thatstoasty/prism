@@ -466,7 +466,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return string_to_bool(result.value())
 
-    def get_int[type: FType = FType.Int](self, name: StringSlice) raises -> Optional[Int] where type.is_int_type():
+    def get_int[type: FType = FType.Int](self, name: StringSlice) raises -> Optional[Int]:
         """Returns the value of a flag as an `Int`. If it isn't set, then return the default value.
 
         Parameters:
@@ -481,6 +481,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Raises:
             Error: If the flag is not found.
         """
+        comptime assert type.is_int_type(), "get_int can only be used to get flags of integer types, but was used to get a flag of type: {type}"
         var flag = self.lookup[type](name)
         if not flag:
             return None

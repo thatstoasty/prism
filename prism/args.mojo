@@ -103,7 +103,7 @@ def range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
     def range_n_args(args: List[String], valid_args: List[String]) raises -> None:
         if UInt(len(args)) < minimum or UInt(len(args)) > maximum:
             raise Error(
-                t"This command accepts between {minimum} and {maximum} argument(s). Received: {len(args)}.",
+                t"This command accepts between {minimum} to {maximum} argument(s). Received: {len(args)}.",
             )
 
     return range_n_args

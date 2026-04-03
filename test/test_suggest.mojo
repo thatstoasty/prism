@@ -134,12 +134,12 @@ struct SuggestTestCase(ImplicitlyCopyable, Movable):
 
 
 def test_suggest_flag() raises:
-    var flags = List[Flag](
+    var flags: List[Flag] = [
         Flag(name="another-flag", shorthand="b", usage="Another flag", type=FType.String),
         Flag(name="help", shorthand="h", usage="Help flag", type=FType.Bool),
         Flag(name="version", shorthand="v", usage="Version flag", type=FType.Bool),
         Flag(name="short-flag", shorthand="s", usage="Short flag", type=FType.String),
-    )
+    ]
 
     var test_cases: List[SuggestTestCase] = [
         SuggestTestCase(
