@@ -1,4 +1,3 @@
-from std.memory import OwnedPointer
 from prism.command import Command
 from prism.flag import Flag, FType
 from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER
@@ -22,19 +21,18 @@ fn _bash_escape(s: String, mut writer: Some[Writer]):
             writer.write(c)
 
 
-fn _bash_function_name(root_name: StringSlice, prefix: StringSlice) -> String:
-    """Builds the bash function name for a command.
-
-    Uses double-underscore as separator between command levels.
+fn _write_opts[origin: ImmutOrigin, //](flag_names: Span[String, origin], mut builder: Some[Writer]):
+    """Writes the opts string for bash completion.
 
     Args:
-        root_name: The root command name.
-        prefix: The accumulated prefix for nested commands.
-
-    Returns:
-        The bash function name.
+        flag_names: The list of flag names to include in the opts string.
+        builder: A Writer to write the opts string to.
     """
-    return String(t"__{root_name}{prefix}")
+    builder.write(t'    opts="')
+    for i in range(len(flag_names)):
+        if i > 0:
+            builder.write(" ")
+        builder.write(flag_names[i])
 
 
 fn _bash_command_function(
@@ -54,12 +52,11 @@ fn _bash_command_function(
     Raises:
         If an error occurs during generation.
     """
-    var func_name = _bash_function_name(root_name, prefix)
     var has_children = Bool(cmd.children)
     var builder = String(capacity=DEFAULT_BUFFER_SIZE)
 
     builder.write(
-        t"{func_name}() ", "{", "\n",
+        t"__{root_name}{prefix}() ", "{", "\n",
         "    local cur prev opts cmds\n",
         "    COMPREPLY=()\n",
         '    cur="${COMP_WORDS[COMP_CWORD]}"\n',
@@ -87,13 +84,6 @@ fn _bash_command_function(
                 if flag.shorthand:
                     flag_names.append(String(t"-{flag.shorthand}"))
 
-    # Build opts string
-    var opts = String()
-    for i in range(len(flag_names)):
-        if i > 0:
-            opts.write(" ")
-        opts.write(flag_names[i])
-
     if has_children:
         # Collect subcommand names (including aliases)
         var subcmds = List[String]()
@@ -103,14 +93,21 @@ fn _bash_command_function(
             for j in range(len(child_aliases)):
                 subcmds.append(child_aliases[j])
 
-        var cmds_str = String()
+        # Write the cmds string for subcommands
+        builder.write('    cmds="')
         for i in range(len(subcmds)):
             if i > 0:
-                cmds_str.write(" ")
-            cmds_str.write(subcmds[i])
+                builder.write(" ")
+            builder.write(subcmds[i])
+        builder.write('"\n')
 
-        builder.write('    cmds="', cmds_str, '"\n')
-        builder.write('    opts="', opts, '"\n\n')
+        # Write the opts string for flags
+        builder.write('    opts="')
+        for i in range(len(flag_names)):
+            if i > 0:
+                builder.write(" ")
+            builder.write(flag_names[i])
+        builder.write('"\n\n')
 
         # Determine which subcommand is being completed by scanning COMP_WORDS
         builder.write("    local i cmd_found=0\n")
@@ -120,16 +117,14 @@ fn _bash_command_function(
         for i in range(len(cmd.children)):
             ref child_name = cmd.children[i][].name
             ref child_aliases = cmd.children[i][].aliases
-            var child_prefix = String(t"{prefix}__{child_name}")
-            var child_func = _bash_function_name(root_name, child_prefix)
-
-            var pattern = child_name
+            builder.write("           ", child_name)
             for j in range(len(child_aliases)):
-                pattern.write("|", child_aliases[j])
+                builder.write("|", child_aliases[j])
 
+            # Write the end of aliases, and write the call to the child function.
             builder.write(
-                t"            {pattern})\n",
-                t"                {child_func}\n",
+                ")\n",
+                t"                __{root_name}{prefix}__{child_name}\n",
                 t"                return\n",
                 "                ;;\n"
             )
@@ -152,9 +147,11 @@ fn _bash_command_function(
                 if i > 0:
                     args_list.write(" ")
                 args_list.write(cmd.valid_args[i])
-            builder.write(t'    opts="{opts} {args_list}"\n')
+            _write_opts(flag_names, builder)
+            builder.write(t' {args_list}"\n')
         else:
-            builder.write(t'    opts="{opts}"\n')
+            _write_opts(flag_names, builder)
+            builder.write(t'"\n')
         builder.write('    COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )\n')
 
     builder.write("}\n")
@@ -183,12 +180,12 @@ fn _bash_functions_recursive(
     for i in range(len(cmd.children)):
         ref child_name = cmd.children[i][].name
         ref child_prefix = String(prefix, "__", child_name)
-        builder.write("\n", _bash_functions_recursive(cmd.children[i][].copy(), child_prefix, root_name, is_root=False))
+        builder.write("\n", _bash_functions_recursive(cmd.children[i][], child_prefix, root_name, is_root=False))
 
     return builder^
 
 
-fn generate_bash_completion(cmd: OwnedPointer[Command]) raises -> String:
+fn generate_bash_completion(cmd: Command) raises -> String:
     """Generates a complete bash completion script for the given command tree.
 
     The generated script uses bash's `complete` builtin and `compgen` for
@@ -204,14 +201,14 @@ fn generate_bash_completion(cmd: OwnedPointer[Command]) raises -> String:
     Raises:
         If an error occurs during generation.
     """
-    ref root_name = cmd[].name
+    ref root_name = cmd.name
     var builder = String(capacity=DEFAULT_BUFFER_SIZE)
 
     # Header
     builder.write("#!/usr/bin/env bash\n", SCRIPT_HEADER)
 
     # Generate all functions recursively
-    builder.write(_bash_functions_recursive(cmd[], "", root_name, is_root=True))
+    builder.write(_bash_functions_recursive(cmd, "", root_name, is_root=True))
 
     # Register the completion
     builder.write("\ncomplete -F __", root_name, " ", root_name, "\n")

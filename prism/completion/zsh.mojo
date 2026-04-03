@@ -1,4 +1,3 @@
-from std.memory import OwnedPointer
 from prism.command import Command
 from prism.flag import Flag, FType
 from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER
@@ -68,23 +67,6 @@ fn _zsh_flag_spec(flag: Flag) -> String:
     return String(t"{prefix}--{flag.name}=[{escaped_usage}]:{flag.name}:'")
 
 
-fn _zsh_function_name(root_name: StringSlice, prefix: StringSlice) -> String:
-    """Builds the ZSH function name for a command.
-
-    Uses double-underscore as separator between command levels.
-    E.g. root "myapp", prefix "" -> "_myapp"
-    E.g. root "myapp", prefix "__sub" -> "_myapp__sub"
-
-    Args:
-        root_name: The root command name.
-        prefix: The accumulated prefix for nested commands.
-
-    Returns:
-        The ZSH function name.
-    """
-    return String(t"_{root_name}{prefix}")
-
-
 fn _zsh_command_function(
     cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
 ) raises -> String:
@@ -102,11 +84,10 @@ fn _zsh_command_function(
     Raises:
         If an error occurs during generation.
     """
-    var func_name = _zsh_function_name(root_name, prefix)
     var has_children = Bool(cmd.children)
     var builder = String(capacity=DEFAULT_BUFFER_SIZE)
 
-    builder.write(func_name, "() {\n")
+    builder.write(t"_{root_name}{prefix}", "() {\n")
 
     if has_children:
         builder.write(
@@ -172,15 +153,11 @@ fn _zsh_command_function(
         for i in range(len(cmd.children)):
             ref child_name = cmd.children[i][].name
             ref child_aliases = cmd.children[i][].aliases
-            var child_prefix = String(t"{prefix}__{child_name}")
-            var child_func = _zsh_function_name(root_name, child_prefix)
-
             # Build case pattern: name|alias1|alias2
-            var pattern = child_name
+            builder.write("        ", child_name)
             for j in range(len(child_aliases)):
-                pattern.write("|", child_aliases[j])
-
-            builder.write("        ", pattern, ") ", child_func, " ;;\n")
+                builder.write("|", child_aliases[j])
+            builder.write(") ", t"_{root_name}{prefix}__{child_name}", " ;;\n")
 
         builder.write(
             "        esac\n",
@@ -223,17 +200,16 @@ fn _zsh_functions_recursive(
     """
     var builder = _zsh_command_function(cmd, prefix, root_name, is_root)
     for i in range(len(cmd.children)):
-        var child_name = cmd.children[i][].name
-        var child_prefix = String(t"{prefix}__{child_name}")
+        var child_prefix = String(t"{prefix}__{cmd.children[i][].name}")
         builder.write(
             "\n",
-            _zsh_functions_recursive(cmd.children[i][].copy(), child_prefix, root_name, is_root=False)
+            _zsh_functions_recursive(cmd.children[i][], child_prefix, root_name, is_root=False)
         )
 
     return builder^
 
 
-fn generate_zsh_completion(cmd: OwnedPointer[Command]) raises -> String:
+fn generate_zsh_completion(cmd: Command) raises -> String:
     """Generates a complete ZSH completion script for the given command tree.
 
     The generated script uses ZSH's _arguments completion system and creates
@@ -249,14 +225,14 @@ fn generate_zsh_completion(cmd: OwnedPointer[Command]) raises -> String:
     Raises:
         If an error occurs during generation.
     """
-    ref root_name = cmd[].name
+    ref root_name = cmd.name
     var builder = String(capacity=DEFAULT_BUFFER_SIZE)
 
     # Header
     builder.write(t"#compdef {root_name}\n", SCRIPT_HEADER)
 
     # Generate all functions recursively
-    builder.write(_zsh_functions_recursive(cmd[], "", root_name, is_root=True))
+    builder.write(_zsh_functions_recursive(cmd, "", root_name, is_root=True))
 
     # Entry point: detect whether loaded by compinit (fpath) or sourced manually.
     # When compinit autoloads the file, funcstack[1] equals the function name,
