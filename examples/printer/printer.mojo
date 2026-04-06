@@ -50,6 +50,4 @@ fn main() -> None:
             Flag.string(name="formatting", shorthand="f", usage="Text formatting"),
         ],
     )
-    var args = read_args()
-    print(args)
-    cli.execute(args.copy())
+    cli.execute(read_args())
