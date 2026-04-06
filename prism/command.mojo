@@ -157,7 +157,7 @@ struct Command(Copyable, Writable):
 
     var children: List[ArcPointer[Self]]
     """Child commands."""
-    # TODO: An optional pointer would be great, but it breaks the compiler. So a list of 0-1 pointers is used.
+    # TODO: An optional pointer would be great, but it breaks the compiler.
     var parent: ArcPointer[Optional[Self]]
     """Parent command."""
 

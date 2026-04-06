@@ -46,7 +46,7 @@ pixi add -s ./path/to/prism && pixi install
 Here's an example of a basic command and subcommand!
 
 ```mojo
-from prism import Command, FlagSet
+from prism import Command, FlagSet, read_args
 
 fn test(args: List[String], flags: FlagSet) -> None:
     print("Pass chromeria as a subcommand!")
@@ -67,7 +67,7 @@ fn main() -> None:
             )
         ],
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ![Chromeria](https://github.com/thatstoasty/prism/blob/main/doc/tapes/hello-chromeria.gif)
@@ -96,7 +96,7 @@ fn printer(args: List[String], flags: FlagSet) raises -> None:
 Commands can also be aliased to enable different ways to call the same command. You can change the command underneath the alias and maintain the same behavior.
 
 ```mojo
-from prism import Command
+from prism import Command, read_args
 
 fn main():
     var cli = Command(
@@ -105,7 +105,7 @@ fn main():
         run=tool_func,
         aliases=["object", "thing"]
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ![Aliases](https://github.com/thatstoasty/prism/blob/main/doc/tapes/aliases.gif)
@@ -115,7 +115,7 @@ fn main():
 Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
 
 ```mojo
-from prism import Command, FlagSet
+from prism import Command, FlagSet, read_args
 
 fn pre_hook(args: List[String], flags: FlagSet) -> None:
     print("Pre-hook executed!")
@@ -131,7 +131,7 @@ fn main() -> None:
         pre_run=pre_hook,
         post_run=post_hook,
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ![Printer](https://github.com/thatstoasty/prism/blob/main/doc/tapes/printer.gif)
@@ -141,7 +141,7 @@ fn main() -> None:
 Commands can have typed flags added to them to enable different behaviors.
 
 ```mojo
-from prism import Command, Flag
+from prism import Command, Flag, read_args
 
 fn main() -> None:
     var cli = Command(
@@ -156,7 +156,7 @@ fn main() -> None:
             )
         ],
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ![Logging](https://github.com/thatstoasty/prism/blob/main/doc/tapes/logging.gif)
@@ -166,7 +166,7 @@ fn main() -> None:
 Flag values can also be retrieved from environment variables, if a value is not provided as an argument.
 
 ```mojo
-from prism import Command, Flag, FlagSet
+from prism import Command, Flag, FlagSet, read_args
 
 fn test(args: List[String], flags: FlagSet) raises -> None:
     if name := flags.get_string("name"):
@@ -176,7 +176,7 @@ fn main() -> None:
     var cli = Command(
         name="greet",
         usage="Greet a user!",
-        raising_run=test,
+        run=test,
         flags=[
             Flag.string(
                 name="name",
@@ -186,7 +186,7 @@ fn main() -> None:
             )
         ],
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ### Default flag values from files
@@ -194,7 +194,7 @@ fn main() -> None:
 Likewise, flag values can also be retrieved from a file as well, if a value is not provided as an argument.
 
 ```mojo
-from prism import Command, Flag, FlagSet
+from prism import Command, Flag, FlagSet, read_args
 import prism
 
 fn test(args: List[String], flags: FlagSet) raises -> None:
@@ -205,7 +205,7 @@ fn main() -> None:
     var cli = Command(
         name="greet",
         usage="Greet a user!",
-        raising_run=test,
+        run=test,
         flags=[
             Flag.string(
                 name="name",
@@ -215,7 +215,7 @@ fn main() -> None:
             )
         ],
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ### Flag Precedence
@@ -232,7 +232,7 @@ The precedence for flag value sources is as follows (highest to lowest):
 Flags and hooks can also be inherited by children commands! This can be useful for setting global flags or hooks that should be applied to all child commands.
 
 ```mojo
-from prism import Command, Flag
+from prism import Command, Flag, read_args
 
 fn main() -> None:
     var cli = Command(
@@ -257,7 +257,7 @@ fn main() -> None:
             )
         ],
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ![Persistent](https://github.com/thatstoasty/prism/blob/main/doc/tapes/persistent.gif)
@@ -269,7 +269,7 @@ Flags can be grouped together to enable relationships between them. This can be 
 By default flags are considered optional. If you want your command to report an error when a flag has not been set, mark it as required:
 
 ```mojo
-from prism import Command, Flag, FlagSet
+from prism import Command, Flag, FlagSet, read_args
 
 fn main():
     var cli = Command(
@@ -286,7 +286,7 @@ fn main():
             )
         ],
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ### Flag Groups
@@ -294,8 +294,7 @@ fn main():
 If you have different flags that must be provided together (e.g. if they provide the `--color` flag they MUST provide the `--formatting` flag as well) then Prism can enforce that requirement:
 
 ```mojo
-from prism import Command, Flag
-import prism
+from prism import Command, Flag, read_args
 
 fn main():
     var cli = Command(
@@ -318,13 +317,13 @@ fn main():
         ],
         flags_required_together=["color", "formatting"],
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
 
 ```mojo
-from prism import Command, Flag
+from prism import Command, Flag, read_args
 
 fn main():
    var cli = Command(
@@ -348,13 +347,13 @@ fn main():
         ],
         mutually_exclusive_flags=["color", "hue"],
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 If you want to require at least one flag from a group to be present, you can use `mark_flags_one_required`. This can be combined with `mark_flags_mutually_exclusive` to enforce exactly one flag from a given group:
 
 ```mojo
-from prism import Command, Flag
+from prism import Command, Flag, read_args
 
 fn main():
    var cli = Command(
@@ -378,7 +377,7 @@ fn main():
         one_required_flags=["color", "formatting"],
         mutually_exclusive_flags=["color", "formatting"],
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 In these cases:
@@ -394,7 +393,7 @@ In these cases:
 If a flag is not provided, you can suggest an alternative flag to the user. This can be useful for providing hints to the user about what they may have meant to type.
 
 ```mojo
-from prism import Command, Flag
+from prism import Command, Flag, read_args
 import prism
 
 fn main():
@@ -418,7 +417,7 @@ fn main():
         ],
         suggest=True,
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 If you run the command with an invalid flag, it will suggest the closest match to the flag you provided.
@@ -461,7 +460,7 @@ If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 Commands are configured to accept a `--help` and `-h` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed. You can use the `help` argument of the `Command` constructor to configure the help function, and the help flag itself.
 
 ```mojo
-from prism import Command, FlagSet, Flag, Help
+from prism import Command, FlagSet, Flag, Help, read_args
 
 fn help_func(args: List[String], flags: FlagSet) -> String:
     return "My help function."
@@ -476,7 +475,7 @@ fn main() -> None:
             action=help_func,
         ),
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ![Help](https://github.com/thatstoasty/prism/blob/main/doc/tapes/help.gif)
@@ -486,7 +485,7 @@ fn main() -> None:
 Commands can be configured to accept `--version` and `-v` flag to run a version function. This will print the result of the version function using the output writer that's configured for the command. You can also configure the flag and function to run when the version flag is passed by using the `version` argument of the `Command` constructor.
 
 ```mojo
-from prism import Command, FlagSet, Version, Flag
+from prism import Command, FlagSet, Version, Flag, read_args
 
 fn test(args: List[String], flags: FlagSet) -> None:
     print("Pass -v to see the version!")
@@ -505,7 +504,7 @@ fn main() -> None:
             action=version
         ),
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ## Output Redirection
@@ -513,7 +512,7 @@ fn main() -> None:
 The standard output and error output behavior can be customized by providing writer functions. By default, the writer is set to `print` to stdout and stderr, but you can provide custom writer functions that satisfy the expected function signatures.
 
 ```mojo
-from prism import Command, FlagSet
+from prism import Command, FlagSet, read_args
 from sys import stderr
 
 fn my_output_writer(arg: String):
@@ -534,7 +533,7 @@ fn main() -> None:
         output_writer=my_output_writer,
         error_writer=my_error_writer,
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ## Reading arguments in from stdin
@@ -542,7 +541,7 @@ fn main() -> None:
 Commands can additionally read arguments in from `stdin`. Set `read_from_stdin` to `True` and `stdin` will also be read and parsed for arguments. This should only be set on the root command.
 
 ```mojo
-from prism import Command, FlagSet
+from prism import Command, FlagSet, read_args
 
 fn test(args: List[String], flags: FlagSet) -> None:
     for arg in args:
@@ -563,7 +562,7 @@ fn main() -> None:
 By default, `prism` will exit with a status code of `1` if any `Errors` are raised during the execution of the program. However, the exit behavior can be customized by providing an exit function to the `Command` struct. It's a bit manual with error handling now, but it will be improved in the future.
 
 ```mojo
-from prism import Command, FlagSet
+from prism import Command, FlagSet, read_args
 from sys import exit
 
 
@@ -582,10 +581,10 @@ fn main() -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",
-        raising_run=test,
+        run=test,
         exit=my_exit,
     )
-    cli.execute()
+    cli.execute(read_args())
 ```
 
 ## Notes
@@ -599,8 +598,6 @@ Should error and output writers even be supported for commands? It seems like un
 ### Features
 
 - Add support for configurable delimiter (default: `--`) to indicate the end of flags.
-- Add suggestion logic for commands.
-- Autocomplete generation.
 - Add persistent flag mutually exclusive and required together checks back in. Right now, the subcommands are created before
 the parent command, so they can't inherit the persistent flags at construction.
 - Typed arguments.
