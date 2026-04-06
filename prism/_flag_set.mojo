@@ -143,7 +143,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         except:
             flag.value()[].annotations[annotation] = [value]
 
-    def from_args[origin: ImmutOrigin, //](mut self, arguments: Span[String, origin]) raises -> Span[String, origin]:
+    def from_args[origin: ImmutOrigin, //](mut self, arguments: Span[String, origin]) raises -> List[String]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
@@ -168,7 +168,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             else:
                 flag.value()[].value.value().write(" ", value)
 
-        # var remaining_args = List[String](capacity=len(arguments))
+        var remaining_args = List[String](capacity=len(arguments))
         var state = ParserState.FIND_FLAG
         var parser = FlagParser(arguments)
         while parser.index < len(arguments):
@@ -178,8 +178,8 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             if state == ParserState.FIND_FLAG:
                 # Positional argument
                 if not argument.startswith("-", 0, 1):
-                    # remaining_args.append(String(argument))
                     parser.index += 1
+                    remaining_args.append(argument)
                     continue
 
                 if argument.startswith("--", 0, 2):
@@ -214,7 +214,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                     with open(os.path.expanduser(flag.file_path.value()), "r") as f:
                         flag.set(f.read())
 
-        return arguments[parser.index:]
+        return remaining_args^
 
     def names(self) -> List[String]:
         """Returns a list of names of all flags in the flag set.

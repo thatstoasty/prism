@@ -4,11 +4,21 @@ from prism.command import Command
 from prism.flag import Flag
 
 
-comptime HelpFn = def (ArcPointer[Command]) raises -> String
+@fieldwise_init
+struct HelpContext:
+    var full_name: String
+    var usage: String
+    var args_usage: Optional[String]
+    var flags: List[Flag]
+    var children: List[Tuple[String, String]]  # (name, usage) pairs
+    var aliases: List[String]
+
+
+comptime HelpFn = def (HelpContext) raises -> String
 """The function to generate help output."""
 
 
-def default_help(cmd: ArcPointer[Command]) raises -> String:
+def default_help(cmd: HelpContext) raises -> String:
     """Prints the help information for the command.
 
     Args:
@@ -21,22 +31,22 @@ def default_help(cmd: ArcPointer[Command]) raises -> String:
         Any error that occurs while generating the help information.
     """
     comptime style = mog.Style(mog.Profile.ASCII)
-    var builder = String(t"Usage: {cmd[].full_name()}")
+    var builder = String(t"Usage: {cmd.full_name}")
 
-    if len(cmd[].flags) > 0:
+    if len(cmd.flags) > 0:
         builder.write(" [OPTIONS]")
-    if len(cmd[].children) > 0:
+    if len(cmd.children) > 0:
         builder.write(" COMMAND")
-    builder.write(t" [ARGS]...\n\n{cmd[].usage}\n")
+    builder.write(t" [ARGS]...\n\n{cmd.usage}\n")
 
-    if cmd[].args_usage:
-        builder.write(t"\nArguments:\n  {cmd[].args_usage.value()}\n")
+    if cmd.args_usage:
+        builder.write(t"\nArguments:\n  {cmd.args_usage.value()}\n")
 
     var option_width = 0
-    if cmd[].flags:
+    if cmd.flags:
         var widest_flag = 0
         var widest_shorthand = 0
-        for flag in cmd[].flags:
+        for flag in cmd.flags:
             if len(flag.name) > widest_flag:
                 widest_flag = len(flag.name)
             if len(flag.shorthand) > widest_shorthand:
@@ -47,8 +57,8 @@ def default_help(cmd: ArcPointer[Command]) raises -> String:
         var options_style = style.width(UInt16(option_width))
 
         builder.write("\nOptions:")
-        for flag in cmd[].flags:
-            var option = String("\n  ")
+        for flag in cmd.flags:
+            var option = "\n  "
             if flag.shorthand:
                 option.write("-", flag.shorthand, ", ")
             option.write("--", flag.name)
@@ -56,19 +66,19 @@ def default_help(cmd: ArcPointer[Command]) raises -> String:
 
         builder.write("\n")
 
-    if cmd[].children:
+    if cmd.children:
         var options_style = style.width(UInt16(option_width) - 2)
         builder.write("\nCommands:")
-        for i in range(len(cmd[].children)):
-            builder.write(t"\n  {options_style.render(cmd[].children[i][].name)}{cmd[].children[i][].usage}")
+        for i in range(len(cmd.children)):
+            builder.write(t"\n  {options_style.render(cmd.children[i][0])}{cmd.children[i][1]}")
         builder.write("\n")
 
-    if cmd[].aliases:
+    if cmd.aliases:
         builder.write("\nAliases:\n  ")
-        for i in range(len(cmd[].aliases)):
-            builder.write(cmd[].aliases[i])
+        for i in range(len(cmd.aliases)):
+            builder.write(cmd.aliases[i])
 
-            if i < len(cmd[].aliases) - 1:
+            if i < len(cmd.aliases) - 1:
                 builder.write(", ")
         builder.write("\n")
 

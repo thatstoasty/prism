@@ -29,7 +29,7 @@ fn allow_hosts(args: List[String], flags: FlagSet) raises -> None:
         print("Received no names to print.")
         return
 
-    print("Allowing: ", hosts.value().__str__())
+    print("Allowing: ", hosts.value())
 
 
 fn version(version: String) -> String:
@@ -45,7 +45,7 @@ fn validate_hosts(value: String) raises -> None:
                 "ValueError: Host provided is not permitted.\nReceived: ",
                 host,
                 " Approved: ",
-                approved_hosts.__str__(),
+                approved_hosts,
             )
 
 

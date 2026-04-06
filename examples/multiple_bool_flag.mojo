@@ -12,7 +12,7 @@ fn test(args: List[String], flags: FlagSet) raises -> None:
         print("Verbose flag is set!")
 
     if len(args) > 0:
-        print("Arguments:", args.__str__())
+        print("Arguments:", args)
 
 
 fn main() -> None:

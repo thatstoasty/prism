@@ -2,7 +2,6 @@ version: 6
 environments:
   default:
     channels:
-    - url: https://repo.prefix.dev/mojo-community/
     - url: https://conda.anaconda.org/conda-forge/
     - url: https://conda.modular.com/max/
     - url: https://prefix.dev/pixi-build-backends/
@@ -31,11 +30,13 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libsodium-1.0.21-h280c20c_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libsqlite-3.52.0-hf4e2dac_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libstdcxx-15.2.0-h934c35e_18.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-64/libuuid-2.41.3-h5347b49_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/libuuid-2.42-h5347b49_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.2-h25fd6f3_2.conda
       - conda: https://conda.modular.com/max/noarch/mblack-26.2.0-release.conda
-      - conda: https://repo.prefix.dev/mojo-community/linux-64/mist-26.2.0-hb0f4dca_0.conda
-      - conda: https://repo.prefix.dev/mojo-community/linux-64/mog-26.2.0-hb0f4dca_0.conda
+      - conda: git+https://github.com/thatstoasty/mist?tag=v0.1.0#bac6378444eebacb5c4aa7daa39dba1771ec416e
+        build: hb0f4dca_0
+      - conda: git+https://github.com/thatstoasty/mog?tag=v0.1.0#372cbd376b4ef635ebb4712b2330ef0262ffcba7
+        build: hb0f4dca_0
       - conda: https://conda.modular.com/max/linux-64/mojo-0.26.2.0-release.conda
       - conda: https://conda.modular.com/max/linux-64/mojo-compiler-0.26.2.0-release.conda
       - conda: https://conda.modular.com/max/noarch/mojo-python-0.26.2.0-release.conda
@@ -84,11 +85,13 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libsodium-1.0.21-h80f16a2_3.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libsqlite-3.52.0-h10b116e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libstdcxx-15.2.0-hef695bb_18.conda
-      - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.41.3-h1022ec0_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.42-h1022ec0_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libzlib-1.3.2-hdc9db2a_2.conda
       - conda: https://conda.modular.com/max/noarch/mblack-26.2.0-release.conda
-      - conda: https://repo.prefix.dev/mojo-community/linux-aarch64/mist-26.2.0-he8cfe8b_0.conda
-      - conda: https://repo.prefix.dev/mojo-community/linux-aarch64/mog-26.2.0-he8cfe8b_0.conda
+      - conda: git+https://github.com/thatstoasty/mist?tag=v0.1.0#bac6378444eebacb5c4aa7daa39dba1771ec416e
+        build: he8cfe8b_0
+      - conda: git+https://github.com/thatstoasty/mog?tag=v0.1.0#372cbd376b4ef635ebb4712b2330ef0262ffcba7
+        build: he8cfe8b_0
       - conda: https://conda.modular.com/max/linux-aarch64/mojo-0.26.2.0-release.conda
       - conda: https://conda.modular.com/max/linux-aarch64/mojo-compiler-0.26.2.0-release.conda
       - conda: https://conda.modular.com/max/noarch/mojo-python-0.26.2.0-release.conda
@@ -134,8 +137,10 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libsqlite-3.52.0-h1ae2325_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/libzlib-1.3.2-h8088a28_2.conda
       - conda: https://conda.modular.com/max/noarch/mblack-26.2.0-release.conda
-      - conda: https://repo.prefix.dev/mojo-community/osx-arm64/mist-26.2.0-h60d57d3_0.conda
-      - conda: https://repo.prefix.dev/mojo-community/osx-arm64/mog-26.2.0-h60d57d3_0.conda
+      - conda: git+https://github.com/thatstoasty/mist?tag=v0.1.0#bac6378444eebacb5c4aa7daa39dba1771ec416e
+        build: h60d57d3_0
+      - conda: git+https://github.com/thatstoasty/mog?tag=v0.1.0#372cbd376b4ef635ebb4712b2330ef0262ffcba7
+        build: h60d57d3_0
       - conda: https://conda.modular.com/max/osx-arm64/mojo-0.26.2.0-release.conda
       - conda: https://conda.modular.com/max/osx-arm64/mojo-compiler-0.26.2.0-release.conda
       - conda: https://conda.modular.com/max/noarch/mojo-python-0.26.2.0-release.conda
@@ -691,25 +696,25 @@ packages:
   license_family: GPL
   size: 5541411
   timestamp: 1771378162499
-- conda: https://conda.anaconda.org/conda-forge/linux-64/libuuid-2.41.3-h5347b49_0.conda
-  sha256: 1a7539cfa7df00714e8943e18de0b06cceef6778e420a5ee3a2a145773758aee
-  md5: db409b7c1720428638e7c0d509d3e1b5
+- conda: https://conda.anaconda.org/conda-forge/linux-64/libuuid-2.42-h5347b49_0.conda
+  sha256: bc1b08c92626c91500fd9f26f2c797f3eb153b627d53e9c13cd167f1e12b2829
+  md5: 38ffe67b78c9d4de527be8315e5ada2c
   depends:
   - __glibc >=2.17,<3.0.a0
   - libgcc >=14
   license: BSD-3-Clause
   license_family: BSD
-  size: 40311
-  timestamp: 1766271528534
-- conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.41.3-h1022ec0_0.conda
-  sha256: c37a8e89b700646f3252608f8368e7eb8e2a44886b92776e57ad7601fc402a11
-  md5: cf2861212053d05f27ec49c3784ff8bb
+  size: 40297
+  timestamp: 1775052476770
+- conda: https://conda.anaconda.org/conda-forge/linux-aarch64/libuuid-2.42-h1022ec0_0.conda
+  sha256: 7d427edf58c702c337bf62bc90f355b7fc374a65fd9f70ea7a490f13bb76b1b9
+  md5: a0b5de740d01c390bdbb46d7503c9fab
   depends:
   - libgcc >=14
   license: BSD-3-Clause
   license_family: BSD
-  size: 43453
-  timestamp: 1766271546875
+  size: 43567
+  timestamp: 1775052485727
 - conda: https://conda.anaconda.org/conda-forge/linux-64/libzlib-1.3.2-h25fd6f3_2.conda
   sha256: 55044c403570f0dc26e6364de4dc5368e5f3fc7ff103e867c487e2b5ab2bcda9
   md5: d87ff7921124eccd67248aa483c23fec
@@ -756,51 +761,69 @@ packages:
   license: LicenseRef-Modular-Proprietary
   size: 133798
   timestamp: 1773780198354
-- conda: https://repo.prefix.dev/mojo-community/linux-64/mist-26.2.0-hb0f4dca_0.conda
-  sha256: a2e2843ef07e8e232f4d184606e456def1a3a5cb0b601dc7cbf83d3162185ccc
-  md5: d643b5b504dec374c637ea974a091848
+- conda: git+https://github.com/thatstoasty/mist?tag=v0.1.0#bac6378444eebacb5c4aa7daa39dba1771ec416e
+  name: mist
+  version: 0.1.0
+  build: h60d57d3_0
+  subdir: osx-arm64
   depends:
   - mojo-compiler >=0.26.2.0,<0.26.3.0
-  size: 2500212
-  timestamp: 1774302195681
-- conda: https://repo.prefix.dev/mojo-community/linux-aarch64/mist-26.2.0-he8cfe8b_0.conda
-  sha256: cf2e5feabd362c9c76995071226db00bd5d71709684338da73c5843d76df6feb
-  md5: 74712ed2611d236a735258b0226b09b1
+  channel: null
+- conda: git+https://github.com/thatstoasty/mist?tag=v0.1.0#bac6378444eebacb5c4aa7daa39dba1771ec416e
+  name: mist
+  version: 0.1.0
+  build: hb0f4dca_0
+  subdir: linux-64
   depends:
   - mojo-compiler >=0.26.2.0,<0.26.3.0
-  size: 2500217
-  timestamp: 1774302181670
-- conda: https://repo.prefix.dev/mojo-community/osx-arm64/mist-26.2.0-h60d57d3_0.conda
-  sha256: 38beda360cf21b48a569bd407cb5b66404d5f6a6162f7d6966469af164927836
-  md5: ff70139a81f86276425c77f60dda227e
+  channel: null
+- conda: git+https://github.com/thatstoasty/mist?tag=v0.1.0#bac6378444eebacb5c4aa7daa39dba1771ec416e
+  name: mist
+  version: 0.1.0
+  build: he8cfe8b_0
+  subdir: linux-aarch64
   depends:
   - mojo-compiler >=0.26.2.0,<0.26.3.0
-  size: 2498714
-  timestamp: 1774302205217
-- conda: https://repo.prefix.dev/mojo-community/linux-64/mog-26.2.0-hb0f4dca_0.conda
-  sha256: 36ca88171795308581fcd9dec660a4c328e17a8ab4b19ac52758bd2665b5807f
-  md5: 57fd69b85fda872a782bc75a4fd9f9bf
+  channel: null
+- conda: git+https://github.com/thatstoasty/mog?tag=v0.1.0#372cbd376b4ef635ebb4712b2330ef0262ffcba7
+  name: mog
+  version: 0.1.0
+  build: h60d57d3_0
+  subdir: osx-arm64
   depends:
   - mojo-compiler >=0.26.2.0,<0.26.3.0
-  - mist >=26.2.0,<26.3.0
-  size: 1808411
-  timestamp: 1774473758404
-- conda: https://repo.prefix.dev/mojo-community/linux-aarch64/mog-26.2.0-he8cfe8b_0.conda
-  sha256: a2fb9a1d1aa95016b89636ec22f6ad3c408870a0429f9c576e9abc77656fe2f9
-  md5: b2083d6d980ff025f0b1a5081b23133e
+  - mist
+  channel: null
+  sources:
+    mist:
+      git: https://github.com/thatstoasty/mist.git
+      tag: v0.1.0
+- conda: git+https://github.com/thatstoasty/mog?tag=v0.1.0#372cbd376b4ef635ebb4712b2330ef0262ffcba7
+  name: mog
+  version: 0.1.0
+  build: hb0f4dca_0
+  subdir: linux-64
   depends:
   - mojo-compiler >=0.26.2.0,<0.26.3.0
-  - mist >=26.2.0,<26.3.0
-  size: 1808414
-  timestamp: 1774473755335
-- conda: https://repo.prefix.dev/mojo-community/osx-arm64/mog-26.2.0-h60d57d3_0.conda
-  sha256: 26953151e513a4d00abe40c387d047dccba0cc6d02f1b41db82066449bdaf990
-  md5: 41f8b865981044c4aa610482adbcbbc5
+  - mist
+  channel: null
+  sources:
+    mist:
+      git: https://github.com/thatstoasty/mist.git
+      tag: v0.1.0
+- conda: git+https://github.com/thatstoasty/mog?tag=v0.1.0#372cbd376b4ef635ebb4712b2330ef0262ffcba7
+  name: mog
+  version: 0.1.0
+  build: he8cfe8b_0
+  subdir: linux-aarch64
   depends:
   - mojo-compiler >=0.26.2.0,<0.26.3.0
-  - mist >=26.2.0,<26.3.0
-  size: 1806846
-  timestamp: 1774473761891
+  - mist
+  channel: null
+  sources:
+    mist:
+      git: https://github.com/thatstoasty/mist.git
+      tag: v0.1.0
 - conda: https://conda.modular.com/max/linux-64/mojo-0.26.2.0-release.conda
   sha256: 4d7047466c13d92b1c8eb19c6d203a8503afbd2b1ad63eb5289a8f4bbf4d2945
   md5: 61318988733a695066b39704f6e08bd2

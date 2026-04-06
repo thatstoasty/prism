@@ -1,5 +1,5 @@
 import mist
-from memory import ArcPointer
+from std.memory import ArcPointer
 
 import prism
 from prism import Command, Flag, FlagSet, exact_args, read_args
@@ -50,4 +50,6 @@ fn main() -> None:
             Flag.string(name="formatting", shorthand="f", usage="Text formatting"),
         ],
     )
-    cli.execute(read_args())
+    var args = read_args()
+    print(args)
+    cli.execute(args.copy())
