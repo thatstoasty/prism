@@ -67,7 +67,7 @@ def default_help(cmd: HelpContext) raises -> String:
         builder.write("\n")
 
     if cmd.children:
-        var options_style = style.width(UInt16(option_width) - 2)
+        var options_style = style.width(UInt16(option_width) - 2) if option_width > 0 else style
         builder.write("\nCommands:")
         for i in range(len(cmd.children)):
             builder.write(t"\n  {options_style.render(cmd.children[i][0])}{cmd.children[i][1]}")

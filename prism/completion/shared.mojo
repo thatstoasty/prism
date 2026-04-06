@@ -1,5 +1,7 @@
 from prism.command import Command
 from prism.flag import Flag
+from prism.completion.bash import generate_bash_completion
+from prism.completion.zsh import generate_zsh_completion
 
 
 comptime CompletionFn = fn (Command, String) raises -> String

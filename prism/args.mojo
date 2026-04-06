@@ -8,6 +8,9 @@ def no_args(args: List[String], valid_args: List[String]) raises -> None:
     Args:
         args: The arguments passed to This command.
         valid_args: The valid arguments for This command.
+
+    Raises:
+        An error if This command has any arguments.
     """
     if len(args) > 0:
         raise Error("This command does not take any arguments.")
@@ -77,16 +80,19 @@ def exact_args[n: UInt]() -> ArgValidatorFn:
 
 
 def valid_args(args: List[String], valid_args: List[String]) raises -> None:
-    """Returns an error if threre are any positional args that are not in This command's `valid_args`.
+    """Returns an error if there are any positional args that are not in this command's `valid_args`.
 
     Args:
-        args: The arguments passed to This command.
-        valid_args: The valid arguments for This command.
+        args: The arguments passed to this command.
+        valid_args: The valid arguments for this command.
+
+    Raises:
+        An error if there are any positional args that are not in this command's `valid_args`.
     """
     if valid_args:
         for arg in args:
             if arg not in valid_args:
-                raise Error(t"Invalid argument: `{arg}`, for This command .")
+                raise Error(t"Invalid argument: `{arg}`, for this command.")
 
 
 def range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:

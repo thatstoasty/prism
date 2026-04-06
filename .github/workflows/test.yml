@@ -35,5 +35,5 @@ jobs:
 
       - name: Run tests
         run: |
-          pixi run -e util tests
-          pixi run -e util examples
+          pixi run tests
+          pixi run examples

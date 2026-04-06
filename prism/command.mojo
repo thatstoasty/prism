@@ -1,7 +1,5 @@
-from std.sys import env_get_bool
 from std.memory import ArcPointer
 from std.sys import get_defined_bool
-from std.utils import Variant
 from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
 from prism._flag_set import Annotation, FlagSet
 from prism._util import panic
@@ -410,8 +408,8 @@ struct Command(Copyable, Writable):
 
         @parameter
         def run_action(parent: Self) raises -> None:
-            if parent.persistent_post_run:
-                parent.persistent_post_run.value()(args, cmd.flags)
+            if parent.persistent_pre_run:
+                parent.persistent_pre_run.value()(args, cmd.flags)
 
                 comptime if not ENABLE_TRAVERSE_RUN_HOOKS:
                     return
