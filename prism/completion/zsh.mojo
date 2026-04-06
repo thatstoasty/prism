@@ -89,15 +89,6 @@ fn _zsh_command_function(
 
     builder.write(t"_{root_name}{prefix}", "() {\n")
 
-    if has_children:
-        builder.write(
-            "    local curcontext=\"$curcontext\" state line\n",
-            "    typeset -A opt_args\n",
-            "    _arguments -C \\\n"
-        )
-    else:
-        builder.write("    _arguments \\\n")
-
     # Collect flags for this command
     # The command's flags already include the help flag (and version flag if root).
     # For non-root commands, persistent flags from ancestors would be merged at execution time,
@@ -120,8 +111,26 @@ fn _zsh_command_function(
                 seen_flags[flag.name] = True
                 flag_specs.append(_zsh_flag_spec(flag))
 
+    if has_children:
+        builder.write(
+            "    local curcontext=\"$curcontext\" state line\n",
+            "    typeset -A opt_args\n",
+            "    _arguments -C \\\n"
+        )
+    else:
+        var has_specs = Bool(flag_specs) or Bool(cmd.valid_args)
+        if has_specs:
+            builder.write("    _arguments \\\n")
+        else:
+            builder.write("    _arguments\n")
+
+    var last_flag_continues = has_children or Bool(cmd.valid_args)
     for i in range(len(flag_specs)):
-        builder.write(t"        {flag_specs[i]} \\\n")
+        builder.write(t"        {flag_specs[i]}")
+        if i < len(flag_specs) - 1 or last_flag_continues:
+            builder.write(" \\\n")
+        else:
+            builder.write("\n")
 
     if has_children:
         builder.write(
@@ -173,9 +182,6 @@ fn _zsh_command_function(
                     args_list.write(" ")
                 args_list.write(cmd.valid_args[i])
             builder.write("        '1:arg:(", args_list, ")'\n")
-        else:
-            # Remove trailing backslash from last flag spec line if any flags were written
-            pass
 
     builder.write("}\n")
     return builder^
