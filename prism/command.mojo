@@ -8,7 +8,7 @@ from prism._util import panic
 from prism.args import ArgValidatorFn, arbitrary_args
 from prism.exit import ExitFn, default_exit
 from prism.flag import Flag
-from prism.help import Help
+from prism.help import Help, HelpContext
 from prism.completion import default_completion
 from prism.suggest import flag_from_error, suggest_flag
 from prism.version import Version
@@ -81,9 +81,9 @@ def _parse_command_from_args(command: Command, args: List[String]) -> Optional[T
 
 
 # Run flag actions if they have any
-def run_action(flag: Flag) raises -> None:
+def _run_flag_action(flag: Flag) raises -> None:
     if flag.action and flag.value:
-        flag.action[](flag.value[])
+        flag.action.value()(flag.value.value())
 
 
 @fieldwise_init
@@ -295,7 +295,6 @@ struct Command(Copyable, Writable):
 
         if self.aliases:
             writer.write(", Aliases: ", self.aliases)
-
         if self.valid_args:
             writer.write(", Valid Args: ", self.valid_args)
         if self.flags:
@@ -309,9 +308,8 @@ struct Command(Copyable, Writable):
             The full command name.
         """
         if self.has_parent():
-            return String.write(self.parent[].value().full_name(), " ", self.name)
-        else:
-            return self.name
+            return String(self.parent[].value().full_name(), " ", self.name)
+        return self.name
 
     def inherited_flags(self) -> FlagSet:
         """Returns the flags for the command and inherited flags from its parent.
@@ -426,7 +424,7 @@ struct Command(Copyable, Writable):
             if cmd.pre_run:
                 cmd.pre_run.value()(args, cmd.flags)
         except e:
-            self.error_writer("Failed to run pre-run hooks for command: " + cmd.name)
+            self.error_writer(String(t"Failed to run pre-run hooks for command: {cmd.name}"))
             raise e^
 
     def _execute_post_run_hooks(self, cmd: Self, args: List[String]) raises -> None:
@@ -457,7 +455,7 @@ struct Command(Copyable, Writable):
             if cmd.post_run:
                 cmd.post_run.value()(args, cmd.flags)
         except e:
-            self.error_writer("Failed to run post-run hooks for command: " + cmd.name)
+            self.error_writer(String(t"Failed to run post-run hooks for command: {cmd.name}"))
             raise e^
 
     def execute(mut self, var args: List[String]) -> None:
@@ -510,7 +508,7 @@ struct Command(Copyable, Writable):
         # Merge persistent flags from ancestors.
         cmd[]._merge_flags()
 
-        var remaining_args: Span[String, origin_of(input_args)].Immutable
+        var remaining_args: List[String]
         try:
             remaining_args = cmd[].flags.from_args(args)
         except e:
@@ -535,7 +533,15 @@ struct Command(Copyable, Writable):
         try:
             # Check if the help flag was passed
             if cmd[].flags.get_bool(self.help.flag.name):
-                self.output_writer(self.help.action(cmd))
+                var help_context = HelpContext(
+                    full_name=cmd[].full_name(),
+                    usage=cmd[].usage,
+                    args_usage=cmd[].args_usage,
+                    flags=cmd[].flags.flags.copy(),
+                    children=[(child[].name, child[].usage) for child in cmd[].children],
+                    aliases=cmd[].aliases.copy()
+                )
+                self.output_writer(self.help.action(help_context))
                 return
 
             # Check if the version flag was passed
@@ -562,15 +568,14 @@ struct Command(Copyable, Writable):
 
             # Run flag actions if they have any
             # TODO: Renable flag actions
-            # cmd[].flags.visit_all[run_action]()
+            cmd[].flags.visit_all[_run_flag_action]()
 
             # Validate the remaining arguments
-            var final_args = List[String](remaining_args)
-            cmd[].arg_validator(final_args, self.valid_args)
+            cmd[].arg_validator(remaining_args, self.valid_args)
 
             # Run the function's commands.
-            self._execute_pre_run_hooks(cmd[], final_args)
-            cmd[].run(final_args, cmd[].flags)
-            self._execute_post_run_hooks(cmd[], final_args)
+            self._execute_pre_run_hooks(cmd[], remaining_args)
+            cmd[].run(remaining_args, cmd[].flags)
+            self._execute_post_run_hooks(cmd[], remaining_args)
         except e:
             self.exit(e)

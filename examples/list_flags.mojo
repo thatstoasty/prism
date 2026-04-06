@@ -7,7 +7,7 @@ fn test(args: List[String], flags: FlagSet) raises -> None:
         print("Received no names to print.")
         return
 
-    print("Hello", StaticString(" ").join(name.value()))
+    print("Hello", " ".join(name.value()))
 
 
 fn sum(args: List[String], flags: FlagSet) raises -> None:

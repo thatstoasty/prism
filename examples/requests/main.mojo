@@ -1,6 +1,4 @@
-from memory import ArcPointer
-from python import Python
-
+from std.python import Python
 import prism
 from prism import Command, Flag, FlagSet, read_args
 
@@ -60,57 +58,53 @@ fn get_dog_breeds(args: List[String], flags: FlagSet) raises -> None:
         raise Error("Request failed!")
 
 
-fn pre_hook(args: List[String], flags: FlagSet) -> None:
+fn pre_hook(args: List[String], flags: FlagSet) raises -> None:
     print("Pre-hook executed!")
 
 
-fn post_hook(args: List[String], flags: FlagSet) -> None:
+fn post_hook(args: List[String], flags: FlagSet) raises -> None:
     print("Post-hook executed!")
 
 
 fn main() -> None:
-    var cat_command = ArcPointer(
-        Command(
-            name="cat",
-            usage="Get some cat facts!",
-            run=get_cat_fact,
-            flags=List[Flag](
-                Flag.int(
-                    name="count",
-                    shorthand="c",
-                    usage="Number of facts to get.",
-                )
-            ),
-        )
+    var cat_command = Command(
+        name="cat",
+        usage="Get some cat facts!",
+        run=get_cat_fact,
+        flags=[
+            Flag.int(
+                name="count",
+                shorthand="c",
+                usage="Number of facts to get.",
+            )
+        ],
     )
 
-    var dog_command = ArcPointer(
-        Command(
-            name="dog",
-            usage="Get some dog breeds!",
-            run=get_dog_breeds,
-        )
+
+    var dog_command = Command(
+        name="dog",
+        usage="Get some dog breeds!",
+        run=get_dog_breeds,
     )
 
-    var get_command = ArcPointer(
-        Command(
-            name="get",
-            usage="Base command for getting some data.",
-            run=print_information,
-            persistent_pre_run=pre_hook,
-            persistent_post_run=post_hook,
-            flags=List[Flag](
-                Flag.bool(
-                    name="lover",
-                    shorthand="l",
-                    usage="Are you an animal lover?",
-                    persistent=True,
-                )
-            ),
-            children=List[ArcPointer[Command]](cat_command, dog_command),
-        )
+
+    var get_command = Command(
+        name="get",
+        usage="Base command for getting some data.",
+        run=print_information,
+        persistent_pre_run=pre_hook,
+        persistent_post_run=post_hook,
+        flags=[
+            Flag.bool(
+                name="lover",
+                shorthand="l",
+                usage="Are you an animal lover?",
+                persistent=True,
+            )
+        ],
+        children=[cat_command.copy(), dog_command.copy()],
     )
 
-    var root = Command(name="nested", usage="Base command.", run=base, children=[get_command])
+    var root = Command(name="nested", usage="Base command.", run=base, children=[get_command.copy()])
 
     root.execute(read_args())

@@ -1,5 +1,4 @@
-from memory import ArcPointer
-from python import Python
+from std.python import Python
 
 from prism import Command, Flag, FlagSet, read_args
 
@@ -61,10 +60,10 @@ fn main() -> None:
         name="cat",
         usage="Get some cat facts!",
         run=get_cat_fact,
-        flags=List[Flag](
+        flags=[
             Flag.int(name="count", shorthand="c", usage="Number of facts to get.", default=1),
             Flag.bool(name="lover", shorthand="l", usage="Are you a cat lover?"),
-        ),
+        ],
     )
 
     var dog_command = Command(
@@ -78,12 +77,12 @@ fn main() -> None:
         usage="Base command.",
         run=base,
         children=[
-            ArcPointer(Command(
+            Command(
                 name="get",
                 usage="Base command for getting some data.",
                 run=print_information,
-                children=[ArcPointer(cat_command^), ArcPointer(dog_command^)],
-            ))
+                children=[cat_command.copy(), dog_command.copy()],
+            )
         ],
     )
 
