@@ -14,7 +14,7 @@ struct HelpContext:
     var aliases: List[String]
 
 
-comptime HelpFn = def (HelpContext) raises -> String
+comptime HelpFn = def (HelpContext) raises thin -> String
 """The function to generate help output."""
 
 
@@ -47,10 +47,10 @@ def default_help(cmd: HelpContext) raises -> String:
         var widest_flag = 0
         var widest_shorthand = 0
         for flag in cmd.flags:
-            if len(flag.name) > widest_flag:
-                widest_flag = len(flag.name)
-            if len(flag.shorthand) > widest_shorthand:
-                widest_shorthand = len(flag.shorthand)
+            if flag.name.byte_length() > widest_flag:
+                widest_flag = flag.name.byte_length()
+            if flag.shorthand.byte_length() > widest_shorthand:
+                widest_shorthand = flag.shorthand.byte_length()
 
         comptime USAGE_PADDING = 4
         option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING

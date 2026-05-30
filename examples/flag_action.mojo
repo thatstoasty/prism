@@ -1,19 +1,19 @@
 from prism import Command, Flag, FlagSet, read_args
 
 
-fn test(args: List[String], flags: FlagSet) raises -> None:
+def test(args: List[String], flags: FlagSet) raises -> None:
     if name := flags.get_string("name"):
         print("Hello", name[])
     else:
         print("Hello World")
 
 
-fn validate_name(value: String) raises -> None:
+def validate_name(value: String) raises -> None:
     if value != "Mikhail":
         raise Error("ValueError: Name provided is not permitted.")
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="greet",
         usage="Greet a user!",

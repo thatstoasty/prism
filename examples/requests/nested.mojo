@@ -3,17 +3,17 @@ from std.python import Python
 from prism import Command, Flag, FlagSet, read_args
 
 
-fn base(args: List[String], flags: FlagSet) -> None:
+def base(args: List[String], flags: FlagSet) -> None:
     print("This is the base command!")
     return None
 
 
-fn print_information(args: List[String], flags: FlagSet) -> None:
+def print_information(args: List[String], flags: FlagSet) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
     return None
 
 
-fn get_cat_fact(args: List[String], flags: FlagSet) raises -> None:
+def get_cat_fact(args: List[String], flags: FlagSet) raises -> None:
     var lover = flags.get_bool("lover")
     if lover:
         print("Hello fellow cat lover!")
@@ -39,7 +39,7 @@ fn get_cat_fact(args: List[String], flags: FlagSet) raises -> None:
             raise Error("Request failed!")
 
 
-fn get_dog_breeds(args: List[String], flags: FlagSet) raises -> None:
+def get_dog_breeds(args: List[String], flags: FlagSet) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = "https://dog.ceo/api/breeds/list/all"
@@ -55,7 +55,7 @@ fn get_dog_breeds(args: List[String], flags: FlagSet) raises -> None:
         raise Error("Request failed!")
 
 
-fn main() -> None:
+def main() -> None:
     var cat_command = Command(
         name="cat",
         usage="Get some cat facts!",

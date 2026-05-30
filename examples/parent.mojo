@@ -1,7 +1,7 @@
 from prism import Command, Flag, FlagSet, read_args
 
 
-fn test(args: List[String], flags: FlagSet) raises -> None:
+def test(args: List[String], flags: FlagSet) raises -> None:
     var host = flags.get_string("host")
     var port = flags.get_string("port")
 
@@ -11,11 +11,11 @@ fn test(args: List[String], flags: FlagSet) raises -> None:
         print(host[] + ":" + port[])
 
 
-fn tool_func(args: List[String], flags: FlagSet) -> None:
+def tool_func(args: List[String], flags: FlagSet) -> None:
     print("My tool!")
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="my",
         usage="This is a dummy command!",

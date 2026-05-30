@@ -5,7 +5,7 @@ import prism
 from prism import Command, Flag, FlagSet, exact_args, read_args
 
 
-fn printer(args: List[String], flags: FlagSet) raises -> None:
+def printer(args: List[String], flags: FlagSet) raises -> None:
     if len(args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
@@ -29,15 +29,15 @@ fn printer(args: List[String], flags: FlagSet) raises -> None:
     print(style.render(args[0]))
 
 
-fn pre_hook(args: List[String], flags: FlagSet) raises -> None:
+def pre_hook(args: List[String], flags: FlagSet) raises -> None:
     print("Pre-hook executed!")
 
 
-fn post_hook(args: List[String], flags: FlagSet) raises -> None:
+def post_hook(args: List[String], flags: FlagSet) raises -> None:
     print("Post-hook executed!")
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="printer",
         usage="Base command.",

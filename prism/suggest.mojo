@@ -18,25 +18,27 @@ def jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
     #### Notes:
         Adapted from: https://github.com/urfave/cli/blob/main/suggestions.go#L24."""
 
-    if len(a) == 0 and len(b) == 0:
+    if a.byte_length() == 0 and b.byte_length() == 0:
         return 1.0
 
-    if len(a) == 0 or len(b) == 0:
+    if a.byte_length() == 0 or b.byte_length() == 0:
         return 0.0
 
-    var hash_a = List[Bool](length=len(a), fill=False)
-    var hash_b = List[Bool](length=len(b), fill=False)
+    var a_grapheme_count = a.count_graphemes()
+    var b_grapheme_count = b.count_graphemes()
+    var hash_a = List[Bool](length=a_grapheme_count, fill=False)
+    var hash_b = List[Bool](length=b_grapheme_count, fill=False)
 
-    var max_distance = Int(max(Float64(0), math.floor(Float64(max(len(a), len(b))) / 2.0) - 1))
+    var max_distance = Int(max(Float64(0), math.floor(Float64(max(a_grapheme_count, b_grapheme_count)) / 2.0) - 1))
     var matches: Float64 = 0.0
-    for i in range(len(a)):
+    for i in range(a_grapheme_count):
         var start = Int(max(Float64(0), Float64(i - max_distance)))
-        var end = Int(min(Float64(len(b) - 1), Float64(i + max_distance)))
+        var end = Int(min(Float64(b_grapheme_count - 1), Float64(i + max_distance)))
 
         for j in range(start, end + 1):
             if hash_b[j]:
                 continue
-            if a[byte=i:i+1] == b[byte=j:j+1]:
+            if a[grapheme=i:i+1] == b[grapheme=j:j+1]:
                 hash_a[i] = True
                 hash_b[j] = True
                 matches += 1.0
@@ -47,17 +49,17 @@ def jaro_distance(a: StringSlice, b: StringSlice) -> Float64:
 
     var transpositions: Float64 = 0.0
     var j = 0
-    for i in range(len(a)):
+    for i in range(a_grapheme_count):
         if not hash_a[i]:
             continue
         while not hash_b[j]:
             j += 1
-        if a[byte=i:i+1] != b[byte=j:j+1]:
+        if a[grapheme=i:i+1] != b[grapheme=j:j+1]:
             transpositions += 1.0
         j += 1
 
     transpositions /= 2.0
-    return ((matches / Float64(len(a))) + (matches / Float64(len(b))) + ((matches - transpositions) / matches)) / 3.0
+    return ((matches / Float64(a_grapheme_count)) + (matches / Float64(b_grapheme_count)) + ((matches - transpositions) / matches)) / 3.0
 
 
 def jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
@@ -83,10 +85,10 @@ def jaro_winkler(a: StringSlice, b: StringSlice) -> Float64:
     if jaro_dist <= BOOST_THRESHOLD:
         return jaro_dist
 
-    var prefix = Int(min(len(a), min(PREFIX_SIZE, len(b))))
+    var prefix = Int(min(a.count_graphemes(), min(PREFIX_SIZE, b.count_graphemes())))
     var prefix_match: Float64 = 0.0
     for i in range(prefix):
-        if a[byte=i:i+1] == b[byte=i:i+1]:
+        if a[grapheme=i:i+1] == b[grapheme=i:i+1]:
             prefix_match += 1.0
         else:
             break
@@ -116,9 +118,9 @@ def suggest_flag[origin: ImmutOrigin, //](flags: Span[Flag, origin], flag_name: 
                 distance = new_distance
                 suggestion = name
 
-    if len(suggestion) == 1:
+    if suggestion.byte_length() == 1:
         suggestion = String("-", suggestion)
-    elif len(suggestion) > 1:
+    elif suggestion.byte_length() > 1:
         suggestion = String("--", suggestion)
 
     return suggestion^

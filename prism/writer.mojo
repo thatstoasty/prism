@@ -1,7 +1,7 @@
 from std.sys import stderr
 
 
-comptime WriterFn = def (String) -> None
+comptime WriterFn = def (String) thin -> None
 """The function to call when writing output or errors."""
 
 

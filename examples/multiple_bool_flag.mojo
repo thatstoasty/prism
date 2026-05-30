@@ -1,7 +1,7 @@
 from prism import Command, Flag, FlagSet, read_args
 
 
-fn test(args: List[String], flags: FlagSet) raises -> None:
+def test(args: List[String], flags: FlagSet) raises -> None:
     if flags.get_bool("required"):
         print("Required flag is set!")
     if flags.get_bool("automation"):
@@ -15,7 +15,7 @@ fn test(args: List[String], flags: FlagSet) raises -> None:
         print("Arguments:", args)
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="my",
         usage="This is a dummy command!",

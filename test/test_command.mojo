@@ -7,7 +7,7 @@ import prism
 
 
 def test_command_operations() raises:
-    fn dummy(args: List[String], flags: FlagSet) -> None:
+    def dummy(args: List[String], flags: FlagSet) -> None:
         return None
 
     var cmd = Command(

@@ -376,5 +376,5 @@ def test_completion_valid_args_includes_bash() raises:
             break
 
 
-fn main() raises:
+def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

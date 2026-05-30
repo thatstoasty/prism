@@ -3,7 +3,7 @@ from prism.flag import Flag, FType
 from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER
 
 
-fn _bash_escape(s: StringSlice, mut writer: Some[Writer]):
+def _bash_escape(s: StringSlice, mut writer: Some[Writer]):
     """Escapes special characters in a string for use in bash completion descriptions.
 
     Single quotes in descriptions need to be escaped for bash.
@@ -21,7 +21,7 @@ fn _bash_escape(s: StringSlice, mut writer: Some[Writer]):
             writer.write(c)
 
 
-fn _write_opts[origin: ImmutOrigin, //](flag_names: Span[String, origin], mut builder: Some[Writer]):
+def _write_opts[origin: ImmutOrigin, //](flag_names: Span[String, origin], mut builder: Some[Writer]):
     """Writes the opts string for bash completion.
 
     Args:
@@ -35,7 +35,7 @@ fn _write_opts[origin: ImmutOrigin, //](flag_names: Span[String, origin], mut bu
         builder.write(flag_names[i])
 
 
-fn _bash_command_function(
+def _bash_command_function(
     cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
 ) raises -> String:
     """Generates a bash completion function for a single command.
@@ -158,7 +158,7 @@ fn _bash_command_function(
     return builder^
 
 
-fn _bash_functions_recursive(
+def _bash_functions_recursive(
     cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
 ) raises -> String:
     """Recursively generates bash completion functions for a command and all its children.
@@ -185,7 +185,7 @@ fn _bash_functions_recursive(
     return builder^
 
 
-fn generate_bash_completion(cmd: Command) raises -> String:
+def generate_bash_completion(cmd: Command) raises -> String:
     """Generates a complete bash completion script for the given command tree.
 
     The generated script uses bash's `complete` builtin and `compgen` for

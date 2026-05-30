@@ -124,7 +124,7 @@ struct FlagParser[origin: ImmutOrigin](Writable):
         # Flag with value set like "-f <value>"
         var state = ShorthandParserState.START
         var start = 1
-        var end = len(argument)
+        var end = argument.byte_length()
         var flag_names = List[String]()
         while start != end:
             var shorthand = argument[byte=start:end]
@@ -160,7 +160,7 @@ struct FlagParser[origin: ImmutOrigin](Writable):
 
                     flag_names.append(flag.value()[].name)
                     start = end
-                    end = len(argument)
+                    end = argument.byte_length()
                     # Reached the end of the parser, all flags have been matched and will be set to true.
                     if start == end:
                         return ParseShorthandFlagResult(names=flag_names^, value="True", increment=1)
@@ -203,5 +203,5 @@ struct FlagParser[origin: ImmutOrigin](Writable):
             "FlagParser._parse_shorthand_flag: Parsed out the following flag: ",
             flag_names,
             ". Could not find a match for the remaining flags: ",
-            argument[byte=start : len(argument)],
+            argument[byte=start : argument.byte_length()],
         )

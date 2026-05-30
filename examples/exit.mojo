@@ -3,11 +3,11 @@ from std.sys import exit
 from prism import Command, FlagSet, read_args
 
 
-fn test(args: List[String], flags: FlagSet) raises -> None:
+def test(args: List[String], flags: FlagSet) raises -> None:
     raise Error("Error: Exit Code 2")
 
 
-fn my_exit(e: Error) -> None:
+def my_exit(e: Error) -> None:
     if String(e) == "Error: Exit Code 2":
         print("Exiting with code 2")
         exit(2)
@@ -15,7 +15,7 @@ fn my_exit(e: Error) -> None:
         exit(1)
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",

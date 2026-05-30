@@ -1,7 +1,7 @@
 from prism import Command, Flag, FlagSet, read_args
 
 
-fn printer(args: List[String], flags: FlagSet) -> None:
+def printer(args: List[String], flags: FlagSet) -> None:
     if len(args) == 0:
         print("No args provided.")
         return
@@ -9,19 +9,19 @@ fn printer(args: List[String], flags: FlagSet) -> None:
     print(args[0])
 
 
-fn say(args: List[String], flags: FlagSet) -> None:
+def say(args: List[String], flags: FlagSet) -> None:
     print("Shouldn't be here!")
 
 
-fn say_hello(args: List[String], flags: FlagSet) -> None:
+def say_hello(args: List[String], flags: FlagSet) -> None:
     print("Hello World!")
 
 
-fn say_goodbye(args: List[String], flags: FlagSet) -> None:
+def say_goodbye(args: List[String], flags: FlagSet) -> None:
     print("Goodbye World!")
 
 
-fn test(args: List[String], flags: FlagSet) -> None:
+def test(args: List[String], flags: FlagSet) -> None:
     if env := flags.get_string("env"):
         print("Env:", env.value())
     else:
@@ -34,7 +34,7 @@ fn test(args: List[String], flags: FlagSet) -> None:
             print(item.name, "N/A")
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="tones",
         usage="This is a dummy command!",

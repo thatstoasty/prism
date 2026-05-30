@@ -1,6 +1,6 @@
 from prism.flag import Flag
 
-comptime VersionFn = def (String) -> String
+comptime VersionFn = def (String) thin -> String
 """The function to call when the version flag is passed."""
 
 

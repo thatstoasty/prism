@@ -1,7 +1,7 @@
 [workspace]
 description = "A budding CLI Library!"
 authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
-channels = ["conda-forge", "https://conda.modular.com/max", "https://prefix.dev/pixi-build-backends"]
+channels = ["conda-forge", "https://conda.modular.com/max"]
 platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
 license = "MIT"
 license-file = "LICENSE"
@@ -26,22 +26,22 @@ build_and_publish = [{ task = "build" }, { task = "publish" }]
 
 [package]
 name = "prism"
-version = "0.2.0"
+version = "0.3.0"
 
 [package.build]
 backend = { name = "pixi-build-mojo", version = "*" }
 
 [dependencies]
-mojo = ">=0.26.2.0,<0.26.3.0"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.1.0" }
+mojo = ">=1.0.0b1,<1.0.0b2"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.0" }
 
 [package.build-dependencies]
-mojo-compiler = ">=0.26.2.0,<0.26.3.0"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.1.0" }
+mojo-compiler = ">=1.0.0b1,<1.0.0b2"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.0" }
 
 [package.host-dependencies]
-mojo = ">=0.26.2.0,<0.26.3.0"
+mojo = ">=1.0.0b1,<1.0.0b2"
 
 [package.run-dependencies]
-mojo = ">=0.26.2.0,<0.26.3.0"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.1.0" }
+mojo = ">=1.0.0b1,<1.0.0b2"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.0" }

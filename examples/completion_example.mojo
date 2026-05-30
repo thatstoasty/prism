@@ -15,23 +15,23 @@ Install Bash completions:
 from prism import Command, FlagSet, Flag, read_args
 
 
-fn serve(args: List[String], flags: FlagSet) raises -> None:
+def serve(args: List[String], flags: FlagSet) raises -> None:
     print("Starting server...")
 
 
-fn build(args: List[String], flags: FlagSet) raises -> None:
+def build(args: List[String], flags: FlagSet) raises -> None:
     print("Building project...")
 
 
-fn deploy(args: List[String], flags: FlagSet) raises -> None:
+def deploy(args: List[String], flags: FlagSet) raises -> None:
     print("Deploying...")
 
 
-fn base(args: List[String], flags: FlagSet) raises -> None:
+def base(args: List[String], flags: FlagSet) raises -> None:
     print("Use --help for usage information.")
 
 
-fn main():
+def main():
     var cli = Command(
         name="myapp",
         usage="An example CLI with shell completions.",
