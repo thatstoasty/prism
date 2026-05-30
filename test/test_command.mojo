@@ -29,5 +29,17 @@ def test_command_operations() raises:
     # testing.assert_equal(child_cmd[].full_name(), "root child")
 
 
+def test_unicode_command_name() raises:
+    def dummy(args: List[String], flags: FlagSet) -> None:
+        return None
+
+    var cmd = Command(
+        name="ルート",
+        usage="Base command with a unicode name.",
+        run=dummy,
+    )
+    testing.assert_equal(cmd.name, "ルート")
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

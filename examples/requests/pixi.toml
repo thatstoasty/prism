@@ -10,6 +10,6 @@ preview = ["pixi-build"]
 [tasks]
 
 [dependencies]
-mojo = ">=0.26.2.0,<0.26.3.0"
+mojo = ">=1.0.0b1,<1.0.0b2"
 prism = { path = "../.." }
 requests = ">=2.32.3,<3"

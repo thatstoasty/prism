@@ -43,6 +43,11 @@ def test_jaro_distance() raises:
             b="SMELLYFISH",
             expected=0.8962962963,
         ),
+        TestCase(
+            a="café",
+            b="cafe",
+            expected=0.8333333333,
+        ),
     ]
 
     for test_case in test_cases:
@@ -116,6 +121,11 @@ def test_jaro_winkler() raises:
             b="aa",
             expected=0.6666666666666666,
         ),
+        TestCase(
+            a="café",
+            b="cafe",
+            expected=0.8833333333,
+        ),
     ]
 
     for test_case in test_cases:
@@ -176,7 +186,7 @@ def test_suggest_flag() raises:
 def test_flag_from_error() raises:
     var error = Error("An Error Occurred. Name: unknown")
     var result = flag_from_error(error)
-    testing.assert_equal(result.value(), String("unknown"))
+    testing.assert_equal(result.value(), "unknown")
 
 
 def test_flag_from_error_wrong_error() raises:
