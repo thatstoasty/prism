@@ -14,7 +14,7 @@ from prism.flag import Flag, FlagActionFn, FType, Annotation
 
 comptime FlagVisitorFn = def (Flag) thin -> None
 """Function perform some action while visiting all flags."""
-comptime FlagVisitorRaisingFn = def (Flag) thin raises -> None
+comptime FlagVisitorRaisingFn = def (Flag) raises thin -> None
 """Function perform some action while visiting all flags. Can raise."""
 
 
