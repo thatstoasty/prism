@@ -285,5 +285,20 @@ def test_float64_list() raises:
     testing.assert_equal(result[1], Float64(1))
 
 
+def test_unicode_flag_name() raises:
+    var cmd = Command(
+        name="root",
+        usage="Base command.",
+        run=dummy,
+        flags=[
+            Flag.string(name="cléf", usage="usage", default="valeur"),
+        ],
+    )
+
+    var flag = cmd.flags.lookup[FType.String]("cléf")
+    testing.assert_equal(flag.value()[].name, "cléf")
+    testing.assert_equal(cmd.flags.get_string("cléf").value(), "valeur")
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

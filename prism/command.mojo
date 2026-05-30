@@ -18,11 +18,11 @@ comptime ENABLE_TRAVERSE_RUN_HOOKS = get_defined_bool["PRISM_TRAVERSE_RUN_HOOKS"
 If False, starts from the child command and goes up the parent chain. If True, starts from root and goes down."""
 
 
-comptime CmdFn = def (args: List[String], flags: FlagSet) raises -> None
+comptime CmdFn = def (args: List[String], flags: FlagSet) raises thin -> None
 """The function for a command to run."""
-comptime ParentVisitorFn = def (Command) capturing -> None
+comptime ParentVisitorFn = def (Command) capturing thin -> None
 """The function for visiting parents of a command."""
-comptime RaisingParentVisitorFn = def (Command) capturing raises -> None
+comptime RaisingParentVisitorFn = def (Command) capturing raises thin -> None
 """The function for visiting parents of a command."""
 
 

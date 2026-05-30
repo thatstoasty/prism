@@ -1,15 +1,15 @@
 from prism import Command, Flag, FlagSet, Version, read_args
 
 
-fn test(args: List[String], flags: FlagSet) -> None:
+def test(args: List[String], flags: FlagSet) -> None:
     print("Pass -v to see the version!")
 
 
-fn version(version: String) -> String:
+def version(version: String) -> String:
     return String("MyCLI version: ", version)
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",

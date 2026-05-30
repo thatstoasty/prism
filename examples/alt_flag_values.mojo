@@ -3,7 +3,7 @@ from std import os
 from prism import Command, Flag, FlagSet, read_args
 
 
-fn test(args: List[String], flags: FlagSet) -> None:
+def test(args: List[String], flags: FlagSet) -> None:
     var name = flags.get_string("name")
     if name:
         print("Hello", name.value())
@@ -11,7 +11,7 @@ fn test(args: List[String], flags: FlagSet) -> None:
         print("Hello World")
 
 
-fn main() -> None:
+def main() -> None:
     _ = os.setenv("NAME", "Mikhail")
     var cli = Command(
         name="greet",

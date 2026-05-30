@@ -3,18 +3,18 @@ from std.sys import exit, stderr
 from prism import Command, Flag, FlagSet, Version, no_args, read_args
 
 
-fn base(args: List[String], flags: FlagSet) -> None:
+def base(args: List[String], flags: FlagSet) -> None:
     print("Pass a subcommand!")
 
 
-fn connect(args: List[String], flags: FlagSet) raises -> None:
+def connect(args: List[String], flags: FlagSet) raises -> None:
     if host := flags.get_string("host"):
         print("Connecting to", host.value())
     else:
         raise Error("Error: Exit Code 2")
 
 
-fn my_exit(e: Error) -> None:
+def my_exit(e: Error) -> None:
     print(e, file=stderr)
     if String(e) == "Error: Exit Code 2":
         print("Exiting with code 2")
@@ -23,7 +23,7 @@ fn my_exit(e: Error) -> None:
         exit(1)
 
 
-fn allow_hosts(args: List[String], flags: FlagSet) raises -> None:
+def allow_hosts(args: List[String], flags: FlagSet) raises -> None:
     var hosts = flags.get_string_list("hosts")
     if not hosts:
         print("Received no names to print.")
@@ -32,11 +32,11 @@ fn allow_hosts(args: List[String], flags: FlagSet) raises -> None:
     print("Allowing: ", hosts.value())
 
 
-fn version(version: String) -> String:
+def version(version: String) -> String:
     return "MyCLI version: " + version
 
 
-fn validate_hosts(value: String) raises -> None:
+def validate_hosts(value: String) raises -> None:
     var approved_hosts: List[String] = ["localhost", "0.0.0.0", "192.168.1.1"]
     var hosts = value.split(" ")
     for host in hosts:
@@ -49,7 +49,7 @@ fn validate_hosts(value: String) raises -> None:
             )
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="connector",
         usage="Base Command.",

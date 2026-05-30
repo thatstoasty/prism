@@ -1,4 +1,4 @@
-comptime FlagActionFn = def (String) raises -> None
+comptime FlagActionFn = def (String) raises thin -> None
 """The type of a function that runs after a flag has been processed."""
 
 
@@ -252,7 +252,7 @@ struct Flag(Copyable, Writable):
         self.changed = True
 
     def get_with_transform[
-        T: ImplicitlyCopyable, //, transform: def (value: StringSlice) -> T
+        T: ImplicitlyCopyable, //, transform: def (value: StringSlice) thin -> T
     ](self) -> Optional[T]:
         """Returns the value of the flag with a transformation applied to it.
 

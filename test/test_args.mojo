@@ -67,5 +67,5 @@ def test_range_args() raises:
 #         )
 
 
-fn main() raises:
+def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

@@ -9,7 +9,7 @@ from prism._flag_group import (
 from std.testing import TestSuite
 
 
-fn make_test_data(required: Bool, alternative: Bool) -> Dict[String, Dict[String, Bool]]:
+def make_test_data(required: Bool, alternative: Bool) -> Dict[String, Dict[String, Bool]]:
     return {"group1": {"required": required, "alternative": alternative}}
 
 

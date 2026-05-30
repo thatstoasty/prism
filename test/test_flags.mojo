@@ -41,5 +41,20 @@ def test_parse() raises:
     testing.assert_equal(len(remaining_args), 0)
 
 
+def test_unicode_flag_name() raises:
+    var cmd = Command(
+        name="root",
+        usage="Base command.",
+        run=dummy,
+        flags=[
+            Flag.string(name="cléf", usage="usage"),
+        ],
+    )
+
+    var args: List[String] = ["--cléf=valeur", "positional"]
+    _ = cmd.flags.from_args(args)
+    testing.assert_equal(cmd.flags.get_string("cléf").value(), "valeur")
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

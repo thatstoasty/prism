@@ -376,5 +376,39 @@ def test_completion_valid_args_includes_bash() raises:
             break
 
 
-fn main() raises:
+def test_zsh_unicode_command_name() raises:
+    var cmd = Command(
+        name="über",
+        usage="Unicode root command.",
+        run=dummy,
+        children=[
+            Command(name="résumé", usage="Resume description.", run=dummy),
+        ],
+    )
+    var script = generate_zsh_completion(cmd)
+    std.testing.assert_true("#compdef über" in script)
+    std.testing.assert_true("_über()" in script)
+    std.testing.assert_true("compdef _über über" in script)
+    std.testing.assert_true("_über__résumé()" in script)
+    std.testing.assert_true("'résumé:Resume description.'" in script)
+    std.testing.assert_true("résumé) _über__résumé" in script)
+
+
+def test_bash_unicode_command_name() raises:
+    var cmd = Command(
+        name="über",
+        usage="Unicode root command.",
+        run=dummy,
+        children=[
+            Command(name="résumé", usage="Resume description.", run=dummy),
+        ],
+    )
+    var script = generate_bash_completion(cmd)
+    std.testing.assert_true("__über()" in script)
+    std.testing.assert_true("complete -F __über über" in script)
+    std.testing.assert_true("__über__résumé()" in script)
+    std.testing.assert_true("résumé" in script)
+
+
+def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

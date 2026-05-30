@@ -1,11 +1,11 @@
 from prism import Command, FlagSet, read_args
 
 
-fn test(args: List[String], flags: FlagSet) -> None:
+def test(args: List[String], flags: FlagSet) -> None:
     for arg in args:
         print("Received:", arg)
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(name="hello", usage="This is a dummy command!", run=test, suggest=True)
     cli.execute(read_args())

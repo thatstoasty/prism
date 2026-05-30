@@ -1,4 +1,4 @@
-comptime ArgValidatorFn = def (args: List[String], valid_args: List[String]) raises -> None
+comptime ArgValidatorFn = def (args: List[String], valid_args: List[String]) raises thin -> None
 """The function for an argument validator."""
 
 
@@ -126,7 +126,7 @@ def match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
     """
 
     def match_all_args(args: List[String], valid_args: List[String]) raises -> None:
-        comptime for i in range(Variadic.size(arg_validators)):
+        comptime for i in range(len(arg_validators)):
             arg_validators[i](args, valid_args)
 
     return match_all_args

@@ -15,5 +15,5 @@ version = "0.1.0"
 backend = { name = "pixi-build-mojo", version = "*" }
 
 [dependencies]
-mojo = ">=0.26.2.0,<0.26.3.0"
+mojo = ">=1.0.0b1,<1.0.0b2"
 prism = { path = "../.." }

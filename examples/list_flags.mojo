@@ -1,7 +1,7 @@
 from prism import Command, Flag, FlagSet, read_args
 
 
-fn test(args: List[String], flags: FlagSet) raises -> None:
+def test(args: List[String], flags: FlagSet) raises -> None:
     var name = flags.get_string_list("name")
     if not name:
         print("Received no names to print.")
@@ -10,7 +10,7 @@ fn test(args: List[String], flags: FlagSet) raises -> None:
     print("Hello", " ".join(name.value()))
 
 
-fn sum(args: List[String], flags: FlagSet) raises -> None:
+def sum(args: List[String], flags: FlagSet) raises -> None:
     var numbers = flags.get_int_list("number")
     if not numbers:
         print("Received no numbers to add.")
@@ -22,7 +22,7 @@ fn sum(args: List[String], flags: FlagSet) raises -> None:
     print("The sum is:", sum)
 
 
-fn sum_float(args: List[String], flags: FlagSet) raises -> None:
+def sum_float(args: List[String], flags: FlagSet) raises -> None:
     var numbers = flags.get_float64_list("number")
     if not numbers:
         print("Received no numbers to add.")
@@ -34,7 +34,7 @@ fn sum_float(args: List[String], flags: FlagSet) raises -> None:
     print("The sum is:", sum)
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="greet",
         usage="Greet a user!",

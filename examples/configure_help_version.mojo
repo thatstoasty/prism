@@ -1,11 +1,11 @@
 from prism import Command, Flag, FlagSet, Help, Version, read_args
 
 
-fn test(args: List[String], flags: FlagSet) -> None:
+def test(args: List[String], flags: FlagSet) -> None:
     print("Pass -ch to see helpful information!")
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",

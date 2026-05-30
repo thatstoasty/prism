@@ -11,16 +11,16 @@ from prism import (
 )
 
 
-fn test(args: List[String], flags: FlagSet) -> None:
+def test(args: List[String], flags: FlagSet) -> None:
     for arg in args:
         print("Received", arg)
 
 
-fn hello(args: List[String], flags: FlagSet) -> None:
+def hello(args: List[String], flags: FlagSet) -> None:
     print("Hello from Chromeria!")
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",

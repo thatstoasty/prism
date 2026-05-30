@@ -12,9 +12,9 @@ from prism._util import string_to_bool
 from prism.flag import Flag, FlagActionFn, FType, Annotation
 
 
-comptime FlagVisitorFn = def (Flag) -> None
+comptime FlagVisitorFn = def (Flag) thin -> None
 """Function perform some action while visiting all flags."""
-comptime FlagVisitorRaisingFn = def (Flag) raises -> None
+comptime FlagVisitorRaisingFn = def (Flag) raises thin -> None
 """Function perform some action while visiting all flags. Can raise."""
 
 
@@ -72,14 +72,14 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         self.flags = flags^
 
     @always_inline
-    def __init__(out self, var *values: Flag, __list_literal__: () = ()):
+    def __init__(out self, var *values: Flag, __list_literal__: NoneType):
         """Constructs a list from the given values.
 
         Args:
             values: The values to populate the list with.
             __list_literal__: Tell Mojo to use this method for list literals.
         """
-        self.flags = List[Flag](elements=values^)
+        self.flags = List[Flag](*values^, __list_literal__=__list_literal__)
 
     def __bool__(self) -> Bool:
         return Bool(self.flags)
