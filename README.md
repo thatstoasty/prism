@@ -48,13 +48,13 @@ Here's an example of a basic command and subcommand!
 ```mojo
 from prism import Command, FlagSet, read_args
 
-fn test(args: List[String], flags: FlagSet) -> None:
+def test(args: List[String], flags: FlagSet) -> None:
     print("Pass chromeria as a subcommand!")
 
-fn hello(args: List[String], flags: FlagSet) -> None:
+def hello(args: List[String], flags: FlagSet) -> None:
     print("Hello from Chromeria!")
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="hello",
         description="This is a dummy command!",
@@ -83,7 +83,7 @@ Due to the nature of self-referential structs, we need to use a smart pointer to
 ```mojo
 from prism import FlagSet
 
-fn printer(args: List[String], flags: FlagSet) raises -> None:
+def printer(args: List[String], flags: FlagSet) raises -> None:
     if len(args) == 0:
         raise Error("No args provided.")
 
@@ -98,7 +98,7 @@ Commands can also be aliased to enable different ways to call the same command. 
 ```mojo
 from prism import Command, read_args
 
-fn main():
+def main():
     var cli = Command(
         name="tool",
         description="This is a dummy command!",
@@ -117,13 +117,13 @@ Commands can be configured to run pre-hook and post-hook functions before and af
 ```mojo
 from prism import Command, FlagSet, read_args
 
-fn pre_hook(args: List[String], flags: FlagSet) -> None:
+def pre_hook(args: List[String], flags: FlagSet) -> None:
     print("Pre-hook executed!")
 
-fn post_hook(args: List[String], flags: FlagSet) -> None:
+def post_hook(args: List[String], flags: FlagSet) -> None:
     print("Post-hook executed!")
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="printer",
         description="Base command.",
@@ -143,7 +143,7 @@ Commands can have typed flags added to them to enable different behaviors.
 ```mojo
 from prism import Command, Flag, read_args
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="logger",
         description="Base command.",
@@ -168,11 +168,11 @@ Flag values can also be retrieved from environment variables, if a value is not 
 ```mojo
 from prism import Command, Flag, FlagSet, read_args
 
-fn test(args: List[String], flags: FlagSet) raises -> None:
+def test(args: List[String], flags: FlagSet) raises -> None:
     if name := flags.get_string("name"):
         print("Hello ", name[])
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="greet",
         usage="Greet a user!",
@@ -197,11 +197,11 @@ Likewise, flag values can also be retrieved from a file as well, if a value is n
 from prism import Command, Flag, FlagSet, read_args
 import prism
 
-fn test(args: List[String], flags: FlagSet) raises -> None:
+def test(args: List[String], flags: FlagSet) raises -> None:
     if name := flags.get_string("name"):
         print("Hello ", name[])
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="greet",
         usage="Greet a user!",
@@ -234,7 +234,7 @@ Flags and hooks can also be inherited by children commands! This can be useful f
 ```mojo
 from prism import Command, Flag, read_args
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="nested",
         description="Base command.",
@@ -271,7 +271,7 @@ By default flags are considered optional. If you want your command to report an 
 ```mojo
 from prism import Command, Flag, FlagSet, read_args
 
-fn main():
+def main():
     var cli = Command(
         name="tool",
         description="This is a dummy command!",
@@ -296,7 +296,7 @@ If you have different flags that must be provided together (e.g. if they provide
 ```mojo
 from prism import Command, Flag, read_args
 
-fn main():
+def main():
     var cli = Command(
         name="tool",
         description="This is a dummy command!",
@@ -325,7 +325,7 @@ You can also prevent different flags from being provided together if they repres
 ```mojo
 from prism import Command, Flag, read_args
 
-fn main():
+def main():
    var cli = Command(
         name="tool",
         description="This is a dummy command!",
@@ -355,7 +355,7 @@ If you want to require at least one flag from a group to be present, you can use
 ```mojo
 from prism import Command, Flag, read_args
 
-fn main():
+def main():
    var cli = Command(
         name="tool",
         description="This is a dummy command!",
@@ -396,7 +396,7 @@ If a flag is not provided, you can suggest an alternative flag to the user. This
 from prism import Command, Flag, read_args
 import prism
 
-fn main():
+def main():
     var cli = Command(
         name="tool",
         description="This is a dummy command!",
@@ -462,10 +462,10 @@ Commands are configured to accept a `--help` and `-h` flag by default. This will
 ```mojo
 from prism import Command, FlagSet, Flag, Help, read_args
 
-fn help_func(args: List[String], flags: FlagSet) -> String:
+def help_func(args: List[String], flags: FlagSet) -> String:
     return "My help function."
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="hello",
         description="This is a dummy command!",
@@ -487,13 +487,13 @@ Commands can be configured to accept `--version` and `-v` flag to run a version 
 ```mojo
 from prism import Command, FlagSet, Version, Flag, read_args
 
-fn test(args: List[String], flags: FlagSet) -> None:
+def test(args: List[String], flags: FlagSet) -> None:
     print("Pass -v to see the version!")
 
-fn version(version: String) -> String:
+def version(version: String) -> String:
     return "MyCLI version: " + version
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",
@@ -515,16 +515,16 @@ The standard output and error output behavior can be customized by providing wri
 from prism import Command, FlagSet, read_args
 from sys import stderr
 
-fn my_output_writer(arg: String):
+def my_output_writer(arg: String):
     print(arg)
 
-fn my_error_writer(arg: String):
+def my_error_writer(arg: String):
     print(arg, file=stderr)
 
-fn test(args: List[String], flags: FlagSet) -> None:
+def test(args: List[String], flags: FlagSet) -> None:
     print("Pass -v to see the version!")
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",
@@ -543,11 +543,11 @@ Commands can additionally read arguments in from `stdin`. Set `read_from_stdin` 
 ```mojo
 from prism import Command, FlagSet, read_args
 
-fn test(args: List[String], flags: FlagSet) -> None:
+def test(args: List[String], flags: FlagSet) -> None:
     for arg in args:
         print("Received:", arg)
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",
@@ -566,18 +566,18 @@ from prism import Command, FlagSet, read_args
 from sys import exit
 
 
-fn test(args: List[String], flags: FlagSet) raises -> None:
+def test(args: List[String], flags: FlagSet) raises -> None:
     raise Error("Error: Exit Code 2")
 
 
-fn my_exit(e: Error) -> None:
+def my_exit(e: Error) -> None:
     if e.as_string_slice() == "Error: Exit Code 2":
         exit(2)
     else:
         exit(1)
 
 
-fn main() -> None:
+def main() -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",
