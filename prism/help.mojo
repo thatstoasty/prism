@@ -47,10 +47,10 @@ def default_help(cmd: HelpContext) raises -> String:
         var widest_flag = 0
         var widest_shorthand = 0
         for flag in cmd.flags:
-            if flag.name.byte_length() > widest_flag:
-                widest_flag = flag.name.byte_length()
-            if flag.shorthand.byte_length() > widest_shorthand:
-                widest_shorthand = flag.shorthand.byte_length()
+            if flag.name.count_graphemes() > widest_flag:
+                widest_flag = flag.name.count_graphemes()
+            if flag.shorthand.count_graphemes() > widest_shorthand:
+                widest_shorthand = flag.shorthand.count_graphemes()
 
         comptime USAGE_PADDING = 4
         option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
