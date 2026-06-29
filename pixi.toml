@@ -26,22 +26,22 @@ build_and_publish = [{ task = "build" }, { task = "publish" }]
 
 [package]
 name = "prism"
-version = "0.3.0"
+version = "0.3.1"
 
 [package.build]
 backend = { name = "pixi-build-mojo", version = "*" }
 
 [dependencies]
-mojo = ">=1.0.0b1,<1.0.0b2"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.0" }
+mojo = ">=1.0.0b2,<2"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.1" }
 
 [package.build-dependencies]
-mojo-compiler = ">=1.0.0b1,<1.0.0b2"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.0" }
+mojo-compiler = ">=1.0.0b2,<1.0.0b3"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.1" }
 
 [package.host-dependencies]
-mojo = ">=1.0.0b1,<1.0.0b2"
+mojo = ">=1.0.0b2,<1.0.0b3"
 
 [package.run-dependencies]
-mojo = ">=1.0.0b1,<1.0.0b2"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.0" }
+mojo = ">=1.0.0b2,<1.0.0b3"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.1" }
