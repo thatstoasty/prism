@@ -446,7 +446,7 @@ def test_generic_get_unknown_flag_is_none() raises:
 
 
 def test_generic_get_reports_a_parse_failure() raises:
-    # Unlike the typed accessors, which return None when the declared FType does not match, the
+    # Unlike the typed accessors, which return None when the declared OptType does not match, the
     # generic accessor matches by name and reports that the value is not readable as a `T`.
     var flags: List[Flag] = [Flag.string(name="region", usage="Region.")]
     var args: List[String] = ["--region", "us-east"]
