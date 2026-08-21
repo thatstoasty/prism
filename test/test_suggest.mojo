@@ -1,5 +1,6 @@
 from std import testing
-from prism.flag import Flag, FType
+from prism.flag import Flag
+from prism.opt_type import OptType
 from prism.suggest import flag_from_error, jaro_distance, jaro_winkler, suggest_flag, suggest_name
 from prism._util import UNKNOWN_FLAG_ERROR
 from std.testing import TestSuite
@@ -146,10 +147,10 @@ struct SuggestTestCase(ImplicitlyCopyable, Movable):
 
 def test_suggest_flag() raises:
     var flags: List[Flag] = [
-        Flag(name="another-flag", shorthand="b", usage="Another flag", type=FType.String),
-        Flag(name="help", shorthand="h", usage="Help flag", type=FType.Bool),
-        Flag(name="version", shorthand="v", usage="Version flag", type=FType.Bool),
-        Flag(name="short-flag", shorthand="s", usage="Short flag", type=FType.String),
+        Flag(name="another-flag", shorthand="b", usage="Another flag", type=OptType.String),
+        Flag(name="help", shorthand="h", usage="Help flag", type=OptType.Bool),
+        Flag(name="version", shorthand="v", usage="Version flag", type=OptType.Bool),
+        Flag(name="short-flag", shorthand="s", usage="Short flag", type=OptType.String),
     ]
 
     var test_cases: List[SuggestTestCase] = [
@@ -209,7 +210,7 @@ def test_flag_from_error_ignores_other_errors_naming_a_flag() raises:
 def test_suggest_below_threshold_returns_nothing() raises:
     # Regression: a weak partial match was still offered. Against a command whose only flag is
     # `--help`, `--verbos` scores 0.47 and used to be answered with "did you mean --help?".
-    var flags: List[Flag] = [Flag(name="help", shorthand="h", usage="Help.", type=FType.Bool)]
+    var flags: List[Flag] = [Flag(name="help", shorthand="h", usage="Help.", type=OptType.Bool)]
     testing.assert_equal(suggest_flag(Span(flags), "verbos"), "")
 
     var candidates: List[String] = ["status"]
@@ -228,8 +229,8 @@ def test_suggest_flag_ignores_shorthands_for_multi_character_input() raises:
     # Regression: a one-character shorthand scores spuriously high against any longer string
     # containing that character, so `count` used to be answered with `-o`.
     var flags: List[Flag] = [
-        Flag(name="output", shorthand="o", usage="Output.", type=FType.String),
-        Flag(name="verbose", shorthand="V", usage="Verbose.", type=FType.Bool),
+        Flag(name="output", shorthand="o", usage="Output.", type=OptType.String),
+        Flag(name="verbose", shorthand="V", usage="Verbose.", type=OptType.Bool),
     ]
     testing.assert_not_equal(suggest_flag(Span(flags), "count"), "-o")
     # A single character the user typed can still match a shorthand.

@@ -2,10 +2,10 @@ import mist
 from std.memory import ArcPointer
 
 import prism
-from prism import Command, Flag, FlagSet, exact_args, read_args
+from prism import ArgSet, Command, Flag, FlagSet, exact_args, read_args
 
 
-def printer(args: List[String], flags: FlagSet) raises -> None:
+def printer(args: ArgSet, flags: FlagSet) raises -> None:
     if len(args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
@@ -29,11 +29,11 @@ def printer(args: List[String], flags: FlagSet) raises -> None:
     print(style.render(args[0]))
 
 
-def pre_hook(args: List[String], flags: FlagSet) raises -> None:
+def pre_hook(args: ArgSet, flags: FlagSet) raises -> None:
     print("Pre-hook executed!")
 
 
-def post_hook(args: List[String], flags: FlagSet) raises -> None:
+def post_hook(args: ArgSet, flags: FlagSet) raises -> None:
     print("Post-hook executed!")
 
 

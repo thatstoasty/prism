@@ -1,7 +1,7 @@
-from prism import Command, Flag, FlagSet, read_args
+from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 
-def test(args: List[String], flags: FlagSet) raises -> None:
+def test(args: ArgSet, flags: FlagSet) raises -> None:
     if flags.get_bool("required"):
         print("Required flag is set!")
     if flags.get_bool("automation"):

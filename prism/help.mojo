@@ -3,6 +3,8 @@
 import mog
 from std.memory import ArcPointer
 from prism.command import Command
+from prism._arg_set import ArgSet
+from prism.arg import Arg
 from prism.flag import Flag
 
 
@@ -14,8 +16,8 @@ struct HelpContext:
     """The command's full name, including its ancestors."""
     var usage: String
     """Description of what the command does."""
-    var args_usage: Optional[String]
-    """Description of the positional arguments the command accepts, if it documents any."""
+    var args: List[Arg]
+    """The positional arguments the command declares, if it declares any."""
     var flags: List[Flag]
     """The flags the command accepts, including those inherited from its ancestors."""
     var inherited_flags: List[Flag]
@@ -113,10 +115,10 @@ def default_help(cmd: HelpContext) raises -> String:
     if len(cmd.children) > 0:
         builder.write(" COMMAND")
 
-    # Name the arguments when the command documents them. A command with subcommands dispatches
-    # rather than taking arguments of its own, so it gets no argument placeholder at all.
-    if cmd.args_usage:
-        builder.write(" ", cmd.args_usage.value())
+    # Name the arguments when the command declares or documents them. A command with subcommands
+    # dispatches rather than taking arguments of its own, so it gets no placeholder at all.
+    if cmd.args:
+        builder.write(" ", ArgSet(cmd.args.copy()).usage())
     elif not cmd.children:
         builder.write(" [ARGS]...")
 
@@ -139,6 +141,18 @@ def default_help(cmd: HelpContext) raises -> String:
 
         comptime USAGE_PADDING = 4
         option_width = widest_flag + widest_shorthand + 5 + USAGE_PADDING
+
+    if cmd.args:
+        var arg_style = style.width(UInt16(option_width))
+        builder.write("\nArguments:")
+        for arg in cmd.args:
+            var rendered = String("  ", arg.name.upper()) if arg.required else String(
+                "  [", arg.name.upper(), "]"
+            )
+            builder.write("\n", arg_style.render(rendered), arg.usage)
+            if arg.default:
+                builder.write(" (default: ", arg.default.value(), ")")
+        builder.write("\n")
 
     if local_flags:
         _write_flag_section("Options", _sorted_by_name(local_flags^), option_width, style, builder)

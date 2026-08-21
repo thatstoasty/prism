@@ -1,11 +1,11 @@
-from prism import Command, Flag, FlagSet, read_args
+from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 
-def test(args: List[String], flags: FlagSet) -> None:
+def test(args: ArgSet, flags: FlagSet) -> None:
     print("Pass chromeria as a subcommand!")
 
 
-def hello(args: List[String], flags: FlagSet) -> None:
+def hello(args: ArgSet, flags: FlagSet) -> None:
     print("Hello from Chromeria!")
 
 

@@ -9,7 +9,8 @@ from prism._flag_group import (
 )
 from prism._flag_parser import FlagParser
 from prism._util import string_to_bool
-from prism.flag import Flag, FlagActionFn, FType, Annotation
+from prism.flag import Flag, FlagActionFn, Annotation
+from prism.opt_type import OptType
 from prism.from_flag_value import FromFlagValue
 
 
@@ -298,7 +299,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    def lookup[type: FType](ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup[type: OptType](ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -333,7 +334,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    def lookup_shorthand[type: FType](ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup_shorthand[type: OptType](ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -352,7 +353,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    def lookup_name(self, shorthand: StringSpan) -> Optional[String]:
+    def lookup_name(self, shorthand: ImmStringSpan) -> Optional[String]:
         """Returns the name of a flag given its shorthand.
 
         Args:
@@ -423,7 +424,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 group_status[group][flag.name] = flag.changed
             except e:
                 raise Error(
-                    "process_group_annotations: Failed to set group status for annotation ", annotation.value, ": ", e
+                    t"process_group_annotations: Failed to set group status for annotation {annotation.value}: ", e
                 )
 
     def validate_flag_groups(self) raises -> None:
@@ -466,15 +467,11 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         #### Notes:
         - The flag is matched by name alone. The typed accessors such as `get_int` additionally
-          require the flag to have been declared with the matching `FType`, and return `None` when
+          require the flag to have been declared with the matching `OptType`, and return `None` when
           it was not. This returns whatever the named flag holds, read as a `T`, and reports a
           parse failure rather than silently returning `None`.
         """
-        comptime assert conforms_to(T, FromFlagValue), String(
-            "`T` must conform to `FromFlagValue`. ",
-            reflect[T].name(),
-            " does not implement `FromFlagValue`.",
-        )
+        comptime assert conforms_to(T, FromFlagValue), String(t"{reflect[T].name()} does not implement `FromFlagValue`.")
 
         var flag = self.lookup(name)
         if not flag:
@@ -486,11 +483,11 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return T(result.value())
 
-    def _get_as[type: FType, T: AnyType](self, name: ImmStringSpan) raises -> Optional[T]:
+    def _get_as[type: OptType, T: AnyType](self, name: ImmStringSpan) raises -> Optional[T]:
         """Returns the value of a flag declared as `type`, read as a `T`.
 
         Parameters:
-            type: The `FType` the flag must have been declared with.
+            type: The `OptType` the flag must have been declared with.
             T: The type to read the flag as. Must conform to `FromFlagValue`.
 
         Args:
@@ -503,11 +500,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Raises:
             Error: If the flag's value cannot be read as a `T`.
         """
-        comptime assert conforms_to(T, FromFlagValue), String(
-            "`T` must conform to `FromFlagValue`. ",
-            reflect[T].name(),
-            " does not implement `FromFlagValue`.",
-        )
+        comptime assert conforms_to(T, FromFlagValue), String(t"{reflect[T].name()} does not implement `FromFlagValue`.")
 
         var flag = self.lookup[type](name)
         if not flag:
@@ -526,14 +519,14 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `String`, or `None` if no `FType.String` flag of that name is
+            The value of the flag as a `String`, or `None` if no `OptType.String` flag of that name is
             defined, or it has neither a value nor a default.
 
         #### Notes:
         - Unlike the other accessors this cannot fail, since a flag's value is already text, so it
           reads the value directly rather than going through `FromFlagValue`.
         """
-        var flag = self.lookup[FType.String](name)
+        var flag = self.lookup[OptType.String](name)
         if not flag:
             return None
 
@@ -546,13 +539,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `Bool`, or `None` if no `FType.Bool` flag of that name is
+            The value of the flag as a `Bool`, or `None` if no `OptType.Bool` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `Bool`.
         """
-        return self._get_as[FType.Bool, Bool](name)
+        return self._get_as[OptType.Bool, Bool](name)
 
     def get_int(self, name: ImmStringSpan) raises -> Optional[Int]:
         """Returns the value of a flag as a `Int`. If it isn't set, then return the default value.
@@ -561,13 +554,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `Int`, or `None` if no `FType.Int` flag of that name is
+            The value of the flag as a `Int`, or `None` if no `OptType.Int` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `Int`.
         """
-        return self._get_as[FType.Int, Int](name)
+        return self._get_as[OptType.Int, Int](name)
 
     def get_int8(self, name: ImmStringSpan) raises -> Optional[Int8]:
         """Returns the value of a flag as a `Int8`. If it isn't set, then return the default value.
@@ -576,13 +569,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `Int8`, or `None` if no `FType.Int8` flag of that name is
+            The value of the flag as a `Int8`, or `None` if no `OptType.Int8` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `Int8`.
         """
-        return self._get_as[FType.Int8, Int8](name)
+        return self._get_as[OptType.Int8, Int8](name)
 
     def get_int16(self, name: ImmStringSpan) raises -> Optional[Int16]:
         """Returns the value of a flag as a `Int16`. If it isn't set, then return the default value.
@@ -591,13 +584,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `Int16`, or `None` if no `FType.Int16` flag of that name is
+            The value of the flag as a `Int16`, or `None` if no `OptType.Int16` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `Int16`.
         """
-        return self._get_as[FType.Int16, Int16](name)
+        return self._get_as[OptType.Int16, Int16](name)
 
     def get_int32(self, name: ImmStringSpan) raises -> Optional[Int32]:
         """Returns the value of a flag as a `Int32`. If it isn't set, then return the default value.
@@ -606,13 +599,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `Int32`, or `None` if no `FType.Int32` flag of that name is
+            The value of the flag as a `Int32`, or `None` if no `OptType.Int32` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `Int32`.
         """
-        return self._get_as[FType.Int32, Int32](name)
+        return self._get_as[OptType.Int32, Int32](name)
 
     def get_int64(self, name: ImmStringSpan) raises -> Optional[Int64]:
         """Returns the value of a flag as a `Int64`. If it isn't set, then return the default value.
@@ -621,13 +614,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `Int64`, or `None` if no `FType.Int64` flag of that name is
+            The value of the flag as a `Int64`, or `None` if no `OptType.Int64` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `Int64`.
         """
-        return self._get_as[FType.Int64, Int64](name)
+        return self._get_as[OptType.Int64, Int64](name)
 
     def get_uint(self, name: ImmStringSpan) raises -> Optional[UInt]:
         """Returns the value of a flag as a `UInt`. If it isn't set, then return the default value.
@@ -636,13 +629,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `UInt`, or `None` if no `FType.UInt` flag of that name is
+            The value of the flag as a `UInt`, or `None` if no `OptType.UInt` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `UInt`.
         """
-        return self._get_as[FType.UInt, UInt](name)
+        return self._get_as[OptType.UInt, UInt](name)
 
     def get_uint8(self, name: ImmStringSpan) raises -> Optional[UInt8]:
         """Returns the value of a flag as a `UInt8`. If it isn't set, then return the default value.
@@ -651,13 +644,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `UInt8`, or `None` if no `FType.UInt8` flag of that name is
+            The value of the flag as a `UInt8`, or `None` if no `OptType.UInt8` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `UInt8`.
         """
-        return self._get_as[FType.UInt8, UInt8](name)
+        return self._get_as[OptType.UInt8, UInt8](name)
 
     def get_uint16(self, name: ImmStringSpan) raises -> Optional[UInt16]:
         """Returns the value of a flag as a `UInt16`. If it isn't set, then return the default value.
@@ -666,13 +659,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `UInt16`, or `None` if no `FType.UInt16` flag of that name is
+            The value of the flag as a `UInt16`, or `None` if no `OptType.UInt16` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `UInt16`.
         """
-        return self._get_as[FType.UInt16, UInt16](name)
+        return self._get_as[OptType.UInt16, UInt16](name)
 
     def get_uint32(self, name: ImmStringSpan) raises -> Optional[UInt32]:
         """Returns the value of a flag as a `UInt32`. If it isn't set, then return the default value.
@@ -681,13 +674,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `UInt32`, or `None` if no `FType.UInt32` flag of that name is
+            The value of the flag as a `UInt32`, or `None` if no `OptType.UInt32` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `UInt32`.
         """
-        return self._get_as[FType.UInt32, UInt32](name)
+        return self._get_as[OptType.UInt32, UInt32](name)
 
     def get_uint64(self, name: ImmStringSpan) raises -> Optional[UInt64]:
         """Returns the value of a flag as a `UInt64`. If it isn't set, then return the default value.
@@ -696,13 +689,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `UInt64`, or `None` if no `FType.UInt64` flag of that name is
+            The value of the flag as a `UInt64`, or `None` if no `OptType.UInt64` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `UInt64`.
         """
-        return self._get_as[FType.UInt64, UInt64](name)
+        return self._get_as[OptType.UInt64, UInt64](name)
 
     def get_float16(self, name: ImmStringSpan) raises -> Optional[Float16]:
         """Returns the value of a flag as a `Float16`. If it isn't set, then return the default value.
@@ -711,13 +704,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `Float16`, or `None` if no `FType.Float16` flag of that name is
+            The value of the flag as a `Float16`, or `None` if no `OptType.Float16` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `Float16`.
         """
-        return self._get_as[FType.Float16, Float16](name)
+        return self._get_as[OptType.Float16, Float16](name)
 
     def get_float32(self, name: ImmStringSpan) raises -> Optional[Float32]:
         """Returns the value of a flag as a `Float32`. If it isn't set, then return the default value.
@@ -726,13 +719,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `Float32`, or `None` if no `FType.Float32` flag of that name is
+            The value of the flag as a `Float32`, or `None` if no `OptType.Float32` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `Float32`.
         """
-        return self._get_as[FType.Float32, Float32](name)
+        return self._get_as[OptType.Float32, Float32](name)
 
     def get_float64(self, name: ImmStringSpan) raises -> Optional[Float64]:
         """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
@@ -741,13 +734,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `Float64`, or `None` if no `FType.Float64` flag of that name is
+            The value of the flag as a `Float64`, or `None` if no `OptType.Float64` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `Float64`.
         """
-        return self._get_as[FType.Float64, Float64](name)
+        return self._get_as[OptType.Float64, Float64](name)
 
     def get_string_list(self, name: ImmStringSpan) raises -> Optional[List[String]]:
         """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
@@ -756,13 +749,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `List[String]`, or `None` if no `FType.StringList` flag of that name is
+            The value of the flag as a `List[String]`, or `None` if no `OptType.StringList` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `List[String]`.
         """
-        return self._get_as[FType.StringList, List[String]](name)
+        return self._get_as[OptType.StringList, List[String]](name)
 
     def get_int_list(self, name: ImmStringSpan) raises -> Optional[List[Int]]:
         """Returns the value of a flag as a `List[Int]`. If it isn't set, then return the default value.
@@ -771,13 +764,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `List[Int]`, or `None` if no `FType.IntList` flag of that name is
+            The value of the flag as a `List[Int]`, or `None` if no `OptType.IntList` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `List[Int]`.
         """
-        return self._get_as[FType.IntList, List[Int]](name)
+        return self._get_as[OptType.IntList, List[Int]](name)
 
     def get_float64_list(self, name: ImmStringSpan) raises -> Optional[List[Float64]]:
         """Returns the value of a flag as a `List[Float64]`. If it isn't set, then return the default value.
@@ -786,10 +779,10 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `List[Float64]`, or `None` if no `FType.Float64List` flag of that name is
+            The value of the flag as a `List[Float64]`, or `None` if no `OptType.Float64List` flag of that name is
             defined, or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `List[Float64]`.
         """
-        return self._get_as[FType.Float64List, List[Float64]](name)
+        return self._get_as[OptType.Float64List, List[Float64]](name)

@@ -35,7 +35,7 @@ TEST_CASES: dict[str, list[list[str]]] = {
     "arg_validators": [
         ["Hello", "from", "Mojo!"],
         ["no_args", "Hello", "from", "Mojo!"],
-        ["valid_args", "Hello", "from", "Mojo!"],
+        ["valid_values", "Pineapple"],
         ["minimum_n_args", "Hello", "from", "Mojo!"],
         ["maximum_n_args", "Hello", "from", "Mojo!"],
         ["exact_args", "Hello", "from", "Mojo!"],
@@ -77,6 +77,13 @@ TEST_CASES: dict[str, list[list[str]]] = {
         ["allow", "-r0"],
         ["allow", "-hl", "localhost", "-hl", "192.168.1.1", "-r0"],
         ["allow", "-hl", "localhost", "-hl", "192.168.1.2", "-r0"],
+    ],
+    "named_args": [
+        ["deploy", "--help"],
+        ["deploy", "staging", "3"],
+        ["deploy", "production", "5", "0.25", "--dry-run"],
+        ["logs", "api"],
+        ["hello", "world"],
     ],
     "configure_help_version": [
         ["--custom-help"],

@@ -2,10 +2,10 @@ from std import testing
 from prism.flag import Flag
 from std.testing import TestSuite
 
-from prism import Command, FlagSet
+from prism import ArgSet, Command, FlagSet
 
 
-def dummy(args: List[String], flags: FlagSet) -> None:
+def dummy(args: ArgSet, flags: FlagSet) -> None:
     return None
 
 

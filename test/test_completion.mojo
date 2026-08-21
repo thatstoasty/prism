@@ -1,5 +1,5 @@
 import std.testing
-from prism import FlagSet
+from prism import Arg, ArgSet, FlagSet
 from prism.command import Command
 from prism.flag import Flag
 from prism.completion.zsh import _zsh_escape, _zsh_flag_spec
@@ -7,7 +7,7 @@ from prism.completion import default_completion, generate_bash_completion, gener
 from std.testing import TestSuite
 
 
-def dummy(args: List[String], flags: FlagSet) raises -> None:
+def dummy(args: ArgSet, flags: FlagSet) raises -> None:
     pass
 
 
@@ -159,7 +159,7 @@ def test_zsh_command_with_valid_args() raises:
         name="myapp",
         usage="My application",
         run=dummy,
-        valid_args=["start", "stop", "restart"],
+        args=[Arg.string(name="action", usage="What to do.", valid_values=["start", "stop", "restart"])],
     )
     var script = generate_zsh_completion(cmd)
 
@@ -312,7 +312,7 @@ def test_bash_command_with_valid_args() raises:
         name="myapp",
         usage="My application",
         run=dummy,
-        valid_args=["start", "stop", "restart"],
+        args=[Arg.string(name="action", usage="What to do.", valid_values=["start", "stop", "restart"])],
     )
     var script = generate_bash_completion(cmd)
     # Verify valid args appear in opts
@@ -368,11 +368,11 @@ def test_completion_valid_args_includes_bash() raises:
         usage="My application",
         run=dummy,
     )
-    # Find the completion subcommand and check valid_args
+    # Find the completion subcommand and check the values its argument accepts
     for child in cmd.children:
         if child[].name == "completion":
-            std.testing.assert_true("bash" in child[].valid_args)
-            std.testing.assert_true("zsh" in child[].valid_args)
+            std.testing.assert_true("bash" in child[].args[0].valid_values)
+            std.testing.assert_true("zsh" in child[].args[0].valid_values)
             break
 
 

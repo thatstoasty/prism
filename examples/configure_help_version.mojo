@@ -1,7 +1,7 @@
-from prism import Command, Flag, FlagSet, Help, Version, read_args
+from prism import ArgSet, Command, Flag, FlagSet, Help, Version, read_args
 
 
-def test(args: List[String], flags: FlagSet) -> None:
+def test(args: ArgSet, flags: FlagSet) -> None:
     print("Pass -ch to see helpful information!")
 
 

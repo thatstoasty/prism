@@ -3,7 +3,8 @@ from std.testing import TestSuite, assert_raises
 
 from prism import FlagSet
 from prism._flag_parser import FlagParser
-from prism.flag import Flag, FType
+from prism.flag import Flag
+from prism.opt_type import OptType
 
 
 def _flags() -> FlagSet:

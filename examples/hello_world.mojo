@@ -1,7 +1,7 @@
-from prism import Command, Flag, FlagSet, read_args
+from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 
-def printer(args: List[String], flags: FlagSet) -> None:
+def printer(args: ArgSet, flags: FlagSet) -> None:
     if len(args) == 0:
         print("No args provided.")
         return
@@ -9,19 +9,19 @@ def printer(args: List[String], flags: FlagSet) -> None:
     print(args[0])
 
 
-def say(args: List[String], flags: FlagSet) -> None:
+def say(args: ArgSet, flags: FlagSet) -> None:
     print("Shouldn't be here!")
 
 
-def say_hello(args: List[String], flags: FlagSet) -> None:
+def say_hello(args: ArgSet, flags: FlagSet) -> None:
     print("Hello World!")
 
 
-def say_goodbye(args: List[String], flags: FlagSet) -> None:
+def say_goodbye(args: ArgSet, flags: FlagSet) -> None:
     print("Goodbye World!")
 
 
-def test(args: List[String], flags: FlagSet) -> None:
+def test(args: ArgSet, flags: FlagSet) -> None:
     if env := flags.get_string("env"):
         print("Env:", env.value())
     else:

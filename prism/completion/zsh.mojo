@@ -1,8 +1,9 @@
 """ZSH completion script generation."""
 
 from prism.command import Command
-from prism.flag import Flag, FType
-from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER
+from prism.flag import Flag
+from prism.opt_type import OptType
+from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates
 
 
 def _zsh_escape(s: StringSpan, mut writer: Some[Writer]):
@@ -49,7 +50,7 @@ def _zsh_flag_spec(flag: Flag) -> String:
     """
     var escaped_usage = String(capacity=DEFAULT_BUFFER_SIZE)
     _zsh_escape(flag.usage, escaped_usage)
-    var is_bool = flag.type == FType.Bool
+    var is_bool = flag.type == OptType.Bool
     var prefix = "'*" if flag.type.is_list_type() else "'"
 
     if flag.shorthand:
@@ -120,13 +121,14 @@ def _zsh_command_function(
             "    _arguments -C \\\n"
         )
     else:
-        var has_specs = Bool(flag_specs) or Bool(cmd.valid_args)
+        var candidates = _arg_candidates(cmd)
+        var has_specs = Bool(flag_specs) or Bool(candidates)
         if has_specs:
             builder.write("    _arguments \\\n")
         else:
             builder.write("    _arguments\n")
 
-    var last_flag_continues = has_children or Bool(cmd.valid_args)
+    var last_flag_continues = has_children or Bool(_arg_candidates(cmd))
     for i in range(len(flag_specs)):
         builder.write(t"        {flag_specs[i]}")
         if i < len(flag_specs) - 1 or last_flag_continues:
@@ -176,13 +178,14 @@ def _zsh_command_function(
             "    esac\n"
         )
     else:
-        # Leaf command - add valid_args completion if present
-        if cmd.valid_args:
+        # Leaf command - complete the values its arguments accept, if any
+        var leaf_candidates = _arg_candidates(cmd)
+        if leaf_candidates:
             var args_list = String(capacity=SMALL_BUFFER_SIZE)
-            for i in range(len(cmd.valid_args)):
+            for i in range(len(leaf_candidates)):
                 if i > 0:
                     args_list.write(" ")
-                args_list.write(cmd.valid_args[i])
+                args_list.write(leaf_candidates[i])
             builder.write("        '1:arg:(", args_list, ")'\n")
 
     builder.write("}\n")

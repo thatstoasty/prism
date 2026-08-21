@@ -3,11 +3,14 @@
 from std.memory import ArcPointer
 from std.sys import get_defined_bool
 from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
+from prism._arg_set import ArgSet
 from prism._flag_set import Annotation, FlagSet
+from prism.arg import Arg
 from prism._util import panic
 from prism.args import ArgValidatorFn, arbitrary_args
 from prism.exit import ExitFn, default_exit
-from prism.flag import Flag, FType
+from prism.flag import Flag
+from prism.opt_type import OptType
 from prism.help import Help, HelpContext
 from prism.completion import default_completion
 from prism.suggest import flag_from_error, suggest_flag, suggest_name
@@ -24,7 +27,7 @@ claimed to stop after the first match, but it returned from the per-parent visit
 traversal, so it never had that effect."""
 
 
-comptime CmdFn = def (args: List[String], flags: FlagSet) raises thin -> None
+comptime CmdFn = def (args: ArgSet, flags: FlagSet) raises thin -> None
 """The function for a command to run.
 
 `run` accepts a non-raising function too, because a non-raising function coerces to this type in
@@ -93,7 +96,7 @@ def _flag_consumes_next(flags: FlagSet, arg: ImmStringSpan) -> Bool:
     """
     if arg.startswith("--", 0, 2):
         var flag = flags.lookup(arg[byte=2:])
-        return Bool(flag) and flag.value()[].type != FType.Bool
+        return Bool(flag) and flag.value()[].type != OptType.Bool
 
     # A shorthand argument may be a cluster of bool flags like `-abc`. Only the final shorthand in
     # such a cluster can take a value, so that is the one that decides.
@@ -102,7 +105,7 @@ def _flag_consumes_next(flags: FlagSet, arg: ImmStringSpan) -> Bool:
         return False
 
     var flag = flags.lookup_shorthand(shorthands[byte = shorthands.byte_length() - 1 :])
-    return Bool(flag) and flag.value()[].type != FType.Bool
+    return Bool(flag) and flag.value()[].type != OptType.Bool
 
 
 def _parse_command_from_args(command: ArcPointer[Command], mut args: List[String]) -> Optional[ArcPointer[Command]]:
@@ -257,8 +260,6 @@ struct Command(Copyable, Writable):
     """The name of the command."""
     var usage: String
     """Description of the command."""
-    var args_usage: Optional[String]
-    """The usage of the arguments for the command. This is used to generate help text."""
     var aliases: List[String]
     """Aliases that can be used instead of the first word in name."""
 
@@ -293,8 +294,13 @@ struct Command(Copyable, Writable):
 
     var arg_validator: ArgValidatorFn
     """Function to validate arguments passed to the command."""
-    var valid_args: List[String]
-    """Valid arguments for the command."""
+    var args: List[Arg]
+    """The positional arguments the command declares.
+
+    Declaring arguments binds them by position and validates their count and types before `run` is
+    called, and names them in usage text. Leave empty to accept any positional arguments and check
+    them with `arg_validator` instead.
+    """
 
     var flags: FlagSet
     """It is all local, persistent, and inherited flags."""
@@ -338,14 +344,13 @@ struct Command(Copyable, Writable):
         usage: String,
         run: CmdFn,
         *,
-        var args_usage: Optional[String] = None,
         var aliases: List[String] = [],
         var help: Help = Help(),
         var version: Optional[Version] = None,
         exit: ExitFn = default_exit,
         output_writer: WriterFn = default_output_writer,
         error_writer: WriterFn = default_error_writer,
-        var valid_args: List[String] = [],
+        var args: List[Arg] = [],
         var children: List[Self] = [],
         pre_run: Optional[CmdFn] = None,
         post_run: Optional[CmdFn] = None,
@@ -366,14 +371,13 @@ struct Command(Copyable, Writable):
             name: The name of the command.
             usage: The usage of the command.
             run: The function to run when the command is executed.
-            args_usage: The usage of the arguments for the command.
             aliases: The aliases for the command.
             help: The help information for the command.
             version: The version information for the command.
             exit: The function to call when an error occurs.
             output_writer: The function to call when writing output.
             error_writer: The function to call when writing errors.
-            valid_args: The valid arguments for the command.
+            args: The positional arguments the command declares.
             children: The child commands.
             pre_run: The function to run before the command is executed. Must be declared `raises`.
             post_run: The function to run after the command is executed. Must be declared `raises`.
@@ -395,7 +399,6 @@ struct Command(Copyable, Writable):
         """
         self.name = name
         self.usage = usage
-        self.args_usage = args_usage^
         self.aliases = aliases^
 
         self.exit = exit
@@ -416,7 +419,7 @@ struct Command(Copyable, Writable):
         self.reject_unknown_subcommands = reject_unknown_subcommands
         self._generated_completion = False
 
-        self.valid_args = valid_args^
+        self.args = args^
         self.flags = flags^
         self.parent = []
         self.children = [ArcPointer(child.copy()) for child in children]
@@ -427,15 +430,20 @@ struct Command(Copyable, Writable):
 
         # Auto-add completion subcommand
         if enable_completion:
-            def _completion_noop(args: List[String], flags: FlagSet) raises -> None:
+            def _completion_noop(args: ArgSet, flags: FlagSet) raises -> None:
                 pass
 
             var completion_command = Command(
                 name="completion",
                 usage="Generate shell completion scripts.",
                 run=_completion_noop,
-                args_usage="SHELL",
-                valid_args=["zsh", "bash"],
+                args=[
+                    Arg.string(
+                        name="shell",
+                        usage="The shell to generate a script for.",
+                        valid_values=["zsh", "bash"],
+                    )
+                ],
                 enable_completion=False,
             )
             completion_command._generated_completion = True
@@ -467,8 +475,6 @@ struct Command(Copyable, Writable):
 
         if self.aliases:
             writer.write(", Aliases: ", self.aliases)
-        if self.valid_args:
-            writer.write(", Valid Args: ", self.valid_args)
         if self.flags:
             writer.write(", Flags: ", self.flags)
         writer.write(")")
@@ -619,7 +625,7 @@ struct Command(Copyable, Writable):
             func(self.parent[0][])
             self.parent[0][].visit_parents[func, reverse]()
 
-    def _execute_pre_run_hooks(self, cmd: Self, args: List[String]) raises -> None:
+    def _execute_pre_run_hooks(self, cmd: Self, args: ArgSet) raises -> None:
         """Runs the pre-run hooks for the command.
 
         Args:
@@ -646,7 +652,7 @@ struct Command(Copyable, Writable):
             self.error_writer(String(t"Failed to run pre-run hooks for command: {cmd.name}"))
             raise e^
 
-    def _execute_post_run_hooks(self, cmd: Self, args: List[String]) raises -> None:
+    def _execute_post_run_hooks(self, cmd: Self, args: ArgSet) raises -> None:
         """Runs the post-run hooks for the command.
 
         Args:
@@ -770,7 +776,7 @@ struct Command(Copyable, Writable):
                 var help_context = HelpContext(
                     full_name=cmd[].full_name(),
                     usage=cmd[].usage,
-                    args_usage=cmd[].args_usage,
+                    args=cmd[].args.copy(),
                     flags=cmd[].flags.flags.copy(),
                     inherited_flags=inherited.flags.copy(),
                     children=[(child[].name, child[].usage) for child in cmd[].children],
@@ -821,13 +827,22 @@ struct Command(Copyable, Writable):
             # Validate the remaining arguments. `ArgValidatorFn` is not handed the command, so
             # name it here rather than leaving the reader to guess which one rejected the input.
             try:
-                cmd[].arg_validator(remaining_args, cmd[].valid_args)
+                cmd[].arg_validator(remaining_args)
+            except e:
+                raise Error(t"{cmd[].full_name()}: {e}")
+
+            # Bind the positional values to the declared arguments. This checks their count and
+            # types, so a mistyped argument is reported before `run` starts rather than surfacing
+            # partway through it.
+            var args = ArgSet(cmd[].args.copy())
+            try:
+                args.bind(remaining_args^)
             except e:
                 raise Error(t"{cmd[].full_name()}: {e}")
 
             # Run the function's commands.
-            self._execute_pre_run_hooks(cmd[], remaining_args)
-            cmd[].run(remaining_args, cmd[].flags)
-            self._execute_post_run_hooks(cmd[], remaining_args)
+            self._execute_pre_run_hooks(cmd[], args)
+            cmd[].run(args, cmd[].flags)
+            self._execute_post_run_hooks(cmd[], args)
         except e:
             self.exit(_with_usage_hint(cmd[], e))

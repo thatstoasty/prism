@@ -1,11 +1,12 @@
 from std import testing
-from prism.flag import Flag, FType
+from prism.flag import Flag
+from prism.opt_type import OptType
 from std.testing import TestSuite, assert_raises
 
-from prism import Command, FlagSet
+from prism import ArgSet, Command, FlagSet
 
 
-def dummy(args: List[String], flags: FlagSet) -> None:
+def dummy(args: ArgSet, flags: FlagSet) -> None:
     return None
 
 
@@ -19,8 +20,8 @@ def test_string() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.String]("key")
-    testing.assert_equal(flag.value()[].type.value, FType.String.value)
+    var flag = cmd.flags.lookup[OptType.String]("key")
+    testing.assert_equal(flag.value()[].type.value, OptType.String.value)
     testing.assert_equal(cmd.flags.get_string("key").value(), "default")
 
 
@@ -34,8 +35,8 @@ def test_bool() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.Bool]("flag")
-    testing.assert_equal(flag.value()[].type.value, FType.Bool.value)
+    var flag = cmd.flags.lookup[OptType.Bool]("flag")
+    testing.assert_equal(flag.value()[].type.value, OptType.Bool.value)
     testing.assert_equal(cmd.flags.get_bool("flag").value(), False)
 
 
@@ -49,8 +50,8 @@ def test_int() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.Int]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.Int.value)
+    var flag = cmd.flags.lookup[OptType.Int]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.Int.value)
     testing.assert_equal(cmd.flags.get_int("num").value(), 0)
 
 
@@ -64,8 +65,8 @@ def test_int8() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.Int8]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.Int8.value)
+    var flag = cmd.flags.lookup[OptType.Int8]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.Int8.value)
     testing.assert_equal(cmd.flags.get_int8("num").value(), Int8(0))
 
 
@@ -79,8 +80,8 @@ def test_int16() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.Int16]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.Int16.value)
+    var flag = cmd.flags.lookup[OptType.Int16]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.Int16.value)
     testing.assert_equal(cmd.flags.get_int16("num").value(), Int16(0))
 
 
@@ -94,8 +95,8 @@ def test_int32() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.Int32]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.Int32.value)
+    var flag = cmd.flags.lookup[OptType.Int32]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.Int32.value)
     testing.assert_equal(cmd.flags.get_int32("num").value(), Int32(0))
 
 
@@ -109,8 +110,8 @@ def test_int64() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.Int64]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.Int64.value)
+    var flag = cmd.flags.lookup[OptType.Int64]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.Int64.value)
     testing.assert_equal(cmd.flags.get_int64("num").value(), Int64(0))
 
 
@@ -124,8 +125,8 @@ def test_uint() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.UInt]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.UInt.value)
+    var flag = cmd.flags.lookup[OptType.UInt]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.UInt.value)
     testing.assert_equal(cmd.flags.get_uint("num").value(), UInt(0))
 
 
@@ -139,8 +140,8 @@ def test_uint8() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.UInt8]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.UInt8.value)
+    var flag = cmd.flags.lookup[OptType.UInt8]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.UInt8.value)
     testing.assert_equal(cmd.flags.get_uint8("num").value(), UInt8(0))
 
 
@@ -154,8 +155,8 @@ def test_uint16() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.UInt16]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.UInt16.value)
+    var flag = cmd.flags.lookup[OptType.UInt16]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.UInt16.value)
     testing.assert_equal(cmd.flags.get_uint16("num").value(), UInt16(0))
 
 
@@ -169,8 +170,8 @@ def test_uint32() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.UInt32]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.UInt32.value)
+    var flag = cmd.flags.lookup[OptType.UInt32]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.UInt32.value)
     testing.assert_equal(cmd.flags.get_uint32("num").value(), UInt32(0))
 
 
@@ -184,8 +185,8 @@ def test_uint64() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.UInt64]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.UInt64.value)
+    var flag = cmd.flags.lookup[OptType.UInt64]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.UInt64.value)
     testing.assert_equal(cmd.flags.get_uint64("num").value(), UInt64(0))
 
 
@@ -199,8 +200,8 @@ def test_float16() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.Float16]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.Float16.value)
+    var flag = cmd.flags.lookup[OptType.Float16]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.Float16.value)
     testing.assert_equal(cmd.flags.get_float16("num").value(), Float16(0))
 
 
@@ -214,8 +215,8 @@ def test_float32() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.Float32]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.Float32.value)
+    var flag = cmd.flags.lookup[OptType.Float32]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.Float32.value)
     testing.assert_equal(cmd.flags.get_float32("num").value(), Float32(0))
 
 
@@ -229,8 +230,8 @@ def test_float64() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.Float64]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.Float64.value)
+    var flag = cmd.flags.lookup[OptType.Float64]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.Float64.value)
     testing.assert_equal(cmd.flags.get_float64("num").value(), Float64(0))
 
 
@@ -244,8 +245,8 @@ def test_string_list() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.StringList]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.StringList.value)
+    var flag = cmd.flags.lookup[OptType.StringList]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.StringList.value)
     testing.assert_equal(cmd.flags.get_string_list("num").value(), ["a", "b"])
 
 
@@ -259,8 +260,8 @@ def test_int_list() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.IntList]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.IntList.value)
+    var flag = cmd.flags.lookup[OptType.IntList]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.IntList.value)
 
     ref result = cmd.flags.get_int_list("num").value()
     testing.assert_equal(result[0], 0)
@@ -277,8 +278,8 @@ def test_float64_list() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.Float64List]("num")
-    testing.assert_equal(flag.value()[].type.value, FType.Float64List.value)
+    var flag = cmd.flags.lookup[OptType.Float64List]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.Float64List.value)
 
     ref result = cmd.flags.get_float64_list("num").value()
     testing.assert_equal(result[0], Float64(0))
@@ -295,7 +296,7 @@ def test_unicode_flag_name() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[FType.String]("cléf")
+    var flag = cmd.flags.lookup[OptType.String]("cléf")
     testing.assert_equal(flag.value()[].name, "cléf")
     testing.assert_equal(cmd.flags.get_string("cléf").value(), "valeur")
 
@@ -403,7 +404,7 @@ def test_generic_get_unknown_flag_is_none() raises:
 
 
 def test_generic_get_reports_a_parse_failure() raises:
-    # Unlike the typed accessors, which return None when the declared FType does not match, the
+    # Unlike the typed accessors, which return None when the declared OptType does not match, the
     # generic accessor matches by name and reports that the value is not readable as a `T`.
     var flags: List[Flag] = [Flag.string(name="region", usage="Region.")]
     var args: List[String] = ["--region", "us-east"]

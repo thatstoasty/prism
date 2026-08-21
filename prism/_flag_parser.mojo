@@ -1,4 +1,5 @@
-from prism._flag_set import FlagSet, FType
+from prism._flag_set import FlagSet
+from prism.opt_type import OptType
 from prism._util import UNKNOWN_FLAG_ERROR
 
 
@@ -33,10 +34,10 @@ struct ShorthandParserState(Equatable, Writable, TrivialRegisterPassable):
 
 
 @fieldwise_init
-struct ParseFlagResult(Movable, Writable):
+struct ParseFlagResult[arg_origin: ImmOrigin](Movable, Writable):
     """Result of parsing a flag."""
 
-    var name: String
+    var name: ImmStringSpan[Self.arg_origin]
     """The name of the flag."""
     var value: String
     """The value of the flag."""
@@ -73,7 +74,7 @@ struct FlagParser[origin: ImmOrigin](Writable):
         self.index = 0
         self.arguments = arguments
 
-    def parse_flag(self, argument: StringSpan, flags: FlagSet) raises -> ParseFlagResult:
+    def parse_flag[arg_origin: ImmOrigin, //](self, argument: ImmStringSpan[arg_origin], flags: FlagSet) raises -> ParseFlagResult[arg_origin]:
         """Parses a flag and returns the name, value, and the index to increment by.
 
         Args:
@@ -95,30 +96,28 @@ struct FlagParser[origin: ImmOrigin](Writable):
             if not flags.lookup(name_slice):
                 raise Error(UNKNOWN_FLAG_ERROR, name_slice)
 
-            return ParseFlagResult(name=String(name_slice), value=String(argument[byte=sep_index + 1 :]), increment=1)
+            return ParseFlagResult(name=name_slice, value=String(argument[byte=sep_index + 1 :]), increment=1)
 
         # Flag with value set like "--flag <value>"
         var name_slice = argument[byte=2:]
         if not flags.lookup(name_slice):
             raise Error(UNKNOWN_FLAG_ERROR, name_slice)
 
-        var name = String(name_slice)
-
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-        if flags.lookup[FType.Bool](name):
-            return ParseFlagResult(name=name^, value="True", increment=1)
+        if flags.lookup[OptType.Bool](name_slice):
+            return ParseFlagResult(name=name_slice, value="True", increment=1)
 
         if self.index + 1 >= len(self.arguments):
-            raise Error("Flag requires a value to be set but reached the end of arguments. Name: ", name)
+            raise Error("Flag requires a value to be set but reached the end of arguments. Name: ", name_slice)
 
         # A leading `-` usually means the next argument is another flag rather than this flag's
         # value, but a negative number is a legitimate value.
         ref next_argument = self.arguments[self.index + 1]
         if next_argument.startswith("-", 0, 1) and not _is_negative_number(next_argument):
-            raise Error("Flag requires a value to be set but found another flag instead. Name: ", name)
+            raise Error("Flag requires a value to be set but found another flag instead. Name: ", name_slice)
 
         # Increment index by 2 because 2 args were used (one for name and value).
-        return ParseFlagResult(name=name^, value=String(self.arguments[self.index + 1]), increment=2)
+        return ParseFlagResult(name=name_slice, value=String(self.arguments[self.index + 1]), increment=2)
 
     def parse_shorthand_flag(self, argument: StringSpan, flags: FlagSet) raises -> ParseShorthandFlagResult:
         """Parses a shorthand flag and returns the name, value, and the index to increment by.
@@ -177,7 +176,7 @@ struct FlagParser[origin: ImmOrigin](Writable):
                     end -= 1
                     continue
 
-                if flag.value()[].type != FType.Bool:
+                if flag.value()[].type != OptType.Bool:
                     raise Error(
                         "Received a combination of shorthand flags that are not all bool flags. flag received: ",
                         argument,
@@ -202,7 +201,7 @@ struct FlagParser[origin: ImmOrigin](Writable):
                         shorthand,
                     )
 
-                if flag[][].type == FType.Bool:
+                if flag[][].type == OptType.Bool:
                     return ParseShorthandFlagResult(names=flag_names^, value="True", increment=1)
 
                 # Non bool flags expect a value to be set. If the end of the arguments list is reached, raise an error.

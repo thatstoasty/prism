@@ -1,3 +1,4 @@
+from prism import ArgSet
 from std import testing
 from std.memory import ArcPointer
 from prism.command import Command, Flag, FlagSet, _unknown_command_error, _with_usage_hint
@@ -7,7 +8,7 @@ import prism
 
 
 def test_command_operations() raises:
-    def dummy(args: List[String], flags: FlagSet) -> None:
+    def dummy(args: ArgSet, flags: FlagSet) -> None:
         return None
 
     var cmd = Command(
@@ -30,7 +31,7 @@ def test_command_operations() raises:
 
 
 def test_unicode_command_name() raises:
-    def dummy(args: List[String], flags: FlagSet) -> None:
+    def dummy(args: ArgSet, flags: FlagSet) -> None:
         return None
 
     var cmd = Command(
@@ -45,7 +46,7 @@ def test_wire_parents_links_the_whole_tree() raises:
     # Regression: parents were linked as each command was constructed, but a child is built before
     # the parent it attaches to exists, so the chain stopped one level up. `full_name` and
     # `inherited_flags` were wrong for anything deeper than a direct child.
-    def dummy(args: List[String], flags: FlagSet) -> None:
+    def dummy(args: ArgSet, flags: FlagSet) -> None:
         return None
 
     var cmd = Command(
@@ -77,7 +78,7 @@ def test_wire_parents_links_the_whole_tree() raises:
 
 
 def test_unknown_command_error_message() raises:
-    def dummy(args: List[String], flags: FlagSet) -> None:
+    def dummy(args: ArgSet, flags: FlagSet) -> None:
         return None
 
     var cmd = Command(
@@ -94,7 +95,7 @@ def test_unknown_command_error_message() raises:
 
 
 def test_usage_hint_names_the_command() raises:
-    def dummy(args: List[String], flags: FlagSet) -> None:
+    def dummy(args: ArgSet, flags: FlagSet) -> None:
         return None
 
     var cmd = Command(name="app", usage="Base command.", run=dummy)
@@ -105,7 +106,7 @@ def test_usage_hint_names_the_command() raises:
 
 
 def test_unknown_command_error_suggests_when_enabled() raises:
-    def dummy(args: List[String], flags: FlagSet) -> None:
+    def dummy(args: ArgSet, flags: FlagSet) -> None:
         return None
 
     var cmd = Command(
@@ -130,10 +131,10 @@ def test_hooks_are_optional_and_raising() raises:
     # never raises: a non-raising function reaches `CmdFn` in one implicit step but not the
     # Optional beyond it. `run` takes either form. This is a compile-time guarantee -- if the
     # accepted shapes change, this file stops building.
-    def non_raising(args: List[String], flags: FlagSet) -> None:
+    def non_raising(args: ArgSet, flags: FlagSet) -> None:
         return None
 
-    def raising(args: List[String], flags: FlagSet) raises -> None:
+    def raising(args: ArgSet, flags: FlagSet) raises -> None:
         return None
 
     var cmd = Command(

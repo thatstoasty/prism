@@ -1,14 +1,14 @@
 from std.sys import exit, stderr
 
-from prism import Command, Flag, FlagSet, Version, no_args, read_args
+from prism import ArgSet, Command, Flag, FlagSet, Version, no_args, read_args
 
 
-def base(args: List[String], flags: FlagSet) -> None:
+def base(args: ArgSet, flags: FlagSet) -> None:
     print("Pass a subcommand!")
 
 
-def connect(args: List[String], flags: FlagSet) raises -> None:
-    if var host := flags.get_string("host"):
+def connect(args: ArgSet, flags: FlagSet) raises -> None:
+    if var host := flags.get[String]("host"):
         print("Connecting to", host.value())
     else:
         raise Error("Error: Exit Code 2")
@@ -23,7 +23,7 @@ def my_exit(e: Error) -> None:
         exit(1)
 
 
-def allow_hosts(args: List[String], flags: FlagSet) raises -> None:
+def allow_hosts(args: ArgSet, flags: FlagSet) raises -> None:
     var hosts = flags.get_string_list("hosts")
     if not hosts:
         print("Received no names to print.")

@@ -1,8 +1,9 @@
 """Bash completion script generation."""
 
 from prism.command import Command
-from prism.flag import Flag, FType
-from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER
+from prism.flag import Flag
+from prism.opt_type import OptType
+from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates
 
 
 def _bash_escape(s: StringSpan, mut writer: Some[Writer]):
@@ -143,12 +144,13 @@ def _bash_command_function(
         )
     else:
         # Leaf command
-        if cmd.valid_args:
+        var candidates = _arg_candidates(cmd)
+        if candidates:
             var args_list = String(capacity=SMALL_BUFFER_SIZE)
-            for i in range(len(cmd.valid_args)):
+            for i in range(len(candidates)):
                 if i > 0:
                     args_list.write(" ")
-                args_list.write(cmd.valid_args[i])
+                args_list.write(candidates[i])
             _write_opts(flag_names, builder)
             builder.write(t' {args_list}"\n')
         else:

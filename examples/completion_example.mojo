@@ -12,22 +12,22 @@ Install Bash completions:
     ./completion_example completion bash > ~/.local/share/bash-completion/completions/completion_example
     # Or source directly: source <(./completion_example completion bash)
 """
-from prism import Command, FlagSet, Flag, read_args
+from prism import Arg, ArgSet, Command, FlagSet, Flag, read_args
 
 
-def serve(args: List[String], flags: FlagSet) raises -> None:
+def serve(args: ArgSet, flags: FlagSet) raises -> None:
     print("Starting server...")
 
 
-def build(args: List[String], flags: FlagSet) raises -> None:
+def build(args: ArgSet, flags: FlagSet) raises -> None:
     print("Building project...")
 
 
-def deploy(args: List[String], flags: FlagSet) raises -> None:
+def deploy(args: ArgSet, flags: FlagSet) raises -> None:
     print("Deploying...")
 
 
-def base(args: List[String], flags: FlagSet) raises -> None:
+def base(args: ArgSet, flags: FlagSet) raises -> None:
     print("Use --help for usage information.")
 
 
@@ -65,7 +65,7 @@ def main():
                 name="deploy",
                 usage="Deploy the project.",
                 run=deploy,
-                valid_args=["staging", "production"],
+                args=[Arg.string(name="action", usage="What to do.", valid_values=["staging", "production"])],
             ),
         ],
     )
