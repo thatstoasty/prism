@@ -1,9 +1,11 @@
+"""Bash completion script generation."""
+
 from prism.command import Command
 from prism.flag import Flag, FType
 from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER
 
 
-def _bash_escape(s: StringSlice, mut writer: Some[Writer]):
+def _bash_escape(s: StringSpan, mut writer: Some[Writer]):
     """Escapes special characters in a string for use in bash completion descriptions.
 
     Single quotes in descriptions need to be escaped for bash.
@@ -21,7 +23,7 @@ def _bash_escape(s: StringSlice, mut writer: Some[Writer]):
             writer.write(c)
 
 
-def _write_opts[origin: ImmutOrigin, //](flag_names: Span[String, origin], mut builder: Some[Writer]):
+def _write_opts[origin: ImmOrigin, //](flag_names: Span[String, origin], mut builder: Some[Writer]):
     """Writes the opts string for bash completion.
 
     Args:
@@ -36,7 +38,7 @@ def _write_opts[origin: ImmutOrigin, //](flag_names: Span[String, origin], mut b
 
 
 def _bash_command_function(
-    cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
+    cmd: Command, prefix: StringSpan, root_name: StringSpan, is_root: Bool
 ) raises -> String:
     """Generates a bash completion function for a single command.
 
@@ -110,7 +112,7 @@ def _bash_command_function(
         builder.write('"\n\n')
 
         # Determine which subcommand is being completed by scanning COMP_WORDS
-        builder.write("    local i cmd_found=0\n")
+        builder.write("    local i\n")
         builder.write("    for ((i=1; i < COMP_CWORD; i++)); do\n")
         builder.write("        case \"${COMP_WORDS[i]}\" in\n")
 
@@ -159,7 +161,7 @@ def _bash_command_function(
 
 
 def _bash_functions_recursive(
-    cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
+    cmd: Command, prefix: StringSpan, root_name: StringSpan, is_root: Bool
 ) raises -> String:
     """Recursively generates bash completion functions for a command and all its children.
 

@@ -1,3 +1,5 @@
+"""Shared pieces of shell completion script generation."""
+
 from prism.command import Command
 from prism.flag import Flag
 from prism.completion.bash import generate_bash_completion

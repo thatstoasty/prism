@@ -5,7 +5,7 @@ def test(args: List[String], flags: FlagSet) -> None:
     print("Pass -v to see the version!")
 
 
-def version(version: String) -> String:
+def version(name: String, version: String) -> String:
     return String("MyCLI version: ", version)
 
 

@@ -2,7 +2,7 @@ from std.io.io import _fdopen
 from std.sys import argv, stdin
 
 
-def parse_args_from_command_line(args: Span[StaticString, StaticConstantOrigin]) -> List[String]:
+def parse_args_from_command_line(args: Span[StaticString, ImmStaticOrigin]) -> List[String]:
     """Returns the arguments passed to the executable as a list of strings.
 
     Returns:
@@ -28,7 +28,7 @@ comptime DOUBLE_QUOTE = '"'
 comptime DOUBLE_DASH = "--"
 """A constant representing a double dash string."""
 
-def parse_args_from_stdin(str: StringSlice) -> List[String]:
+def parse_args_from_stdin(str: StringSpan) -> List[String]:
     """Reads arguments from stdin and returns them as a list of strings.
 
     Args:
@@ -38,30 +38,27 @@ def parse_args_from_stdin(str: StringSlice) -> List[String]:
         The arguments read from stdin as a list of strings.
     """
     var state = STDINParserState.FIND_TOKEN
-    var line_number = 1
     var token = ""
     var args = List[String]()
 
     for char in str.codepoint_slices():
         if state == STDINParserState.FIND_TOKEN:
             if char.isspace() or char == DOUBLE_QUOTE:
-                if char == "\n":
-                    line_number += 1
                 if token != "":
                     if token == DOUBLE_DASH:
                         break
-                    args.append(token)
+                    args.append(token^)
                     token = ""
                 if char == DOUBLE_QUOTE:
                     state = STDINParserState.FIND_ARG
                 continue
             token.write(char)
         else:
-            if char != StringSlice(DOUBLE_QUOTE):
+            if DOUBLE_QUOTE != char:
                 token.write(char)
             else:
                 if token != "":
-                    args.append(token)
+                    args.append(token^)
                     token = ""
                 state = STDINParserState.FIND_TOKEN
 

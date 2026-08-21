@@ -1,19 +1,22 @@
+"""Version reporting for a command."""
+
 from prism.flag import Flag
 
-comptime VersionFn = def (String) thin -> String
-"""The function to call when the version flag is passed."""
+comptime VersionFn = def (String, String) thin -> String
+"""The function to call when the version flag is passed. Receives the command name and version."""
 
 
-def default_version_writer(version: String) -> String:
+def default_version_writer(name: String, version: String) -> String:
     """Writes the version information for the CLI.
 
     Args:
+        name: The full name of the command.
         version: The version of the command.
 
     Returns:
         The version information for the command.
     """
-    return version.copy()
+    return String(name, " version ", version)
 
 
 struct Version(Copyable):

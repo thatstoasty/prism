@@ -11,7 +11,7 @@ repository = "https://github.com/thatstoasty/prism"
 preview = ["pixi-build"]
 
 [tasks]
-tests = "sh -c 'find test -name \"test_*.mojo\" -exec mojo -D ASSERT=all -I . {} \\;'"
+tests = "sh -c 'status=0; for f in test/test_*.mojo; do echo \"== $f\"; mojo -D ASSERT=all -I . \"$f\" || status=1; done; exit $status'"
 examples = "python3 scripts/examples.py"
 
 # Linting and Formatting
@@ -19,29 +19,24 @@ lint_docs = "mojo doc --Werror --diagnose-missing-doc-strings -o /dev/null ./pri
 mojo_format = "mojo format prism --line-length 120"
 format = [{ task = "mojo_format" }]
 
-# Build and publish
-build = { cmd = "pixi build -o ." }
-publish = { cmd = "find . -name 'prism-*.conda' | xargs pixi upload https://prefix.dev/api/v1/upload/mojo-community" }
-build_and_publish = [{ task = "build" }, { task = "publish" }]
-
 [package]
 name = "prism"
-version = "0.3.1"
+version = "0.4.0"
 
 [package.build]
 backend = { name = "pixi-build-mojo", version = "*" }
 
 [dependencies]
-mojo = ">=1.0.0b2,<2"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.1" }
+mojo = ">=1.0.0,<1.1.0"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.3.0" }
 
 [package.build-dependencies]
-mojo-compiler = ">=1.0.0b2,<1.0.0b3"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.1" }
+mojo-compiler = ">=1.0.0,<1.1.0"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.3.0" }
 
 [package.host-dependencies]
-mojo = ">=1.0.0b2,<1.0.0b3"
+mojo = ">=1.0.0,<1.1.0"
 
 [package.run-dependencies]
-mojo = ">=1.0.0b2,<1.0.0b3"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.2.1" }
+mojo = ">=1.0.0,<1.1.0"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.3.0" }

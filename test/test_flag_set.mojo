@@ -1,6 +1,6 @@
 from std import testing
 from prism.flag import Flag, FType
-from std.testing import TestSuite
+from std.testing import TestSuite, assert_raises
 
 from prism import Command, FlagSet
 
@@ -298,6 +298,119 @@ def test_unicode_flag_name() raises:
     var flag = cmd.flags.lookup[FType.String]("cléf")
     testing.assert_equal(flag.value()[].name, "cléf")
     testing.assert_equal(cmd.flags.get_string("cléf").value(), "valeur")
+
+
+def test_double_dash_terminates_flag_parsing() raises:
+    # Regression: `--` was parsed as a flag with an empty name and rejected as unknown.
+    var flags: List[Flag] = [
+        Flag.string(name="output", shorthand="o", usage="Output path."),
+        Flag.bool(name="verbose", shorthand="V", usage="Verbose."),
+    ]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--output", "x", "--", "-V", "positional"]
+    var remaining = flag_set.from_args(Span(args))
+
+    testing.assert_equal(flag_set.get_string("output").value(), "x")
+    # Everything after `--` is positional, even though `-V` names a real flag.
+    testing.assert_equal(len(remaining), 2)
+    testing.assert_equal(remaining[0], "-V")
+    testing.assert_equal(remaining[1], "positional")
+    testing.assert_false(flag_set.get_bool("verbose").or_else(False))
+
+
+def test_repeated_scalar_flag_last_wins() raises:
+    # Regression: repeats were concatenated for every type, so this produced the value "a b".
+    var flags: List[Flag] = [Flag.string(name="name", usage="A name.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--name", "a", "--name", "b"]
+    _ = flag_set.from_args(Span(args))
+
+    testing.assert_equal(flag_set.get_string("name").value(), "b")
+
+
+def test_repeated_list_flag_accumulates() raises:
+    var flags: List[Flag] = [Flag.string_list(name="tags", usage="Tags.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--tags", "x", "--tags", "y"]
+    _ = flag_set.from_args(Span(args))
+
+    var tags = flag_set.get_string_list("tags").value().copy()
+    testing.assert_equal(len(tags), 2)
+    testing.assert_equal(tags[0], "x")
+    testing.assert_equal(tags[1], "y")
+
+
+def _parsed(var flags: List[Flag], var args: List[String]) raises -> FlagSet:
+    """Builds a flag set and parses `args` into it."""
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(args))
+    return flag_set^
+
+
+def test_generic_get_scalars() raises:
+    var flags: List[Flag] = [
+        Flag.string(name="region", usage="Region."),
+        Flag.int(name="port", usage="Port."),
+        Flag.uint8(name="small", usage="Small."),
+        Flag.float64(name="ratio", usage="Ratio."),
+        Flag.bool(name="verbose", usage="Verbose."),
+    ]
+    var args: List[String] = ["--region", "us", "--port", "8080", "--small", "7", "--ratio", "0.25", "--verbose"]
+    var flag_set = _parsed(flags^, args^)
+
+    testing.assert_equal(flag_set.get[String]("region").value(), "us")
+    testing.assert_equal(flag_set.get[Int]("port").value(), 8080)
+    testing.assert_equal(flag_set.get[UInt8]("small").value(), UInt8(7))
+    testing.assert_equal(flag_set.get[Float64]("ratio").value(), 0.25)
+    testing.assert_true(flag_set.get[Bool]("verbose").value())
+
+
+def test_generic_get_lists() raises:
+    var flags: List[Flag] = [
+        Flag.string_list(name="tags", usage="Tags."),
+        Flag.int_list(name="nums", usage="Nums."),
+        Flag.float64_list(name="rates", usage="Rates."),
+    ]
+    var args: List[String] = ["--tags", "a", "--tags", "b", "--nums", "1", "--nums", "2", "--rates", "1.5"]
+    var flag_set = _parsed(flags^, args^)
+
+    var tags = flag_set.get[List[String]]("tags").value().copy()
+    testing.assert_equal(len(tags), 2)
+    testing.assert_equal(tags[1], "b")
+
+    var nums = flag_set.get[List[Int]]("nums").value().copy()
+    testing.assert_equal(len(nums), 2)
+    testing.assert_equal(nums[1], 2)
+
+    var rates = flag_set.get[List[Float64]]("rates").value().copy()
+    testing.assert_equal(rates[0], 1.5)
+
+
+def test_generic_get_falls_back_to_default() raises:
+    var flags: List[Flag] = [Flag.int(name="port", usage="Port.", default=Optional[Int](9000))]
+    var args = List[String]()
+    var flag_set = _parsed(flags^, args^)
+
+    testing.assert_equal(flag_set.get[Int]("port").value(), 9000)
+
+
+def test_generic_get_unknown_flag_is_none() raises:
+    var flags: List[Flag] = [Flag.int(name="port", usage="Port.")]
+    var args = List[String]()
+    var flag_set = _parsed(flags^, args^)
+
+    testing.assert_false(Bool(flag_set.get[Int]("nope")), "an undefined flag should read as None")
+
+
+def test_generic_get_reports_a_parse_failure() raises:
+    # Unlike the typed accessors, which return None when the declared FType does not match, the
+    # generic accessor matches by name and reports that the value is not readable as a `T`.
+    var flags: List[Flag] = [Flag.string(name="region", usage="Region.")]
+    var args: List[String] = ["--region", "us-east"]
+    var flag_set = _parsed(flags^, args^)
+
+    with assert_raises():
+        _ = flag_set.get[Int]("region")
 
 
 def main() raises:

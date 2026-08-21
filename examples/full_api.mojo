@@ -8,7 +8,7 @@ def base(args: List[String], flags: FlagSet) -> None:
 
 
 def connect(args: List[String], flags: FlagSet) raises -> None:
-    if host := flags.get_string("host"):
+    if var host := flags.get_string("host"):
         print("Connecting to", host.value())
     else:
         raise Error("Error: Exit Code 2")
@@ -32,7 +32,7 @@ def allow_hosts(args: List[String], flags: FlagSet) raises -> None:
     print("Allowing: ", hosts.value())
 
 
-def version(version: String) -> String:
+def version(name: String, version: String) -> String:
     return "MyCLI version: " + version
 
 

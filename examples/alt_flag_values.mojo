@@ -3,8 +3,8 @@ from std import os
 from prism import Command, Flag, FlagSet, read_args
 
 
-def test(args: List[String], flags: FlagSet) -> None:
-    var name = flags.get_string("name")
+def test(args: List[String], flags: FlagSet) raises -> None:
+    var name = flags.get[String]("name")
     if name:
         print("Hello", name.value())
     else:

@@ -1,3 +1,5 @@
+"""The exit hook invoked when a command fails."""
+
 from prism._util import panic
 
 

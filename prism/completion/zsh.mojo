@@ -1,9 +1,11 @@
+"""ZSH completion script generation."""
+
 from prism.command import Command
 from prism.flag import Flag, FType
 from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER
 
 
-def _zsh_escape(s: StringSlice, mut writer: Some[Writer]):
+def _zsh_escape(s: StringSpan, mut writer: Some[Writer]):
     """Escapes special characters in a string for use in ZSH completion specs.
 
     ZSH completion descriptions need certain characters escaped:
@@ -68,7 +70,7 @@ def _zsh_flag_spec(flag: Flag) -> String:
 
 
 def _zsh_command_function(
-    cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
+    cmd: Command, prefix: StringSpan, root_name: StringSpan, is_root: Bool
 ) raises -> String:
     """Generates a ZSH completion function for a single command.
 
@@ -188,7 +190,7 @@ def _zsh_command_function(
 
 
 def _zsh_functions_recursive(
-    cmd: Command, prefix: StringSlice, root_name: StringSlice, is_root: Bool
+    cmd: Command, prefix: StringSpan, root_name: StringSpan, is_root: Bool
 ) raises -> String:
     """Recursively generates ZSH completion functions for a command and all its children.
 

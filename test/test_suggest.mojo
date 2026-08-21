@@ -1,6 +1,7 @@
 from std import testing
 from prism.flag import Flag, FType
-from prism.suggest import flag_from_error, jaro_distance, jaro_winkler, suggest_flag
+from prism.suggest import flag_from_error, jaro_distance, jaro_winkler, suggest_flag, suggest_name
+from prism._util import UNKNOWN_FLAG_ERROR
 from std.testing import TestSuite
 
 
@@ -184,7 +185,7 @@ def test_suggest_flag() raises:
 
 
 def test_flag_from_error() raises:
-    var error = Error("An Error Occurred. Name: unknown")
+    var error = Error(UNKNOWN_FLAG_ERROR, "unknown")
     var result = flag_from_error(error)
     testing.assert_equal(result.value(), "unknown")
 
@@ -193,6 +194,46 @@ def test_flag_from_error_wrong_error() raises:
     var error = Error("Some other error.")
     result = flag_from_error(error)
     testing.assert_false(Bool(result))
+
+
+def test_flag_from_error_ignores_other_errors_naming_a_flag() raises:
+    # Regression: this matched on a bare "Name: ", so errors that merely mention a flag name were
+    # mistaken for unknown-flag errors and their precise message was replaced by a "did you mean".
+    var error = Error("Flag requires a value to be set but reached the end of arguments. Name: output")
+    testing.assert_false(Bool(flag_from_error(error)))
+
+    var other = Error("Flag requires a value to be set but found another flag instead. Name: output")
+    testing.assert_false(Bool(flag_from_error(other)))
+
+
+def test_suggest_below_threshold_returns_nothing() raises:
+    # Regression: a weak partial match was still offered. Against a command whose only flag is
+    # `--help`, `--verbos` scores 0.47 and used to be answered with "did you mean --help?".
+    var flags: List[Flag] = [Flag(name="help", shorthand="h", usage="Help.", type=FType.Bool)]
+    testing.assert_equal(suggest_flag(Span(flags), "verbos"), "")
+
+    var candidates: List[String] = ["status"]
+    testing.assert_equal(suggest_name(Span(candidates), "xyzabc"), "")
+
+
+def test_suggest_name() raises:
+    var candidates: List[String] = ["status", "deploy", "rollback"]
+    testing.assert_equal(suggest_name(Span(candidates), "sttaus"), "status")
+    testing.assert_equal(suggest_name(Span(candidates), "rolback"), "rollback")
+    # Nothing in common with any candidate yields no suggestion rather than an arbitrary one.
+    testing.assert_equal(suggest_name(Span(candidates), "zzzzz"), "")
+
+
+def test_suggest_flag_ignores_shorthands_for_multi_character_input() raises:
+    # Regression: a one-character shorthand scores spuriously high against any longer string
+    # containing that character, so `count` used to be answered with `-o`.
+    var flags: List[Flag] = [
+        Flag(name="output", shorthand="o", usage="Output.", type=FType.String),
+        Flag(name="verbose", shorthand="V", usage="Verbose.", type=FType.Bool),
+    ]
+    testing.assert_not_equal(suggest_flag(Span(flags), "count"), "-o")
+    # A single character the user typed can still match a shorthand.
+    testing.assert_equal(suggest_flag(Span(flags), "o"), "-o")
 
 
 def main() raises:

@@ -1,3 +1,5 @@
+"""Flags, their types, and the annotations used to group them."""
+
 comptime FlagActionFn = def (String) raises thin -> None
 """The type of a function that runs after a flag has been processed."""
 
@@ -46,23 +48,41 @@ struct FType(Equatable, ImplicitlyCopyable):
     var value: UInt8
     """The value of the flag type."""
     comptime String = Self(0)
+    """A string value."""
     comptime Bool = Self(1)
+    """A boolean value."""
     comptime Int = Self(2)
+    """A signed integer value."""
     comptime Int8 = Self(3)
+    """An 8-bit signed integer value."""
     comptime Int16 = Self(4)
+    """A 16-bit signed integer value."""
     comptime Int32 = Self(5)
+    """A 32-bit signed integer value."""
     comptime Int64 = Self(6)
+    """A 64-bit signed integer value."""
     comptime UInt = Self(7)
+    """An unsigned integer value."""
     comptime UInt8 = Self(8)
+    """An 8-bit unsigned integer value."""
     comptime UInt16 = Self(9)
+    """A 16-bit unsigned integer value."""
     comptime UInt32 = Self(10)
+    """A 32-bit unsigned integer value."""
     comptime UInt64 = Self(11)
+    """A 64-bit unsigned integer value."""
     comptime Float16 = Self(12)
+    """A 16-bit floating point value."""
     comptime Float32 = Self(13)
+    """A 32-bit floating point value."""
     comptime Float64 = Self(14)
+    """A 64-bit floating point value."""
     comptime StringList = Self(15)
+    """A space separated list of strings."""
     comptime IntList = Self(16)
+    """A space separated list of integers."""
     comptime Float64List = Self(17)
+    """A space separated list of 64-bit floating point values."""
 
     def is_int_type(self) -> Bool:
         """Returns if the type is an integer type.
@@ -242,7 +262,7 @@ struct Flag(Copyable, Writable):
             ")",
         )
 
-    def set(mut self, value: StringSlice) -> None:
+    def set(mut self, value: StringSpan) -> None:
         """Sets the value of the flag.
 
         Args:
@@ -252,7 +272,7 @@ struct Flag(Copyable, Writable):
         self.changed = True
 
     def get_with_transform[
-        T: ImplicitlyCopyable, //, transform: def (value: StringSlice) thin -> T
+        T: ImplicitlyCopyable, //, transform: def (value: StringSpan) thin -> T
     ](self) -> Optional[T]:
         """Returns the value of the flag with a transformation applied to it.
 
@@ -295,8 +315,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def string(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[String] = None,
         environment_variable: Optional[String] = None,
@@ -342,8 +362,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def bool(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[Bool] = None,
         environment_variable: Optional[String] = None,
@@ -389,8 +409,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def int(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[Int] = None,
         environment_variable: Optional[String] = None,
@@ -436,8 +456,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def int8(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[Int8] = None,
         environment_variable: Optional[String] = None,
@@ -483,8 +503,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def int16(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[Int16] = None,
         environment_variable: Optional[String] = None,
@@ -530,8 +550,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def int32(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[Int32] = None,
         environment_variable: Optional[String] = None,
@@ -577,8 +597,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def int64(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[Int64] = None,
         environment_variable: Optional[String] = None,
@@ -624,8 +644,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def uint(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[UInt] = None,
         environment_variable: Optional[String] = None,
@@ -671,8 +691,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def uint8(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[UInt8] = None,
         environment_variable: Optional[String] = None,
@@ -718,8 +738,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def uint16(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[UInt16] = None,
         environment_variable: Optional[String] = None,
@@ -765,8 +785,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def uint32(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[UInt32] = None,
         environment_variable: Optional[String] = None,
@@ -812,8 +832,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def uint64(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[UInt64] = None,
         environment_variable: Optional[String] = None,
@@ -859,8 +879,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def float16(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[Float16] = None,
         environment_variable: Optional[String] = None,
@@ -906,8 +926,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def float32(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[Float32] = None,
         environment_variable: Optional[String] = None,
@@ -953,8 +973,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def float64(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: Optional[Float64] = None,
         environment_variable: Optional[String] = None,
@@ -1000,8 +1020,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def string_list(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: List[String] = [],
         environment_variable: Optional[String] = None,
@@ -1047,8 +1067,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def int_list(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: List[Int] = [],
         environment_variable: Optional[String] = None,
@@ -1094,8 +1114,8 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def float64_list(
-        name: StringSlice,
-        usage: StringSlice,
+        name: StringSpan,
+        usage: StringSpan,
         shorthand: String = "",
         default: List[Float64] = [],
         environment_variable: Optional[String] = None,

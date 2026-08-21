@@ -1,3 +1,5 @@
+"""Validators for the positional arguments a command accepts."""
+
 comptime ArgValidatorFn = def (args: List[String], valid_args: List[String]) raises thin -> None
 """The function for an argument validator."""
 
@@ -92,7 +94,8 @@ def valid_args(args: List[String], valid_args: List[String]) raises -> None:
     if valid_args:
         for arg in args:
             if arg not in valid_args:
-                raise Error(t"Invalid argument: `{arg}`, for this command.")
+                # Naming the accepted values saves the reader a trip to `--help`.
+                raise Error(t"Invalid argument: `{arg}`. Valid arguments are: {', '.join(valid_args)}.")
 
 
 def range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:

@@ -6,7 +6,7 @@ Prism is a Mojo library designed to help you build command-line interfaces (CLI)
 
 Inspired by: `Cobra` and `urfave/cli`!
 
-![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-1.0.0b2-orange)
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-1.0.0-orange)
 ![Build Status](https://github.com/thatstoasty/prism/actions/workflows/build.yml/badge.svg)
 ![Test Status](https://github.com/thatstoasty/prism/actions/workflows/test.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -28,7 +28,7 @@ There's two ways to build `prism` from source: directly from the Git repository 
 Run the following commands in your terminal:
 
 ```bash
-pixi add -g "https://github.com/thatstoasty/prism.git" --tag v0.3.1 && pixi install
+pixi add prism --git "https://github.com/thatstoasty/prism.git" --tag "v0.4.0" && pixi install
 ```
 
 #### Building from source: Local
@@ -57,12 +57,12 @@ def hello(args: List[String], flags: FlagSet) -> None:
 def main() -> None:
     var cli = Command(
         name="hello",
-        description="This is a dummy command!",
+        usage="This is a dummy command!",
         run=test,
         children=[
             Command(
                 name="chromeria",
-                description="This is a dummy command!",
+                usage="This is a dummy command!",
                 run=hello
             )
         ],
@@ -81,7 +81,7 @@ Due to the nature of self-referential structs, we need to use a smart pointer to
 `prism` provides the parsed cli arguments as command function arguments.
 
 ```mojo
-from prism import FlagSet
+from prism import Command, FlagSet, read_args
 
 def printer(args: List[String], flags: FlagSet) raises -> None:
     if len(args) == 0:
@@ -89,6 +89,10 @@ def printer(args: List[String], flags: FlagSet) raises -> None:
 
     for arg in args:
         print(arg)
+
+def main() -> None:
+    var cli = Command(name="printer", usage="Print the args.", run=printer)
+    cli.execute(read_args())
 ```
 
 ## Command Aliases
@@ -96,12 +100,15 @@ def printer(args: List[String], flags: FlagSet) raises -> None:
 Commands can also be aliased to enable different ways to call the same command. You can change the command underneath the alias and maintain the same behavior.
 
 ```mojo
-from prism import Command, read_args
+from prism import Command, FlagSet, read_args
+
+def tool_func(args: List[String], flags: FlagSet) -> None:
+    print("Running tool!")
 
 def main():
     var cli = Command(
         name="tool",
-        description="This is a dummy command!",
+        usage="This is a dummy command!",
         run=tool_func,
         aliases=["object", "thing"]
     )
@@ -114,19 +121,28 @@ def main():
 
 Commands can be configured to run pre-hook and post-hook functions before and after the command's main run function.
 
+Hook functions must be declared `raises`, even when they never raise. Unlike `run`, hooks are held
+as `Optional`, and a non-raising function does not convert that far implicitly. Leaving `raises` off
+reports a mismatch against the whole `Command` constructor rather than naming the hook, so it is
+worth checking first if a hook will not compile.
+
 ```mojo
 from prism import Command, FlagSet, read_args
 
-def pre_hook(args: List[String], flags: FlagSet) -> None:
+def pre_hook(args: List[String], flags: FlagSet) raises -> None:
     print("Pre-hook executed!")
 
-def post_hook(args: List[String], flags: FlagSet) -> None:
+def post_hook(args: List[String], flags: FlagSet) raises -> None:
     print("Post-hook executed!")
+
+def printer(args: List[String], flags: FlagSet) -> None:
+    for arg in args:
+        print(arg)
 
 def main() -> None:
     var cli = Command(
         name="printer",
-        description="Base command.",
+        usage="Base command.",
         run=printer,
         pre_run=pre_hook,
         post_run=post_hook,
@@ -141,12 +157,15 @@ def main() -> None:
 Commands can have typed flags added to them to enable different behaviors.
 
 ```mojo
-from prism import Command, Flag, read_args
+from prism import Command, Flag, FlagSet, read_args
+
+def handler(args: List[String], flags: FlagSet) raises -> None:
+    print("Formatting type:", flags.get_string("type").or_else("none"))
 
 def main() -> None:
     var cli = Command(
         name="logger",
-        description="Base command.",
+        usage="Base command.",
         run=handler,
         flags=[
             Flag.string(
@@ -218,6 +237,61 @@ def main() -> None:
     cli.execute(read_args())
 ```
 
+### Reading flag values
+
+Each flag type has a matching accessor -- `get_string`, `get_int`, `get_uint8`, `get_float64`,
+`get_string_list` and so on -- which returns `None` when no flag of that name *and type* is defined,
+or when it has neither a value nor a default.
+
+There is also a single generic accessor, if you would rather name the type than the method:
+
+```mojo
+from prism import Command, FlagSet, Flag, read_args
+
+def handler(args: List[String], flags: FlagSet) raises -> None:
+    var region = flags.get[String]("region")
+    var port = flags.get[Int]("port")
+    var tags = flags.get[List[String]]("tags")
+    print("region:", region.or_else(String("none")), "port:", port.or_else(0))
+
+def main() -> None:
+    var cli = Command(
+        name="deploy",
+        usage="Deploy the app.",
+        run=handler,
+        flags=[
+            Flag.string(name="region", usage="Target region."),
+            Flag.int(name="port", usage="Port to bind."),
+            Flag.string_list(name="tags", usage="Tags to apply."),
+        ],
+    )
+    cli.execute(read_args())
+```
+
+`get[T]` differs from the typed accessors in one way worth knowing: it matches on the flag's name
+alone, and raises if the value cannot be read as a `T`, rather than returning `None` the way a
+declared-type mismatch does. Asking for `get[Int]("region")` on a string flag reports that the value
+is not a number instead of quietly yielding nothing.
+
+`T` can be any type conforming to `FromFlagValue`, so a type of your own works too:
+
+```mojo
+from prism import FromFlagValue
+
+@fieldwise_init
+struct Port(FromFlagValue, Copyable, Movable):
+    var value: UInt16
+
+    def __init__(out self, value: StringSlice) raises:
+        var parsed = atol(value)
+        if parsed < 1 or parsed > 65535:
+            raise Error(t"Port out of range: {parsed}")
+        self.value = UInt16(parsed)
+
+def main() -> None:
+    print("Implement FromFlagValue to read a flag as your own type.")
+```
+
 ### Flag Precedence
 
 The precedence for flag value sources is as follows (highest to lowest):
@@ -232,17 +306,29 @@ The precedence for flag value sources is as follows (highest to lowest):
 Flags and hooks can also be inherited by children commands! This can be useful for setting global flags or hooks that should be applied to all child commands.
 
 ```mojo
-from prism import Command, Flag, read_args
+from prism import Command, Flag, FlagSet, read_args
+
+def base(args: List[String], flags: FlagSet) -> None:
+    print("Base command.")
+
+def print_information(args: List[String], flags: FlagSet) raises -> None:
+    print("Animal lover:", flags.get_bool("lover").or_else(False))
+
+def pre_hook(args: List[String], flags: FlagSet) raises -> None:
+    print("Pre-hook executed!")
+
+def post_hook(args: List[String], flags: FlagSet) raises -> None:
+    print("Post-hook executed!")
 
 def main() -> None:
     var cli = Command(
         name="nested",
-        description="Base command.",
+        usage="Base command.",
         run=base,
         children=[
             Command(
                 name="get",
-                description="Base command for getting some data.",
+                usage="Base command for getting some data.",
                 run=print_information,
                 persistent_pre_run=pre_hook,
                 persistent_post_run=post_hook,
@@ -271,10 +357,13 @@ By default flags are considered optional. If you want your command to report an 
 ```mojo
 from prism import Command, Flag, FlagSet, read_args
 
+def tool_func(args: List[String], flags: FlagSet) -> None:
+    print("Running tool!")
+
 def main():
     var cli = Command(
         name="tool",
-        description="This is a dummy command!",
+        usage="This is a dummy command!",
         run=tool_func,
         aliases=["object", "thing"],
         flags=[
@@ -294,12 +383,15 @@ def main():
 If you have different flags that must be provided together (e.g. if they provide the `--color` flag they MUST provide the `--formatting` flag as well) then Prism can enforce that requirement:
 
 ```mojo
-from prism import Command, Flag, read_args
+from prism import Command, Flag, FlagSet, read_args
+
+def tool_func(args: List[String], flags: FlagSet) -> None:
+    print("Running tool!")
 
 def main():
     var cli = Command(
         name="tool",
-        description="This is a dummy command!",
+        usage="This is a dummy command!",
         run=tool_func,
         aliases=["object", "thing"],
         flags=[
@@ -307,7 +399,7 @@ def main():
                 name="color",
                 shorthand="c",
                 usage="Text color",
-                default=0x3464eb,
+                default=UInt32(0x3464eb),
             ),
             Flag.string(
                 name="formatting",
@@ -323,12 +415,15 @@ def main():
 You can also prevent different flags from being provided together if they represent mutually exclusive options such as specifying an output format as either `--color` or `--hue` but never both:
 
 ```mojo
-from prism import Command, Flag, read_args
+from prism import Command, Flag, FlagSet, read_args
+
+def tool_func(args: List[String], flags: FlagSet) -> None:
+    print("Running tool!")
 
 def main():
-   var cli = Command(
+    var cli = Command(
         name="tool",
-        description="This is a dummy command!",
+        usage="This is a dummy command!",
         run=tool_func,
         aliases=["object", "thing"],
         flags=[
@@ -336,13 +431,13 @@ def main():
                 name="color",
                 shorthand="c",
                 usage="Text color",
-                default=0x3464eb,
+                default=UInt32(0x3464eb),
             ),
             Flag.uint32(
                 name="hue",
                 shorthand="x",
                 usage="Text color",
-                default=0x3464eb,
+                default=UInt32(0x3464eb),
             ),
         ],
         mutually_exclusive_flags=["color", "hue"],
@@ -353,12 +448,15 @@ def main():
 If you want to require at least one flag from a group to be present, you can use `mark_flags_one_required`. This can be combined with `mark_flags_mutually_exclusive` to enforce exactly one flag from a given group:
 
 ```mojo
-from prism import Command, Flag, read_args
+from prism import Command, Flag, FlagSet, read_args
+
+def tool_func(args: List[String], flags: FlagSet) -> None:
+    print("Running tool!")
 
 def main():
-   var cli = Command(
+    var cli = Command(
         name="tool",
-        description="This is a dummy command!",
+        usage="This is a dummy command!",
         run=tool_func,
         aliases=["object", "thing"],
         flags=[
@@ -366,7 +464,7 @@ def main():
                 name="color",
                 shorthand="c",
                 usage="Text color",
-                default=0x3464eb,
+                default=UInt32(0x3464eb),
             ),
             Flag.string(
                 name="formatting",
@@ -393,13 +491,15 @@ In these cases:
 If a flag is not provided, you can suggest an alternative flag to the user. This can be useful for providing hints to the user about what they may have meant to type.
 
 ```mojo
-from prism import Command, Flag, read_args
-import prism
+from prism import Command, Flag, FlagSet, read_args
+
+def tool_func(args: List[String], flags: FlagSet) -> None:
+    print("Running tool!")
 
 def main():
     var cli = Command(
         name="tool",
-        description="This is a dummy command!",
+        usage="This is a dummy command!",
         run=tool_func,
         aliases=["object", "thing"],
         flags=[
@@ -407,7 +507,7 @@ def main():
                 name="color",
                 shorthand="c",
                 usage="Text color",
-                default=0x3464eb,
+                default=String("#3464eb"),
             ),
             Flag.string(
                 name="formatting",
@@ -430,8 +530,81 @@ will suggest:
 
 ```txt
 Unknown flag: volor
-Did you mean: --color
+Did you mean: --color?
+
+Run 'tool --help' for usage.
 ```
+
+A suggestion is only offered when a flag is a close enough match. Against a command whose flags
+share nothing with what was typed, `prism` reports the unknown flag without guessing at a
+correction.
+
+### Unknown subcommands
+
+A command that has subcommands dispatches to them, so a leftover positional argument is a mistyped
+subcommand rather than data. `prism` reports it instead of silently running the parent command:
+
+```mojo
+from prism import Command, FlagSet, read_args
+
+def tool_func(args: List[String], flags: FlagSet) -> None:
+    print("Running tool!")
+
+def status(args: List[String], flags: FlagSet) -> None:
+    print("Status!")
+
+def main() -> None:
+    var cli = Command(
+        name="tool",
+        usage="This is a dummy command!",
+        run=tool_func,
+        suggest=True,
+        children=[Command(name="status", usage="Show status.", run=status)],
+    )
+    cli.execute(read_args())
+```
+
+```bash
+mojo cli.mojo sttaus
+```
+
+```txt
+Unknown command: "sttaus" for "tool".
+
+Did you mean this?
+	status
+
+Run 'tool --help' for usage.
+```
+
+The `suggest` field covers subcommands as well as flags. With `suggest=False` the unknown command
+is still reported, just without the correction. Either way the command exits non-zero.
+
+If a parent command genuinely takes positional arguments of its own, set
+`reject_unknown_subcommands=False` to opt out and have the arguments passed through to it:
+
+```mojo
+from prism import Command, FlagSet, read_args
+
+def tool_func(args: List[String], flags: FlagSet) -> None:
+    print("Running tool with:", args)
+
+def status(args: List[String], flags: FlagSet) -> None:
+    print("Status!")
+
+def main() -> None:
+    var cli = Command(
+        name="tool",
+        usage="This is a dummy command!",
+        run=tool_func,
+        reject_unknown_subcommands=False,
+        children=[Command(name="status", usage="Show status.", run=status)],
+    )
+    cli.execute(read_args())
+```
+
+The `completion` subcommand that `enable_completion=True` generates does not count as a subcommand
+for this purpose, so turning on shell completion will not start rejecting a command's arguments.
 
 ## Positional and Custom Arguments
 
@@ -460,15 +633,18 @@ If `arg_validator` is undefined, it defaults to `arbitrary_args`.
 Commands are configured to accept a `--help` and `-h` flag by default. This will print the output of a default help function. You can also configure a custom help function to be run when the `--help` flag is passed. You can use the `help` argument of the `Command` constructor to configure the help function, and the help flag itself.
 
 ```mojo
-from prism import Command, FlagSet, Flag, Help, read_args
+from prism import Command, FlagSet, Flag, Help, HelpContext, read_args
 
-def help_func(args: List[String], flags: FlagSet) -> String:
+def test(args: List[String], flags: FlagSet) -> None:
+    print("Hello from Chromeria!")
+
+def help_func(cmd: HelpContext) raises -> String:
     return "My help function."
 
 def main() -> None:
     var cli = Command(
         name="hello",
-        description="This is a dummy command!",
+        usage="This is a dummy command!",
         run=test,
         help=Help(
             flag=Flag.bool(name="custom-help", shorthand="ch", usage="My Cool Help Flag."),
@@ -484,13 +660,33 @@ def main() -> None:
 
 Commands can be configured to accept `--version` and `-v` flag to run a version function. This will print the result of the version function using the output writer that's configured for the command. You can also configure the flag and function to run when the version flag is passed by using the `version` argument of the `Command` constructor.
 
+By default the version is reported as `<command> version <version>`:
+
+```bash
+mojo cli.mojo --version
+```
+
+```txt
+hello version 0.1.0
+```
+
+A version function receives the command's full name alongside the version, so a subcommand carrying
+its own `Version` can name itself:
+
+```text
+VersionFn = def (String, String) thin -> String
+```
+
+The name is the command's full path, so `--version` on a subcommand of `hello` is passed
+`"hello sub"`. A version function that only wants the version can ignore the first argument.
+
 ```mojo
 from prism import Command, FlagSet, Version, Flag, read_args
 
 def test(args: List[String], flags: FlagSet) -> None:
     print("Pass -v to see the version!")
 
-def version(version: String) -> String:
+def version(name: String, version: String) -> String:
     return "MyCLI version: " + version
 
 def main() -> None:
@@ -512,8 +708,8 @@ def main() -> None:
 The standard output and error output behavior can be customized by providing writer functions. By default, the writer is set to `print` to stdout and stderr, but you can provide custom writer functions that satisfy the expected function signatures.
 
 ```mojo
-from prism import Command, FlagSet, read_args
-from sys import stderr
+from prism import Command, FlagSet, Version, read_args
+from std.sys import stderr
 
 def my_output_writer(arg: String):
     print(arg)
@@ -529,7 +725,7 @@ def main() -> None:
         name="hello",
         usage="This is a dummy command!",
         run=test,
-        version=version,
+        version=Version("0.1.0"),
         output_writer=my_output_writer,
         error_writer=my_error_writer,
     )
@@ -538,23 +734,23 @@ def main() -> None:
 
 ## Reading arguments in from stdin
 
-Commands can additionally read arguments in from `stdin`. Set `read_from_stdin` to `True` and `stdin` will also be read and parsed for arguments. This should only be set on the root command.
+Commands can additionally read arguments in from `stdin`. Pass the result of `read_args_from_stdin`
+to `execute` instead of `read_args`. This should only be done on the root command.
 
 ```mojo
-from prism import Command, FlagSet, read_args
+from prism import Command, FlagSet, read_args_from_stdin
 
 def test(args: List[String], flags: FlagSet) -> None:
     for arg in args:
         print("Received:", arg)
 
-def main() -> None:
+def main() raises -> None:
     var cli = Command(
         name="hello",
         usage="This is a dummy command!",
         run=test,
-        read_from_stdin=True
     )
-    cli.execute()
+    cli.execute(read_args_from_stdin())
 ```
 
 ## Exiting the program
@@ -563,7 +759,7 @@ By default, `prism` will exit with a status code of `1` if any `Errors` are rais
 
 ```mojo
 from prism import Command, FlagSet, read_args
-from sys import exit
+from std.sys import exit
 
 
 def test(args: List[String], flags: FlagSet) raises -> None:
@@ -571,7 +767,7 @@ def test(args: List[String], flags: FlagSet) raises -> None:
 
 
 def my_exit(e: Error) -> None:
-    if e.as_string_slice() == "Error: Exit Code 2":
+    if String(e) == "Error: Exit Code 2":
         exit(2)
     else:
         exit(1)
