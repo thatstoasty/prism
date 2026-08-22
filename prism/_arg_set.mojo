@@ -3,7 +3,7 @@ from std.collections.list import _ListIter
 
 from prism._util import string_to_bool
 from prism.arg import Arg
-from prism.from_flag_value import FromFlagValue
+from prism.value import FromValue
 from prism.opt_type import OptType
 
 
@@ -120,7 +120,7 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
         """Returns the value of a declared argument as a `T`.
 
         Parameters:
-            T: The type to read the argument as. Must conform to `FromFlagValue`.
+            T: The type to read the argument as. Must conform to `FromValue`.
 
         Args:
             name: The name of the argument.
@@ -132,9 +132,9 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
         Raises:
             Error: If the argument's value cannot be read as a `T`.
         """
-        comptime assert conforms_to(T, FromFlagValue), String(
+        comptime assert conforms_to(T, FromValue), String(
             reflect[T].name(),
-            " does not conform to `FromFlagValue`.",
+            " does not conform to `FromValue`.",
         )
 
         var arg = self.lookup(name)

@@ -1,8 +1,8 @@
-"""The `FromFlagValue` trait, which turns a flag's raw text into a typed value."""
+"""The `FromValue` trait, which turns a flag's raw text into a typed value."""
 from std.builtin.rebind import rebind_var
 
 
-trait FromFlagValue(Movable):
+trait FromValue(Movable, Deinitable):
     """A type that can be constructed from the text a flag was given on the command line.
 
     Conforming types can be read straight out of a `FlagSet`:
@@ -15,7 +15,8 @@ trait FromFlagValue(Movable):
     when adding a type of your own.
     """
 
-    def __init__(out self, value: StringSlice) raises:
+    @staticmethod
+    def from_value(value: StringSpan) raises -> Self:
         """Constructs the type from a flag's raw value.
 
         Args:
@@ -27,8 +28,9 @@ trait FromFlagValue(Movable):
         ...
 
 
-__extension String(FromFlagValue):
-    def __init__(out self, value: StringSlice) raises:
+__extension String(FromValue):
+    @staticmethod
+    def from_value(value: StringSpan) raises -> Self:
         """Constructs a `String` from a flag's raw value.
 
         Args:
@@ -37,13 +39,12 @@ __extension String(FromFlagValue):
         Raises:
             Error: Never; a flag value is already text.
         """
-        # Not `Self(value)`: that resolves back to this initializer and recurses forever.
-        self = String()
-        self.write(value)
+        return String(value)
 
 
-__extension Bool(FromFlagValue):
-    def __init__(out self, value: StringSlice) raises:
+__extension Bool(FromValue):
+    @staticmethod
+    def from_value(value: StringSpan) raises -> Self:
         """Constructs a `Bool` from a flag's raw value.
 
         Args:
@@ -54,9 +55,9 @@ __extension Bool(FromFlagValue):
         """
         # Same spellings as `strconv.ParseBool`, matching `_util.string_to_bool`.
         if value == "1" or value == "t" or value == "T" or value == "true" or value == "True" or value == "TRUE":
-            self = True
+            return True
         elif value == "0" or value == "f" or value == "F" or value == "false" or value == "False" or value == "FALSE":
-            self = False
+            return False
         else:
             raise Error(
                 "Invalid boolean value: '",
@@ -65,8 +66,9 @@ __extension Bool(FromFlagValue):
             )
 
 
-__extension SIMD(FromFlagValue):
-    def __init__(out self, value: StringSlice) raises:
+__extension SIMD(FromValue):
+    @staticmethod
+    def from_value(value: StringSpan) raises -> Self:
         """Constructs a scalar from a flag's raw value.
 
         Args:
@@ -81,13 +83,14 @@ __extension SIMD(FromFlagValue):
             "Flags hold scalars, not vectors. ", reflect[Self].name(), " has more than one lane."
         )
         comptime if Self.dtype in (DType.float16, DType.float32, DType.float64):
-            self = Scalar[Self.dtype](atof(value))
+            return Scalar[Self.dtype](atof(value))
         else:
-            self = Scalar[Self.dtype](atol(value))
+            return Scalar[Self.dtype](atol(value))
 
 
-__extension List(FromFlagValue):
-    def __init__(out self, value: StringSlice) raises:
+__extension List(FromValue):
+    @staticmethod
+    def from_value(value: StringSpan) raises -> Self:
         """Constructs a list from a flag's space separated raw value.
 
         Args:
@@ -104,20 +107,71 @@ __extension List(FromFlagValue):
             var parsed = List[String]()
             for item in value.split(sep=" "):
                 parsed.append(String(item))
-            self = rebind_var[List[Self.T]](parsed^)
+            return rebind_var[List[Self.T]](parsed^)
         elif Self.T == Int:
             var parsed = List[Int]()
             for item in value.split(sep=" "):
                 parsed.append(atol(item))
-            self = rebind_var[List[Self.T]](parsed^)
+            return rebind_var[List[Self.T]](parsed^)
         elif Self.T == Float64:
             var parsed = List[Float64]()
             for item in value.split(sep=" "):
                 parsed.append(atof(item))
-            self = rebind_var[List[Self.T]](parsed^)
+            return rebind_var[List[Self.T]](parsed^)
         else:
             comptime assert False, String(
                 "List flags hold String, Int or Float64 elements. ",
                 reflect[Self.T].name(),
                 " is not one of them.",
             )
+
+
+trait ToValue(Movable, Deinitable):
+    def to_value(self) -> String:
+        ...
+
+
+__extension String(ToValue):
+    def to_value(self) -> String:
+        """Constructs a `String` from a flag's raw value.
+
+        Returns:
+            A copy of the string.
+        """
+        return self.copy()
+
+
+__extension Bool(ToValue):
+    def to_value(self) -> String:
+        """Constructs a `Bool` from a flag's raw value.
+
+        Returns:
+            The Bool as a string.
+        """
+        return String(self)
+
+
+__extension SIMD(ToValue):
+    def to_value(self) -> String:
+        """Constructs a scalar from a flag's raw value.
+
+        Returns:
+            The SIMD Scalar as a string.
+        """
+        # `Int` is `SIMD[DType.int, 1]` and `UInt` is `SIMD[DType.uint, 1]`, so this one extension
+        # covers every integer and float width a flag can hold.
+        comptime assert Self.length == 1, String(
+            "Values hold scalars, not vectors. ", reflect[Self].name(), " has more than one lane."
+        )
+        return String(self)
+
+
+__extension List(ToValue):
+    def to_value(self) -> String:
+        """Constructs a list from a flag's space separated raw value.
+
+        Returns:
+            The List as a string.
+        """
+        comptime assert conforms_to(Self.T, Writable), "The elements of the List must conform to `Writable`."
+        return String(self)

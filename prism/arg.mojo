@@ -3,6 +3,7 @@ from std.collections.list import _ListIter
 
 from prism.opt_type import OptType
 from prism._util import _map_dtype_to_opt_type, _to_opt_string
+from prism.value import ToValue
 
 
 @fieldwise_init
@@ -82,13 +83,14 @@ struct Arg(Copyable, Writable):
         return None
 
     @staticmethod
-    def new[T: Movable & Writable & Deinitable](
+    def new[T: Movable & Deinitable](
         name: StringSpan,
         usage: StringSpan = "",
         var default: Optional[T] = None,
         required: Bool = True,
         valid_values: List[T] = [],
     ) -> Self:
+        comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
         comptime opt_type = OptType(reflect[T].name())
         return Self(
             name=String(name),
@@ -96,5 +98,5 @@ struct Arg(Copyable, Writable):
             usage=String(usage),
             required=required and not default,
             default=default^.and_then(_to_opt_string[T]),
-            valid_values=[String(val) for val in valid_values],
+            valid_values=[val.to_value() for val in valid_values],
         )

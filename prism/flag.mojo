@@ -1,6 +1,7 @@
 """Flags, their types, and the annotations used to group them."""
 from prism.opt_type import OptType
 from prism._util import _map_dtype_to_opt_type, _to_opt_string
+from prism.value import FromValue, ToValue, String, Bool, SIMD, List
 
 comptime FlagActionFn = def (String) raises thin -> None
 """The type of a function that runs after a flag has been processed."""
@@ -226,7 +227,7 @@ struct Flag(Copyable, Writable):
         return names^
 
     @staticmethod
-    def new[T: Movable & Writable & Deinitable](
+    def new[T: AnyType](
         name: StringSpan,
         usage: StringSpan,
         shorthand: StringSpan = "",
@@ -237,6 +238,7 @@ struct Flag(Copyable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Self:
+        comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
         comptime opt_type = OptType(reflect[T].name())
         return Self(
             name=String(name),

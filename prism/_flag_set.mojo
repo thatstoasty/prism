@@ -11,7 +11,7 @@ from prism._flag_parser import FlagParser
 from prism._util import string_to_bool
 from prism.flag import Flag, FlagActionFn, Annotation
 from prism.opt_type import OptType
-from prism.from_flag_value import FromFlagValue
+from prism.value import FromValue
 
 
 comptime FlagVisitorFn = def (Flag) thin -> None
@@ -453,7 +453,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         """Returns the value of a flag as a `T`. If it isn't set, then return the default value.
 
         Parameters:
-            T: The type to read the flag as. Must conform to `FromFlagValue`.
+            T: The type to read the flag as. Must conform to `FromValue`.
 
         Args:
             name: The name of the flag.
@@ -471,7 +471,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
           it was not. This returns whatever the named flag holds, read as a `T`, and reports a
           parse failure rather than silently returning `None`.
         """
-        comptime assert conforms_to(T, FromFlagValue), String(t"{reflect[T].name()} does not implement `FromFlagValue`.")
+        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
 
         var flag = self.lookup(name)
         if not flag:
@@ -481,14 +481,14 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         if not result:
             return None
 
-        return T(result.value())
+        return T.from_value(result.value())
 
     def _get_as[type: OptType, T: AnyType](self, name: ImmStringSpan) raises -> Optional[T]:
         """Returns the value of a flag declared as `type`, read as a `T`.
 
         Parameters:
             type: The `OptType` the flag must have been declared with.
-            T: The type to read the flag as. Must conform to `FromFlagValue`.
+            T: The type to read the flag as. Must conform to `FromValue`.
 
         Args:
             name: The name of the flag.
@@ -500,7 +500,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Raises:
             Error: If the flag's value cannot be read as a `T`.
         """
-        comptime assert conforms_to(T, FromFlagValue), String(t"{reflect[T].name()} does not implement `FromFlagValue`.")
+        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
 
         var flag = self.lookup[type](name)
         if not flag:
@@ -510,7 +510,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         if not result:
             return None
 
-        return T(result.value())
+        return T.from_value(result.value())
 
     def get_string(self, name: ImmStringSpan) -> Optional[String]:
         """Returns the value of a flag as a `String`. If it isn't set, then return the default value.
@@ -524,7 +524,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         #### Notes:
         - Unlike the other accessors this cannot fail, since a flag's value is already text, so it
-          reads the value directly rather than going through `FromFlagValue`.
+          reads the value directly rather than going through `FromValue`.
         """
         var flag = self.lookup[OptType.String](name)
         if not flag:

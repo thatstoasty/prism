@@ -273,23 +273,23 @@ alone, and raises if the value cannot be read as a `T`, rather than returning `N
 declared-type mismatch does. Asking for `get[Int]("region")` on a string flag reports that the value
 is not a number instead of quietly yielding nothing.
 
-`T` can be any type conforming to `FromFlagValue`, so a type of your own works too:
+`T` can be any type conforming to `FromValue`, so a type of your own works too:
 
 ```mojo
-from prism import FromFlagValue
+from prism import FromValue
 
 @fieldwise_init
-struct Port(FromFlagValue, Copyable, Movable):
+struct Port(FromValue, Copyable, Movable):
     var value: UInt16
 
-    def __init__(out self, value: StringSlice) raises:
+    def __init__(out self, value: StringSpan) raises:
         var parsed = atol(value)
         if parsed < 1 or parsed > 65535:
             raise Error(t"Port out of range: {parsed}")
         self.value = UInt16(parsed)
 
 def main() -> None:
-    print("Implement FromFlagValue to read a flag as your own type.")
+    print("Implement FromValue to read a flag as your own type.")
 ```
 
 ### Flag Precedence

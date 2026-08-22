@@ -1,6 +1,7 @@
 from std.os import abort
 from std.sys import exit, stderr
 from prism.opt_type import OptType
+from prism.value import ToValue
 
 
 comptime UNKNOWN_FLAG_ERROR = "Command does not accept the flag supplied. Name: "
@@ -82,5 +83,5 @@ def _map_dtype_to_opt_type[T: DType]() -> OptType:
         abort("Invalid DType.")
 
 
-def _to_opt_string[T: Writable & Movable & Deinitable](var lhs: T) -> Optional[String]:
-    return String(lhs)
+def _to_opt_string[T: ToValue](var lhs: T) -> Optional[String]:
+    return lhs.to_value()
