@@ -36,7 +36,7 @@ def _validate_value(type: OptType, name: ImmStringSpan, value: ImmStringSpan) ra
         raise Error(t"Invalid value for argument `{name}`: {e}")
 
 
-struct ArgSet(Boolable, Copyable, Movable, Sized, Writable, Iterable):
+struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
     """The positional arguments a command received.
 
     Values can be read positionally, as before, or by the name of a declared `Arg`:
@@ -67,22 +67,28 @@ struct ArgSet(Boolable, Copyable, Movable, Sized, Writable, Iterable):
         self.args = args^
         self.values = values^
 
+    @always_inline
     def __bool__(self) -> Bool:
         return Bool(self.values)
 
+    @always_inline
     def __len__(self) -> Int:
         return len(self.values)
 
-    def __getitem__(self, index: Int) -> String:
+    @__unsafe_nested_origins_read_only
+    @always_inline
+    def __getitem__(
+        ref self, idx: Int, /
+    ) -> ref[self.values.unsafe_get(index(idx))] String:
         """Returns the positional value at `index`.
 
         Args:
-            index: The position to read.
+            idx: The position to read.
 
         Returns:
             A copy of the value at that position.
         """
-        return self.values[index].copy()
+        return self.values.unsafe_get(idx)
 
     def __iter__(ref self) -> Self.IteratorType[origin_of(self)]:
         return rebind[Self.IteratorType[origin_of(self)]](iter(self.values))
@@ -200,7 +206,7 @@ struct ArgSet(Boolable, Copyable, Movable, Sized, Writable, Iterable):
         Returns:
             The rendered arguments, or an empty string when none are declared.
         """
-        var builder = String()
+        var builder = String(capacity=128)
         for i in range(len(self.args)):
             if i > 0:
                 builder.write(" ")

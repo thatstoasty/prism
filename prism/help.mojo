@@ -200,7 +200,7 @@ struct Help(Copyable):
     def __init__(
         out self,
         *,
-        var flag: Flag = Flag.bool(name="help", shorthand="h", usage="Displays help information about the command."),
+        var flag: Flag = Flag.new[Bool](name="help", shorthand="h", usage="Displays help information about the command."),
         action: HelpFn = default_help,
     ):
         """Constructs a new `Help` configuration.

@@ -19,7 +19,7 @@ def main() -> None:
         usage="Greet a user!",
         run=test,
         flags=[
-            Flag.string(
+            Flag.new[String](
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",

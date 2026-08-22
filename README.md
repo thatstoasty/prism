@@ -160,7 +160,7 @@ Commands can have typed flags added to them to enable different behaviors.
 from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 def handler(args: ArgSet, flags: FlagSet) raises -> None:
-    print("Formatting type:", flags.get_string("type").or_else("none"))
+    print("Formatting type:", flags.get[String]("type").or_else("none"))
 
 def main() -> None:
     var cli = Command(
@@ -168,7 +168,7 @@ def main() -> None:
         usage="Base command.",
         run=handler,
         flags=[
-            Flag.string(
+            Flag.new[String](
                 name="type",
                 shorthand="t",
                 usage="Formatting type: [json, custom]",
@@ -188,7 +188,7 @@ Flag values can also be retrieved from environment variables, if a value is not 
 from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 def test(args: ArgSet, flags: FlagSet) raises -> None:
-    if name := flags.get_string("name"):
+    if name := flags.get[String]("name"):
         print("Hello ", name[])
 
 def main() -> None:
@@ -197,7 +197,7 @@ def main() -> None:
         usage="Greet a user!",
         run=test,
         flags=[
-            Flag.string(
+            Flag.new[String](
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
@@ -217,7 +217,7 @@ from prism import ArgSet, Command, Flag, FlagSet, read_args
 import prism
 
 def test(args: ArgSet, flags: FlagSet) raises -> None:
-    if name := flags.get_string("name"):
+    if name := flags.get[String]("name"):
         print("Hello ", name[])
 
 def main() -> None:
@@ -226,7 +226,7 @@ def main() -> None:
         usage="Greet a user!",
         run=test,
         flags=[
-            Flag.string(
+            Flag.new[String](
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
@@ -260,8 +260,8 @@ def main() -> None:
         usage="Deploy the app.",
         run=handler,
         flags=[
-            Flag.string(name="region", usage="Target region."),
-            Flag.int(name="port", usage="Port to bind."),
+            Flag.new[String](name="region", usage="Target region."),
+            Flag.new[Int](name="port", usage="Port to bind."),
             Flag.string_list(name="tags", usage="Tags to apply."),
         ],
     )
@@ -312,7 +312,7 @@ def base(args: ArgSet, flags: FlagSet) -> None:
     print("Base command.")
 
 def print_information(args: ArgSet, flags: FlagSet) raises -> None:
-    print("Animal lover:", flags.get_bool("lover").or_else(False))
+    print("Animal lover:", flags.get[Bool]("lover").or_else(False))
 
 def pre_hook(args: ArgSet, flags: FlagSet) raises -> None:
     print("Pre-hook executed!")
@@ -335,7 +335,7 @@ def main() -> None:
             )
         ],
         flags=[
-            Flag.bool(
+            Flag.new[Bool](
                 name="lover",
                 shorthand="l",
                 usage="Are you an animal lover?",
@@ -367,7 +367,7 @@ def main():
         run=tool_func,
         aliases=["object", "thing"],
         flags=[
-            Flag.bool(
+            Flag.new[Bool](
                 name="required",
                 shorthand="r",
                 usage="Always required.",
@@ -395,13 +395,13 @@ def main():
         run=tool_func,
         aliases=["object", "thing"],
         flags=[
-            Flag.uint32(
+            Flag.new[UInt32](
                 name="color",
                 shorthand="c",
                 usage="Text color",
                 default=UInt32(0x3464eb),
             ),
-            Flag.string(
+            Flag.new[String](
                 name="formatting",
                 shorthand="f",
                 usage="Text formatting",
@@ -427,13 +427,13 @@ def main():
         run=tool_func,
         aliases=["object", "thing"],
         flags=[
-            Flag.uint32(
+            Flag.new[UInt32](
                 name="color",
                 shorthand="c",
                 usage="Text color",
                 default=UInt32(0x3464eb),
             ),
-            Flag.uint32(
+            Flag.new[UInt32](
                 name="hue",
                 shorthand="x",
                 usage="Text color",
@@ -460,13 +460,13 @@ def main():
         run=tool_func,
         aliases=["object", "thing"],
         flags=[
-            Flag.uint32(
+            Flag.new[UInt32](
                 name="color",
                 shorthand="c",
                 usage="Text color",
                 default=UInt32(0x3464eb),
             ),
-            Flag.string(
+            Flag.new[String](
                 name="formatting",
                 shorthand="f",
                 usage="Text formatting",
@@ -503,13 +503,13 @@ def main():
         run=tool_func,
         aliases=["object", "thing"],
         flags=[
-            Flag.string(
+            Flag.new[String](
                 name="color",
                 shorthand="c",
                 usage="Text color",
                 default=String("#3464eb"),
             ),
-            Flag.string(
+            Flag.new[String](
                 name="formatting",
                 shorthand="f",
                 usage="Text formatting",
@@ -625,7 +625,7 @@ def main() -> None:
         usage="Deploy the app.",
         run=deploy,
         args=[
-            Arg.string(name="target", usage="Where to deploy."),
+            Arg.new[String](name="target", usage="Where to deploy."),
             Arg.int(name="replicas", usage="How many replicas."),
             Arg.float64(name="ratio", usage="Traffic ratio.", default=Float64(1.0)),
         ],
@@ -672,7 +672,7 @@ def main() -> None:
         name="deploy",
         usage="Deploy the app.",
         run=deploy,
-        args=[Arg.string(name="env", usage="Environment.", valid_values=["staging", "production"])],
+        args=[Arg.new[String](name="env", usage="Environment.", valid_values=["staging", "production"])],
     )
     cli.execute(read_args())
 ```
@@ -731,7 +731,7 @@ def main() -> None:
         usage="This is a dummy command!",
         run=test,
         help=Help(
-            flag=Flag.bool(name="custom-help", shorthand="ch", usage="My Cool Help Flag."),
+            flag=Flag.new[Bool](name="custom-help", shorthand="ch", usage="My Cool Help Flag."),
             action=help_func,
         ),
     )
@@ -780,7 +780,7 @@ def main() -> None:
         run=test,
         version=Version(
             "0.1.0",
-            flag=Flag.bool(name="custom-version", shorthand="cv", usage="My Cool Version Flag."),
+            flag=Flag.new[Bool](name="custom-version", shorthand="cv", usage="My Cool Version Flag."),
             action=version
         ),
     )

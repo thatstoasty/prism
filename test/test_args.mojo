@@ -64,7 +64,7 @@ def _bound(var args: List[Arg], var values: List[String]) raises -> ArgSet:
 
 def test_named_args_bind_positionally() raises:
     var args: List[Arg] = [
-        Arg.string(name="target", usage="Where."),
+        Arg.new[String](name="target", usage="Where."),
         Arg.int(name="replicas", usage="How many."),
     ]
     var values: List[String] = ["prod", "3"]
@@ -79,7 +79,7 @@ def test_named_args_bind_positionally() raises:
 
 def test_named_args_use_defaults_when_omitted() raises:
     var args: List[Arg] = [
-        Arg.string(name="target", usage="Where."),
+        Arg.new[String](name="target", usage="Where."),
         Arg.float64(name="ratio", usage="Ratio.", default=Float64(1.0)),
     ]
     var values: List[String] = ["prod"]
@@ -90,7 +90,7 @@ def test_named_args_use_defaults_when_omitted() raises:
 
 def test_named_args_reject_missing_required() raises:
     var args: List[Arg] = [
-        Arg.string(name="target", usage="Where."),
+        Arg.new[String](name="target", usage="Where."),
         Arg.int(name="replicas", usage="How many."),
     ]
     var values: List[String] = ["prod"]
@@ -99,7 +99,7 @@ def test_named_args_reject_missing_required() raises:
 
 
 def test_named_args_reject_extra() raises:
-    var args: List[Arg] = [Arg.string(name="target", usage="Where.")]
+    var args: List[Arg] = [Arg.new[String](name="target", usage="Where.")]
     var values: List[String] = ["prod", "extra"]
     with assert_raises():
         _ = _bound(args^, values^)
@@ -127,7 +127,7 @@ def test_undeclared_args_are_permissive() raises:
 
 def test_named_args_usage_line() raises:
     var args: List[Arg] = [
-        Arg.string(name="target", usage="Where."),
+        Arg.new[String](name="target", usage="Where."),
         Arg.int(name="replicas", usage="How many.", default=Optional[Int](1)),
     ]
     testing.assert_equal(ArgSet(args^).usage(), "TARGET [REPLICAS]")
@@ -137,7 +137,7 @@ def test_named_args_reject_invalid_value() raises:
     # `Arg.valid_values` replaces the command-level `valid_args` list and the validator that read
     # it, so the constraint now belongs to the argument it constrains.
     var args: List[Arg] = [
-        Arg.string(name="env", usage="Environment.", valid_values=["staging", "production"])
+        Arg.new[String](name="env", usage="Environment.", valid_values=["staging", "production"])
     ]
     var values: List[String] = ["dev"]
     with assert_raises():
@@ -146,7 +146,7 @@ def test_named_args_reject_invalid_value() raises:
 
 def test_named_args_accept_a_valid_value() raises:
     var args: List[Arg] = [
-        Arg.string(name="env", usage="Environment.", valid_values=["staging", "production"])
+        Arg.new[String](name="env", usage="Environment.", valid_values=["staging", "production"])
     ]
     var values: List[String] = ["staging"]
     var bound = _bound(args^, values^)

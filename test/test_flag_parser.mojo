@@ -10,10 +10,10 @@ from prism.opt_type import OptType
 def _flags() -> FlagSet:
     """Builds the flag set every test in this module parses against."""
     var flags: List[Flag] = [
-        Flag.bool(name="verbose", shorthand="V", usage="Verbose output."),
-        Flag.bool(name="quiet", shorthand="q", usage="Quiet output."),
-        Flag.string(name="output", shorthand="o", usage="Output path."),
-        Flag.int(name="count", shorthand="c", usage="A count."),
+        Flag.new[Bool](name="verbose", shorthand="V", usage="Verbose output."),
+        Flag.new[Bool](name="quiet", shorthand="q", usage="Quiet output."),
+        Flag.new[String](name="output", shorthand="o", usage="Output path."),
+        Flag.new[Int](name="count", shorthand="c", usage="A count."),
     ]
     return FlagSet(flags^)
 

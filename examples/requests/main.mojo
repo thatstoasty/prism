@@ -14,7 +14,7 @@ def print_information(args: ArgSet, flags: FlagSet) -> None:
 
 
 def get_cat_fact(args: ArgSet, flags: FlagSet) raises -> None:
-    var lover = flags.get_bool("lover")
+    var lover = flags.get[Bool]("lover")
     if lover:
         print("Hello fellow cat lover!")
 
@@ -24,7 +24,7 @@ def get_cat_fact(args: ArgSet, flags: FlagSet) raises -> None:
     var url = "https://catfact.ninja/fact"
 
     # Send the GET requests
-    var count = flags.get_int("count")
+    var count = flags.get[Int]("count")
     if not count:
         raise Error("Count flag was not found.")
 
@@ -40,7 +40,7 @@ def get_cat_fact(args: ArgSet, flags: FlagSet) raises -> None:
 
 
 def get_dog_breeds(args: ArgSet, flags: FlagSet) raises -> None:
-    var lover = flags.get_bool("lover")
+    var lover = flags.get[Bool]("lover")
     if lover:
         print("Hello fellow dog lover!")
 
@@ -72,7 +72,7 @@ def main() -> None:
         usage="Get some cat facts!",
         run=get_cat_fact,
         flags=[
-            Flag.int(
+            Flag.new[Int](
                 name="count",
                 shorthand="c",
                 usage="Number of facts to get.",
@@ -95,7 +95,7 @@ def main() -> None:
         persistent_pre_run=pre_hook,
         persistent_post_run=post_hook,
         flags=[
-            Flag.bool(
+            Flag.new[Bool](
                 name="lover",
                 shorthand="l",
                 usage="Are you an animal lover?",

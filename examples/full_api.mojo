@@ -58,8 +58,8 @@ def main() -> None:
         version=Version("0.1.0", action=version),
         suggest=True,
         flags=[
-            Flag.bool(name="required", shorthand="r0", usage="Always required.", required=True, persistent=True),
-            Flag.string(
+            Flag.new[Bool](name="required", shorthand="r0", usage="Always required.", required=True, persistent=True),
+            Flag.new[String](
                 name="host",
                 shorthand="h",
                 usage="Host",
@@ -68,19 +68,19 @@ def main() -> None:
                 file_path="~/.myapp/config",
                 default="localhost",
             ),
-            Flag.string(
+            Flag.new[String](
                 name="port",
                 shorthand="p",
                 usage="Port",
                 persistent=True,
             ),
-            Flag.bool(
+            Flag.new[Bool](
                 name="automation",
                 shorthand="a",
                 usage="In automation?",
                 persistent=True,
             ),
-            Flag.bool(
+            Flag.new[Bool](
                 name="verbose",
                 shorthand="vv",
                 usage="Verbose output.",
@@ -95,13 +95,13 @@ def main() -> None:
                 run=connect,
                 aliases=["db-connect"],
                 flags=[
-                    Flag.bool(
+                    Flag.new[Bool](
                         name="also",
                         shorthand="a",
                         usage="Also always required.",
                         required=True,
                     ),
-                    Flag.string(
+                    Flag.new[String](
                         name="uri",
                         shorthand="u",
                         usage="URI",

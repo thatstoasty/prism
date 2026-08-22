@@ -1,4 +1,6 @@
+from std.os import abort
 from std.sys import exit, stderr
+from prism.opt_type import OptType
 
 
 comptime UNKNOWN_FLAG_ERROR = "Command does not accept the flag supplied. Name: "
@@ -47,3 +49,38 @@ def string_to_bool(value: ImmStringSpan) raises -> Bool:
         value,
         "'. Expected one of: 1, t, T, true, True, TRUE, 0, f, F, false, False, FALSE.",
     )
+
+
+def _map_dtype_to_opt_type[T: DType]() -> OptType:
+    comptime if T == DType.int:
+        return OptType.Int
+    elif T == DType.int8:
+        return OptType.Int8
+    elif T == DType.int16:
+        return OptType.Int16
+    elif T == DType.int32:
+        return OptType.Int32
+    elif T == DType.int64:
+        return OptType.Int64
+    elif T == DType.uint:
+        return OptType.UInt
+    elif T == DType.uint8:
+        return OptType.UInt8
+    elif T == DType.uint16:
+        return OptType.UInt16
+    elif T == DType.uint32:
+        return OptType.UInt32
+    elif T == DType.uint64:
+        return OptType.UInt64
+    elif T == DType.float16:
+        return OptType.Float16
+    elif T == DType.float32:
+        return OptType.Float32
+    elif T == DType.float64:
+        return OptType.Float64
+    else:
+        abort("Invalid DType.")
+
+
+def _to_opt_string[T: Writable & Movable & Deinitable](var lhs: T) -> Optional[String]:
+    return String(lhs)

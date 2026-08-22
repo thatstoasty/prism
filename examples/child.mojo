@@ -15,14 +15,14 @@ def main() -> None:
         usage="This is a dummy command!",
         run=test,
         flags=[
-            Flag.bool(name="required", shorthand="r", usage="Always required.", required=True, persistent=True),
-            Flag.string(
+            Flag.new[Bool](name="required", shorthand="r", usage="Always required.", required=True, persistent=True),
+            Flag.new[String](
                 name="host",
                 shorthand="h",
                 usage="Host",
                 persistent=True,
             ),
-            Flag.string(
+            Flag.new[String](
                 name="port",
                 shorthand="p",
                 usage="Port",
@@ -36,13 +36,13 @@ def main() -> None:
                 usage="This is a dummy command!",
                 run=tool_func,
                 flags=[
-                    Flag.bool(
+                    Flag.new[Bool](
                         name="also",
                         shorthand="a",
                         usage="Also always required.",
                         required=True,
                     ),
-                    Flag.string(
+                    Flag.new[String](
                         name="uri",
                         shorthand="u",
                         usage="URI",

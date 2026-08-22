@@ -2,10 +2,10 @@ from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 
 def test(args: ArgSet, flags: FlagSet) raises -> None:
-    var host = flags.get_string("host")
-    var port = flags.get_string("port")
+    var host = flags.get[String]("host")
+    var port = flags.get[String]("port")
 
-    if uri := flags.get_string("uri"):
+    if var uri := flags.get[String]("uri"):
         print("URI:", uri[])
     elif host and port:
         print(host[] + ":" + port[])
@@ -21,23 +21,23 @@ def main() -> None:
         usage="This is a dummy command!",
         run=test,
         flags=[
-            Flag.bool(
+            Flag.new[Bool](
                 name="required",
                 shorthand="r",
                 usage="Always required.",
                 required=True,
             ),
-            Flag.string(
+            Flag.new[String](
                 name="host",
                 shorthand="h",
                 usage="Host",
             ),
-            Flag.string(
+            Flag.new[String](
                 name="port",
                 shorthand="p",
                 usage="Port",
             ),
-            Flag.string(
+            Flag.new[String](
                 name="uri",
                 shorthand="u",
                 usage="URI",

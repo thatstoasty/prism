@@ -438,7 +438,7 @@ struct Command(Copyable, Writable):
                 usage="Generate shell completion scripts.",
                 run=_completion_noop,
                 args=[
-                    Arg.string(
+                    Arg.new[String](
                         name="shell",
                         usage="The shell to generate a script for.",
                         valid_values=["zsh", "bash"],
@@ -771,7 +771,7 @@ struct Command(Copyable, Writable):
             # whenever it holds a value, so the wrapped `False` reads as True.
             # Read the help flag from the command being executed, and render with that command's own
             # `Help`, so a subcommand configured with a custom help flag or renderer gets its own.
-            if cmd[].flags.get_bool(cmd[].help.flag.name).or_else(False):
+            if cmd[].flags.get[Bool](cmd[].help.flag.name).or_else(False):
                 var inherited = cmd[].inherited_flags()
                 var help_context = HelpContext(
                     full_name=cmd[].full_name(),
@@ -790,7 +790,7 @@ struct Command(Copyable, Writable):
             if cmd[].version:
                 ref version = cmd[].version.value()
                 # Unwrapped the same way as the help flag above, and for the same reason.
-                if cmd[].flags.get_bool(version.flag.name).or_else(False):
+                if cmd[].flags.get[Bool](version.flag.name).or_else(False):
                     self.output_writer(version.action(cmd[].full_name(), version.value))
                     return
 

@@ -33,7 +33,7 @@ struct Version(Copyable):
         out self,
         version: String,
         *,
-        var flag: Flag = Flag.bool(name="version", shorthand="v", usage="Displays the version of the command."),
+        var flag: Flag = Flag.new[Bool](name="version", shorthand="v", usage="Displays the version of the command."),
         action: VersionFn = default_version_writer,
     ):
         """Constructs a new `Version` configuration.

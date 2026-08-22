@@ -39,7 +39,7 @@ def main() -> None:
                 name="valid_values",
                 usage="This is a dummy command!",
                 run=hello,
-                args=[Arg.string(name="fruit", usage="Which fruit.", valid_values=["Pineapple"])],
+                args=[Arg.new[String](name="fruit", usage="Which fruit.", valid_values=["Pineapple"])],
             ),
             Command(name="no_args", usage="This is a dummy command!", run=hello, arg_validator=no_args),
         ],

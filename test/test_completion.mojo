@@ -36,31 +36,31 @@ def test_zsh_escape_brackets() raises:
 
 
 def test_zsh_flag_spec_bool_with_shorthand() raises:
-    var flag = Flag.bool(name="verbose", shorthand="v", usage="Enable verbose output")
+    var flag = Flag.new[Bool](name="verbose", shorthand="v", usage="Enable verbose output")
     var spec = _zsh_flag_spec(flag)
     std.testing.assert_equal(spec, "'(-v --verbose)'{-v,--verbose}'[Enable verbose output]'")
 
 
 def test_zsh_flag_spec_bool_no_shorthand() raises:
-    var flag = Flag.bool(name="debug", usage="Enable debug mode")
+    var flag = Flag.new[Bool](name="debug", usage="Enable debug mode")
     var spec = _zsh_flag_spec(flag)
     std.testing.assert_equal(spec, "'--debug[Enable debug mode]'")
 
 
 def test_zsh_flag_spec_string_with_shorthand() raises:
-    var flag = Flag.string(name="env", shorthand="e", usage="Environment")
+    var flag = Flag.new[String](name="env", shorthand="e", usage="Environment")
     var spec = _zsh_flag_spec(flag)
     std.testing.assert_equal(spec, "'(-e --env)'{-e,--env}'=[Environment]:env:'")
 
 
 def test_zsh_flag_spec_string_no_shorthand() raises:
-    var flag = Flag.string(name="host", usage="Host name")
+    var flag = Flag.new[String](name="host", usage="Host name")
     var spec = _zsh_flag_spec(flag)
     std.testing.assert_equal(spec, "'--host=[Host name]:host:'")
 
 
 def test_zsh_flag_spec_int() raises:
-    var flag = Flag.int(name="port", shorthand="p", usage="Port number")
+    var flag = Flag.new[Int](name="port", shorthand="p", usage="Port number")
     var spec = _zsh_flag_spec(flag)
     std.testing.assert_equal(spec, "'(-p --port)'{-p,--port}'=[Port number]:port:'")
 
@@ -159,7 +159,7 @@ def test_zsh_command_with_valid_args() raises:
         name="myapp",
         usage="My application",
         run=dummy,
-        args=[Arg.string(name="action", usage="What to do.", valid_values=["start", "stop", "restart"])],
+        args=[Arg.new[String](name="action", usage="What to do.", valid_values=["start", "stop", "restart"])],
     )
     var script = generate_zsh_completion(cmd)
 
@@ -173,9 +173,9 @@ def test_zsh_command_with_flags() raises:
         usage="My application",
         run=dummy,
         flags=[
-            Flag.string(name="config", shorthand="c", usage="Config file"),
-            Flag.bool(name="verbose", shorthand="v", usage="Verbose output"),
-            Flag.int(name="port", usage="Port number"),
+            Flag.new[String](name="config", shorthand="c", usage="Config file"),
+            Flag.new[Bool](name="verbose", shorthand="v", usage="Verbose output"),
+            Flag.new[Int](name="port", usage="Port number"),
         ],
     )
     var script = generate_zsh_completion(cmd)
@@ -312,7 +312,7 @@ def test_bash_command_with_valid_args() raises:
         name="myapp",
         usage="My application",
         run=dummy,
-        args=[Arg.string(name="action", usage="What to do.", valid_values=["start", "stop", "restart"])],
+        args=[Arg.new[String](name="action", usage="What to do.", valid_values=["start", "stop", "restart"])],
     )
     var script = generate_bash_completion(cmd)
     # Verify valid args appear in opts
@@ -327,9 +327,9 @@ def test_bash_command_with_flags() raises:
         usage="My application",
         run=dummy,
         flags=[
-            Flag.string(name="config", shorthand="c", usage="Config file"),
-            Flag.bool(name="verbose", shorthand="v", usage="Verbose output"),
-            Flag.int(name="port", usage="Port number"),
+            Flag.new[String](name="config", shorthand="c", usage="Config file"),
+            Flag.new[Bool](name="verbose", shorthand="v", usage="Verbose output"),
+            Flag.new[Int](name="port", usage="Port number"),
         ],
     )
     var script = generate_bash_completion(cmd)

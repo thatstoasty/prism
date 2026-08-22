@@ -11,7 +11,7 @@ def deploy(args: ArgSet, flags: FlagSet) raises -> None:
     print("  replicas:", replicas)
     print("  traffic ratio:", ratio)
 
-    if flags.get_bool("dry-run").or_else(False):
+    if flags.get[Bool]("dry-run").or_else(False):
         print("  (dry run, nothing was changed)")
 
 
@@ -43,25 +43,25 @@ def main() -> None:
                 run=deploy,
                 args=[
                     # Required, and constrained to a fixed set of values.
-                    Arg.string(
+                    Arg.new[String](
                         name="environment",
                         usage="Where to deploy to.",
                         valid_values=["staging", "production"],
                     ),
                     # Required, and parsed as an Int before `run` is called.
-                    Arg.int(name="replicas", usage="How many replicas to run."),
+                    Arg.new[Int](name="replicas", usage="How many replicas to run."),
                     # Optional: giving a default makes it so.
-                    Arg.float64(name="ratio", usage="Fraction of traffic to send.", default=1.0),
+                    Arg.new[Float64](name="ratio", usage="Fraction of traffic to send.", default=1.0),
                 ],
                 flags=[
-                    Flag.bool(name="dry-run", shorthand="d", usage="Print the plan and stop.")
+                    Flag.new[Bool](name="dry-run", shorthand="d", usage="Print the plan and stop.")
                 ],
             ),
             Command(
                 name="logs",
                 usage="Show logs for a service.",
                 run=logs,
-                args=[Arg.string(name="service", usage="The service to read logs for.")],
+                args=[Arg.new[String](name="service", usage="The service to read logs for.")],
             ),
         ],
     )

@@ -1,5 +1,5 @@
 """`OptType`, the value type shared by flags and positional arguments."""
-
+from std.os import abort
 
 @fieldwise_init
 struct OptType(Equatable, ImplicitlyCopyable):
@@ -44,6 +44,40 @@ struct OptType(Equatable, ImplicitlyCopyable):
     comptime Float64List = Self(17)
     """A space separated list of 64-bit floating point values."""
 
+    def __init__(out self, type: String):
+        if type == "String":
+            return Self.String
+        elif type == "Bool":
+            return Self.Bool
+        elif type == "SIMD[DType.int, 1]":
+            return Self.Int
+        elif type == "SIMD[DType.int8, 1]":
+            return Self.Int8
+        elif type == "SIMD[DType.int16, 1]":
+            return Self.Int16
+        elif type == "SIMD[DType.int32, 1]":
+            return Self.Int32
+        elif type == "SIMD[DType.int64, 1]":
+            return Self.Int64
+        elif type == "SIMD[DType.uint, 1]":
+            return Self.UInt
+        elif type == "SIMD[DType.uint8, 1]":
+            return Self.UInt8
+        elif type == "SIMD[DType.uint16, 1]":
+            return Self.UInt16
+        elif type == "SIMD[DType.uint32, 1]":
+            return Self.UInt32
+        elif type == "SIMD[DType.uint64, 1]":
+            return Self.UInt64
+        elif type == "SIMD[DType.float16, 1]":
+            return Self.Float16
+        elif type == "SIMD[DType.float32, 1]":
+            return Self.Float32
+        elif type == "SIMD[DType.float64, 1]":
+            return Self.Float64
+        else:
+            abort(String(t"Invalid OptType. Received: {type}"))
+
     def is_int_type(self) -> Bool:
         """Returns if the type is an integer type.
 
@@ -78,14 +112,3 @@ struct OptType(Equatable, ImplicitlyCopyable):
             True if the type is a list type, False otherwise.
         """
         return self in [Self.StringList, Self.IntList, Self.Float64List]
-
-    def __eq__(self, other: Self) -> Bool:
-        """Compares two OptType objects for equality.
-
-        Args:
-            other: The other OptType to compare against.
-
-        Returns:
-            True if the OptTypes are equal, False otherwise.
-        """
-        return self.value == other.value

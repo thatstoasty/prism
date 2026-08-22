@@ -15,15 +15,15 @@ def test_gets() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.string(name="key", usage="usage"),
-            Flag.bool(name="flag", usage="usage"),
+            Flag.new[String](name="key", usage="usage"),
+            Flag.new[Bool](name="flag", usage="usage"),
         ],
     )
 
     var args: List[String] = ["--key=value", "positional", "--flag"]
     _ = cmd.flags.from_args(args)
-    testing.assert_equal(cmd.flags.get_string("key").value(), "value")
-    testing.assert_equal(cmd.flags.get_bool("flag").value(), True)
+    testing.assert_equal(cmd.flags.get[String]("key").value(), "value")
+    testing.assert_equal(cmd.flags.get[Bool]("flag").value(), True)
 
 
 def test_parse() raises:
@@ -32,8 +32,8 @@ def test_parse() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.string(name="key", usage="usage"),
-            Flag.bool(name="flag", usage="usage"),
+            Flag.new[String](name="key", usage="usage"),
+            Flag.new[Bool](name="flag", usage="usage"),
         ],
     )
     var args: List[String] = ["--key=value"]
@@ -47,13 +47,13 @@ def test_unicode_flag_name() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.string(name="cléf", usage="usage"),
+            Flag.new[String](name="cléf", usage="usage"),
         ],
     )
 
     var args: List[String] = ["--cléf=valeur", "positional"]
     _ = cmd.flags.from_args(args)
-    testing.assert_equal(cmd.flags.get_string("cléf").value(), "valeur")
+    testing.assert_equal(cmd.flags.get[String]("cléf").value(), "valeur")
 
 
 def main() raises:

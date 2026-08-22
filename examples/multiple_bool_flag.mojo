@@ -2,13 +2,13 @@ from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 
 def test(args: ArgSet, flags: FlagSet) raises -> None:
-    if flags.get_bool("required"):
+    if flags.get[Bool]("required"):
         print("Required flag is set!")
-    if flags.get_bool("automation"):
+    if flags.get[Bool]("automation"):
         print("Automation flag is set!")
-    if flags.get_bool("secure"):
+    if flags.get[Bool]("secure"):
         print("Secure flag is set!")
-    if flags.get_bool("verbose"):
+    if flags.get[Bool]("verbose"):
         print("Verbose flag is set!")
 
     if len(args) > 0:
@@ -21,23 +21,23 @@ def main() -> None:
         usage="This is a dummy command!",
         run=test,
         flags=[
-            Flag.bool(
+            Flag.new[Bool](
                 name="required",
                 shorthand="r0",
                 usage="Always required.",
                 required=True,
             ),
-            Flag.bool(
+            Flag.new[Bool](
                 name="automation",
                 shorthand="a",
                 usage="In automation?",
             ),
-            Flag.bool(
+            Flag.new[Bool](
                 name="secure",
                 shorthand="s",
                 usage="Use SSL?",
             ),
-            Flag.bool(
+            Flag.new[Bool](
                 name="verbose",
                 shorthand="vv",
                 usage="Verbose output.",

@@ -20,7 +20,7 @@ def test_command_operations() raises:
                 name="child",
                 usage="Child command.",
                 run=dummy,
-                flags=[Flag.uint32(name="color", shorthand="c", usage="Text color", default=UInt32(0x3464EB))],
+                flags=[Flag.new[UInt32](name="color", shorthand="c", usage="Text color", default=UInt32(0x3464EB))],
             )
         ],
     )
@@ -53,7 +53,7 @@ def test_wire_parents_links_the_whole_tree() raises:
         name="app",
         usage="Base command.",
         run=dummy,
-        flags=[Flag.string(name="region", usage="Region.", persistent=True)],
+        flags=[Flag.new[String](name="region", usage="Region.", persistent=True)],
         children=[
             Command(
                 name="deploy",
