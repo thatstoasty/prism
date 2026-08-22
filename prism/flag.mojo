@@ -1,6 +1,6 @@
 """Flags, their types, and the annotations used to group them."""
 from prism.opt_type import OptType
-from prism._util import _map_dtype_to_opt_type, _to_opt_string
+from prism._util import _to_opt_string
 from prism.value import FromValue, ToValue, String, Bool, SIMD, List
 
 comptime FlagActionFn = def (String) raises thin -> None
@@ -146,26 +146,13 @@ struct Flag(Copyable, Writable):
         Args:
             writer: The formatter to write to.
         """
-        @parameter
-        def write_optional(opt: Optional[String]):
-            if opt:
-                writer.write(repr(opt.value()))
-            else:
-                writer.write(repr(None))
-
         writer.write("Flag(name=", self.name)
         if self.shorthand != "":
             writer.write(", shorthand=", self.shorthand)
-        writer.write(", Usage=", self.usage)
-        if self.value:
-            writer.write(", value=")
-            write_optional(self.value)
-        if self.default:
-            writer.write(", default=")
-            write_optional(self.default)
         writer.write(
+            ", usage=", self.usage, ", value=", self.value, ", default=", self.default,
             ", type=",
-            self.type.value,
+            self.type,
             ", changed=",
             self.changed,
             ", required=",
@@ -175,7 +162,7 @@ struct Flag(Copyable, Writable):
             ")",
         )
 
-    def set(mut self, value: StringSpan) -> None:
+    def set(mut self, value: ImmStringSpan) -> None:
         """Sets the value of the flag.
 
         Args:
@@ -228,9 +215,10 @@ struct Flag(Copyable, Writable):
 
     @staticmethod
     def new[T: AnyType](
-        name: StringSpan,
-        usage: StringSpan,
-        shorthand: StringSpan = "",
+        name: ImmStringSpan,
+        usage: ImmStringSpan,
+        *,
+        shorthand: ImmStringSpan = "",
         var default: Optional[T] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
@@ -238,158 +226,44 @@ struct Flag(Copyable, Writable):
         required: Bool = False,
         persistent: Bool = False,
     ) -> Self:
+        """Constructs a flag holding a `T`.
+
+        Parameters:
+            T: The type of value the flag holds. Must conform to `ToValue`, and to `FromValue` to
+                be read back with `FlagSet.get`.
+
+        Args:
+            name: The name of the flag, matched as `--name`.
+            usage: What the flag is for. Shown in help output.
+            shorthand: A single character alias, matched as `-s`.
+            default: The value to use when the flag is not passed. Supplying one makes the flag
+                optional even if `required` is True.
+            environment_variable: An environment variable to read the value from when the flag is
+                not passed.
+            file_path: A file to read the value from when the flag is not passed and the
+                environment variable is unset.
+            action: A function to run once the flag has been parsed.
+            required: Whether the flag must be passed.
+            persistent: Whether child commands inherit the flag.
+
+        Returns:
+            The flag.
+
+        #### Notes:
+        - `T` determines the flag's `OptType`, which is what tells the parser whether the flag takes
+          a following value. A `Bool` flag consumes nothing, so `--verbose` stands alone.
+        """
         comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
         comptime opt_type = OptType(reflect[T].name())
         return Self(
             name=String(name),
             shorthand=String(shorthand),
             usage=String(usage),
-            type=OptType.String,
+            type=opt_type,
             environment_variable=environment_variable,
             file_path=file_path,
             action=action,
             required=required and not default,
             persistent=persistent,
             default=default^.and_then(_to_opt_string[T]),
-        )
-
-    @staticmethod
-    def string_list(
-        name: StringSpan,
-        usage: StringSpan,
-        shorthand: String = "",
-        default: List[String] = [],
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Self:
-        """Constructs a `StringList` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = " ".join(default)
-        else:
-            default_value = None
-
-        return Self(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=OptType.StringList,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required and not default,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def int_list(
-        name: StringSpan,
-        usage: StringSpan,
-        shorthand: String = "",
-        default: List[Int] = [],
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Self:
-        """Constructs a `IntList` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = " ".join(default)
-        else:
-            default_value = None
-
-        return Self(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=OptType.IntList,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required and not default,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def float64_list(
-        name: StringSpan,
-        usage: StringSpan,
-        shorthand: String = "",
-        default: List[Float64] = [],
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Self:
-        """Constructs a `Float64List` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = " ".join(default)
-        else:
-            default_value = None
-
-        return Self(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=OptType.Float64List,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required and not default,
-            persistent=persistent,
         )

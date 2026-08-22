@@ -24,7 +24,7 @@ def my_exit(e: Error) -> None:
 
 
 def allow_hosts(args: ArgSet, flags: FlagSet) raises -> None:
-    var hosts = flags.get_string_list("hosts")
+    var hosts = flags.get[List[String]]("hosts")
     if not hosts:
         print("Received no names to print.")
         return
@@ -115,11 +115,11 @@ def main() -> None:
                 usage="Add hosts to the allow list!",
                 run=allow_hosts,
                 flags=[
-                    Flag.string_list(
+                    Flag.new[List[String]](
                         name="hosts",
                         shorthand="hl",
                         usage="Hosts to add to the allowlist.",
-                        default=["localhost", "0.0.0.0"],
+                        default=List[String](["localhost", "0.0.0.0"]),
                         action=validate_hosts,
                     )
                 ],

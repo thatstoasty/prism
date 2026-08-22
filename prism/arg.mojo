@@ -2,7 +2,7 @@
 from std.collections.list import _ListIter
 
 from prism.opt_type import OptType
-from prism._util import _map_dtype_to_opt_type, _to_opt_string
+from prism._util import _to_opt_string
 from prism.value import ToValue
 
 
@@ -90,6 +90,28 @@ struct Arg(Copyable, Writable):
         required: Bool = True,
         valid_values: List[T] = [],
     ) -> Self:
+        """Constructs a positional argument holding a `T`.
+
+        Parameters:
+            T: The type of value the argument holds. Must conform to `ToValue`, and to `FromValue`
+                to be read back with `ArgSet.get`.
+
+        Args:
+            name: The name of the argument. Used to look the value up, and shown uppercased in
+                usage text.
+            usage: What the argument is for. Shown in help output.
+            default: The value to use when the argument is omitted. Supplying one makes the
+                argument optional even if `required` is True.
+            required: Whether the argument must be supplied.
+            valid_values: The values the argument accepts. Empty accepts any value.
+
+        Returns:
+            The argument.
+
+        #### Notes:
+        - Arguments are bound by position in the order they are declared, and their count, types
+          and `valid_values` are checked before the command's `run` function is called.
+        """
         comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
         comptime opt_type = OptType(reflect[T].name())
         return Self(

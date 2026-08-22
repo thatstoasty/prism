@@ -8,7 +8,6 @@ from prism._flag_group import (
     validate_required_flag_group,
 )
 from prism._flag_parser import FlagParser
-from prism._util import string_to_bool
 from prism.flag import Flag, FlagActionFn, Annotation
 from prism.opt_type import OptType
 from prism.value import FromValue
@@ -167,7 +166,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 )
             if not flag.value()[].changed:
                 flag.value()[].set(value)
-            elif flag.value()[].type.is_list_type():
+            elif flag.value()[].type == OptType.List:
                 # Repeating a list flag accumulates: `--tags a --tags b` is a two-element list.
                 flag.value()[].value.value().write(" ", value)
             else:
@@ -459,50 +458,20 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             name: The name of the flag.
 
         Returns:
-            The value of the flag as a `T`, or `None` if the flag is not defined or has neither a
-            value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `T`.
-
-        #### Notes:
-        - The flag is matched by name alone. The typed accessors such as `get_int` additionally
-          require the flag to have been declared with the matching `OptType`, and return `None` when
-          it was not. This returns whatever the named flag holds, read as a `T`, and reports a
-          parse failure rather than silently returning `None`.
-        """
-        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
-
-        var flag = self.lookup(name)
-        if not flag:
-            return None
-
-        var result = flag.value()[].value_or_default()
-        if not result:
-            return None
-
-        return T.from_value(result.value())
-
-    def _get_as[type: OptType, T: AnyType](self, name: ImmStringSpan) raises -> Optional[T]:
-        """Returns the value of a flag declared as `type`, read as a `T`.
-
-        Parameters:
-            type: The `OptType` the flag must have been declared with.
-            T: The type to read the flag as. Must conform to `FromValue`.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `T`, or `None` if no flag of that name and type is defined,
+            The value of the flag as a `T`, or `None` if no flag of that name *and type* is defined,
             or it has neither a value nor a default.
 
         Raises:
             Error: If the flag's value cannot be read as a `T`.
+
+        #### Notes:
+        - `T` is matched against the flag's declared `OptType`, so asking for the wrong type reads
+          as `None` rather than as a parse failure. `get[Int]("region")` on a `String` flag finds
+          nothing, the same as asking for a name that was never declared.
         """
         comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
-
-        var flag = self.lookup[type](name)
+        comptime opt_type = OptType(reflect[T].name())
+        var flag = self.lookup[opt_type](name)
         if not flag:
             return None
 
@@ -511,278 +480,3 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
 
         return T.from_value(result.value())
-
-    def get_string(self, name: ImmStringSpan) -> Optional[String]:
-        """Returns the value of a flag as a `String`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `String`, or `None` if no `OptType.String` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        #### Notes:
-        - Unlike the other accessors this cannot fail, since a flag's value is already text, so it
-          reads the value directly rather than going through `FromValue`.
-        """
-        var flag = self.lookup[OptType.String](name)
-        if not flag:
-            return None
-
-        return flag.value()[].value_or_default()
-
-    def get_bool(self, name: ImmStringSpan) raises -> Optional[Bool]:
-        """Returns the value of a flag as a `Bool`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Bool`, or `None` if no `OptType.Bool` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `Bool`.
-        """
-        return self._get_as[OptType.Bool, Bool](name)
-
-    def get_int(self, name: ImmStringSpan) raises -> Optional[Int]:
-        """Returns the value of a flag as a `Int`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Int`, or `None` if no `OptType.Int` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `Int`.
-        """
-        return self._get_as[OptType.Int, Int](name)
-
-    def get_int8(self, name: ImmStringSpan) raises -> Optional[Int8]:
-        """Returns the value of a flag as a `Int8`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Int8`, or `None` if no `OptType.Int8` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `Int8`.
-        """
-        return self._get_as[OptType.Int8, Int8](name)
-
-    def get_int16(self, name: ImmStringSpan) raises -> Optional[Int16]:
-        """Returns the value of a flag as a `Int16`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Int16`, or `None` if no `OptType.Int16` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `Int16`.
-        """
-        return self._get_as[OptType.Int16, Int16](name)
-
-    def get_int32(self, name: ImmStringSpan) raises -> Optional[Int32]:
-        """Returns the value of a flag as a `Int32`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Int32`, or `None` if no `OptType.Int32` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `Int32`.
-        """
-        return self._get_as[OptType.Int32, Int32](name)
-
-    def get_int64(self, name: ImmStringSpan) raises -> Optional[Int64]:
-        """Returns the value of a flag as a `Int64`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Int64`, or `None` if no `OptType.Int64` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `Int64`.
-        """
-        return self._get_as[OptType.Int64, Int64](name)
-
-    def get_uint(self, name: ImmStringSpan) raises -> Optional[UInt]:
-        """Returns the value of a flag as a `UInt`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `UInt`, or `None` if no `OptType.UInt` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `UInt`.
-        """
-        return self._get_as[OptType.UInt, UInt](name)
-
-    def get_uint8(self, name: ImmStringSpan) raises -> Optional[UInt8]:
-        """Returns the value of a flag as a `UInt8`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `UInt8`, or `None` if no `OptType.UInt8` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `UInt8`.
-        """
-        return self._get_as[OptType.UInt8, UInt8](name)
-
-    def get_uint16(self, name: ImmStringSpan) raises -> Optional[UInt16]:
-        """Returns the value of a flag as a `UInt16`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `UInt16`, or `None` if no `OptType.UInt16` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `UInt16`.
-        """
-        return self._get_as[OptType.UInt16, UInt16](name)
-
-    def get_uint32(self, name: ImmStringSpan) raises -> Optional[UInt32]:
-        """Returns the value of a flag as a `UInt32`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `UInt32`, or `None` if no `OptType.UInt32` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `UInt32`.
-        """
-        return self._get_as[OptType.UInt32, UInt32](name)
-
-    def get_uint64(self, name: ImmStringSpan) raises -> Optional[UInt64]:
-        """Returns the value of a flag as a `UInt64`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `UInt64`, or `None` if no `OptType.UInt64` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `UInt64`.
-        """
-        return self._get_as[OptType.UInt64, UInt64](name)
-
-    def get_float16(self, name: ImmStringSpan) raises -> Optional[Float16]:
-        """Returns the value of a flag as a `Float16`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Float16`, or `None` if no `OptType.Float16` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `Float16`.
-        """
-        return self._get_as[OptType.Float16, Float16](name)
-
-    def get_float32(self, name: ImmStringSpan) raises -> Optional[Float32]:
-        """Returns the value of a flag as a `Float32`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Float32`, or `None` if no `OptType.Float32` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `Float32`.
-        """
-        return self._get_as[OptType.Float32, Float32](name)
-
-    def get_float64(self, name: ImmStringSpan) raises -> Optional[Float64]:
-        """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Float64`, or `None` if no `OptType.Float64` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `Float64`.
-        """
-        return self._get_as[OptType.Float64, Float64](name)
-
-    def get_string_list(self, name: ImmStringSpan) raises -> Optional[List[String]]:
-        """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `List[String]`, or `None` if no `OptType.StringList` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `List[String]`.
-        """
-        return self._get_as[OptType.StringList, List[String]](name)
-
-    def get_int_list(self, name: ImmStringSpan) raises -> Optional[List[Int]]:
-        """Returns the value of a flag as a `List[Int]`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `List[Int]`, or `None` if no `OptType.IntList` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `List[Int]`.
-        """
-        return self._get_as[OptType.IntList, List[Int]](name)
-
-    def get_float64_list(self, name: ImmStringSpan) raises -> Optional[List[Float64]]:
-        """Returns the value of a flag as a `List[Float64]`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `List[Float64]`, or `None` if no `OptType.Float64List` flag of that name is
-            defined, or it has neither a value nor a default.
-
-        Raises:
-            Error: If the flag's value cannot be read as a `List[Float64]`.
-        """
-        return self._get_as[OptType.Float64List, List[Float64]](name)

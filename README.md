@@ -239,11 +239,8 @@ def main() -> None:
 
 ### Reading flag values
 
-Each flag type has a matching accessor -- `get_string`, `get_int`, `get_uint8`, `get_float64`,
-`get_string_list` and so on -- which returns `None` when no flag of that name *and type* is defined,
-or when it has neither a value nor a default.
-
-There is also a single generic accessor, if you would rather name the type than the method:
+Flag values are read with `get[T]`, naming the type you expect. It returns `None` when no flag of
+that name is defined, or when the flag has neither a value nor a default.
 
 ```mojo
 from prism import ArgSet, Command, FlagSet, Flag, read_args
@@ -262,16 +259,15 @@ def main() -> None:
         flags=[
             Flag.new[String](name="region", usage="Target region."),
             Flag.new[Int](name="port", usage="Port to bind."),
-            Flag.string_list(name="tags", usage="Tags to apply."),
+            Flag.new[List[String]](name="tags", usage="Tags to apply."),
         ],
     )
     cli.execute(read_args())
 ```
 
-`get[T]` differs from the typed accessors in one way worth knowing: it matches on the flag's name
-alone, and raises if the value cannot be read as a `T`, rather than returning `None` the way a
-declared-type mismatch does. Asking for `get[Int]("region")` on a string flag reports that the value
-is not a number instead of quietly yielding nothing.
+`get[T]` matches on the flag's name alone, and raises if the value cannot be read as a `T`. Asking
+for `get[Int]("region")` on a string flag reports that the value is not a number rather than quietly
+yielding nothing.
 
 `T` can be any type conforming to `FromValue`, so a type of your own works too:
 
@@ -282,11 +278,12 @@ from prism import FromValue
 struct Port(FromValue, Copyable, Movable):
     var value: UInt16
 
-    def __init__(out self, value: StringSpan) raises:
+    @staticmethod
+    def from_value(value: StringSpan) raises -> Self:
         var parsed = atol(value)
         if parsed < 1 or parsed > 65535:
             raise Error(t"Port out of range: {parsed}")
-        self.value = UInt16(parsed)
+        return Self(UInt16(parsed))
 
 def main() -> None:
     print("Implement FromValue to read a flag as your own type.")
@@ -626,8 +623,8 @@ def main() -> None:
         run=deploy,
         args=[
             Arg.new[String](name="target", usage="Where to deploy."),
-            Arg.int(name="replicas", usage="How many replicas."),
-            Arg.float64(name="ratio", usage="Traffic ratio.", default=Float64(1.0)),
+            Arg.new[Int](name="replicas", usage="How many replicas."),
+            Arg.new[Float64](name="ratio", usage="Traffic ratio.", default=Optional[Float64](1.0)),
         ],
     )
     cli.execute(read_args())

@@ -20,7 +20,7 @@ def test_command_operations() raises:
                 name="child",
                 usage="Child command.",
                 run=dummy,
-                flags=[Flag.new[UInt32](name="color", shorthand="c", usage="Text color", default=UInt32(0x3464EB))],
+                flags=[Flag.new[UInt32](name="color", shorthand="c", usage="Text color", default=Optional[UInt32](UInt32(0x3464EB)))],
             )
         ],
     )

@@ -66,7 +66,7 @@ def test_zsh_flag_spec_int() raises:
 
 
 def test_zsh_flag_spec_string_list() raises:
-    var flag = Flag.string_list(name="hosts", usage="Host list")
+    var flag = Flag.new[List[String]](name="hosts", usage="Host list")
     var spec = _zsh_flag_spec(flag)
     std.testing.assert_equal(spec, "'*--hosts=[Host list]:hosts:'")
 

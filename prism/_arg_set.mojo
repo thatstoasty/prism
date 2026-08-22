@@ -131,6 +131,11 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         Raises:
             Error: If the argument's value cannot be read as a `T`.
+
+        #### Notes:
+        - Unlike `FlagSet.get`, the argument is matched by name alone, so reading a declared
+          argument as the wrong type reports a parse failure rather than `None`. Its declared type
+          has already been checked during binding.
         """
         comptime assert conforms_to(T, FromValue), String(
             reflect[T].name(),
@@ -145,7 +150,7 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
         if not result:
             return None
 
-        return T(result.value())
+        return T.from_value(result.value())
 
     def bind(mut self, var values: List[String]) raises -> None:
         """Binds positional values to the declared arguments and validates them.

@@ -8,6 +8,6 @@ from prism.args import arbitrary_args, exact_args, maximum_n_args, minimum_n_arg
 from prism.command import Command
 from prism.flag import Flag
 from prism.opt_type import OptType
-from prism.value import FromValue
+from prism.value import FromValue, ToValue
 from prism.help import Help, HelpContext
 from prism.version import Version

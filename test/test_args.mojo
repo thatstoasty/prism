@@ -65,7 +65,7 @@ def _bound(var args: List[Arg], var values: List[String]) raises -> ArgSet:
 def test_named_args_bind_positionally() raises:
     var args: List[Arg] = [
         Arg.new[String](name="target", usage="Where."),
-        Arg.int(name="replicas", usage="How many."),
+        Arg.new[Int](name="replicas", usage="How many."),
     ]
     var values: List[String] = ["prod", "3"]
     var bound = _bound(args^, values^)
@@ -80,7 +80,7 @@ def test_named_args_bind_positionally() raises:
 def test_named_args_use_defaults_when_omitted() raises:
     var args: List[Arg] = [
         Arg.new[String](name="target", usage="Where."),
-        Arg.float64(name="ratio", usage="Ratio.", default=Float64(1.0)),
+        Arg.new[Float64](name="ratio", usage="Ratio.", default=Optional[Float64](1.0)),
     ]
     var values: List[String] = ["prod"]
     var bound = _bound(args^, values^)
@@ -91,7 +91,7 @@ def test_named_args_use_defaults_when_omitted() raises:
 def test_named_args_reject_missing_required() raises:
     var args: List[Arg] = [
         Arg.new[String](name="target", usage="Where."),
-        Arg.int(name="replicas", usage="How many."),
+        Arg.new[Int](name="replicas", usage="How many."),
     ]
     var values: List[String] = ["prod"]
     with assert_raises():
@@ -108,7 +108,7 @@ def test_named_args_reject_extra() raises:
 def test_named_args_reject_wrong_type() raises:
     # Binding validates eagerly, so a mistyped argument is reported before `run` is called rather
     # than surfacing partway through it.
-    var args: List[Arg] = [Arg.int(name="replicas", usage="How many.")]
+    var args: List[Arg] = [Arg.new[Int](name="replicas", usage="How many.")]
     var values: List[String] = ["many"]
     with assert_raises():
         _ = _bound(args^, values^)
@@ -128,7 +128,7 @@ def test_undeclared_args_are_permissive() raises:
 def test_named_args_usage_line() raises:
     var args: List[Arg] = [
         Arg.new[String](name="target", usage="Where."),
-        Arg.int(name="replicas", usage="How many.", default=Optional[Int](1)),
+        Arg.new[Int](name="replicas", usage="How many.", default=Optional[Int](1)),
     ]
     testing.assert_equal(ArgSet(args^).usage(), "TARGET [REPLICAS]")
 

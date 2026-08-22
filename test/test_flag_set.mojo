@@ -16,7 +16,7 @@ def test_string() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.new[String](name="key", usage="usage", default=String("default")),
+            Flag.new[String](name="key", usage="usage", default=Optional[String](String("default"))),
         ],
     )
 
@@ -61,13 +61,13 @@ def test_int8() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.int8(name="num", usage="usage", default=Int8(0)),
+            Flag.new[Int8](name="num", usage="usage", default=Optional[Int8](Int8(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.Int8]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.Int8.value)
-    testing.assert_equal(cmd.flags.get_int8("num").value(), Int8(0))
+    testing.assert_equal(cmd.flags.get[Int8]("num").value(), Int8(0))
 
 
 def test_int16() raises:
@@ -76,13 +76,13 @@ def test_int16() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.int16(name="num", usage="usage", default=Int16(0)),
+            Flag.new[Int16](name="num", usage="usage", default=Optional[Int16](Int16(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.Int16]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.Int16.value)
-    testing.assert_equal(cmd.flags.get_int16("num").value(), Int16(0))
+    testing.assert_equal(cmd.flags.get[Int16]("num").value(), Int16(0))
 
 
 def test_int32() raises:
@@ -91,13 +91,13 @@ def test_int32() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.int32(name="num", usage="usage", default=Int32(0)),
+            Flag.new[Int32](name="num", usage="usage", default=Optional[Int32](Int32(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.Int32]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.Int32.value)
-    testing.assert_equal(cmd.flags.get_int32("num").value(), Int32(0))
+    testing.assert_equal(cmd.flags.get[Int32]("num").value(), Int32(0))
 
 
 def test_int64() raises:
@@ -106,13 +106,13 @@ def test_int64() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.int64(name="num", usage="usage", default=Int64(0)),
+            Flag.new[Int64](name="num", usage="usage", default=Optional[Int64](Int64(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.Int64]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.Int64.value)
-    testing.assert_equal(cmd.flags.get_int64("num").value(), Int64(0))
+    testing.assert_equal(cmd.flags.get[Int64]("num").value(), Int64(0))
 
 
 def test_uint() raises:
@@ -121,13 +121,13 @@ def test_uint() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.uint(name="num", usage="usage", default=UInt(0)),
+            Flag.new[UInt](name="num", usage="usage", default=Optional[UInt](UInt(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.UInt]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.UInt.value)
-    testing.assert_equal(cmd.flags.get_uint("num").value(), UInt(0))
+    testing.assert_equal(cmd.flags.get[UInt]("num").value(), UInt(0))
 
 
 def test_uint8() raises:
@@ -136,13 +136,13 @@ def test_uint8() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.uint8(name="num", usage="usage", default=UInt8(0)),
+            Flag.new[UInt8](name="num", usage="usage", default=Optional[UInt8](UInt8(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.UInt8]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.UInt8.value)
-    testing.assert_equal(cmd.flags.get_uint8("num").value(), UInt8(0))
+    testing.assert_equal(cmd.flags.get[UInt8]("num").value(), UInt8(0))
 
 
 def test_uint16() raises:
@@ -151,13 +151,13 @@ def test_uint16() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.uint16(name="num", usage="usage", default=UInt16(0)),
+            Flag.new[UInt16](name="num", usage="usage", default=Optional[UInt16](UInt16(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.UInt16]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.UInt16.value)
-    testing.assert_equal(cmd.flags.get_uint16("num").value(), UInt16(0))
+    testing.assert_equal(cmd.flags.get[UInt16]("num").value(), UInt16(0))
 
 
 def test_uint32() raises:
@@ -166,7 +166,7 @@ def test_uint32() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.new[UInt32](name="num", usage="usage", default=UInt32(0)),
+            Flag.new[UInt32](name="num", usage="usage", default=Optional[UInt32](UInt32(0))),
         ],
     )
 
@@ -181,13 +181,13 @@ def test_uint64() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.uint64(name="num", usage="usage", default=UInt64(0)),
+            Flag.new[UInt64](name="num", usage="usage", default=Optional[UInt64](UInt64(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.UInt64]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.UInt64.value)
-    testing.assert_equal(cmd.flags.get_uint64("num").value(), UInt64(0))
+    testing.assert_equal(cmd.flags.get[UInt64]("num").value(), UInt64(0))
 
 
 def test_float16() raises:
@@ -196,13 +196,13 @@ def test_float16() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.float16(name="num", usage="usage", default=Float16(0)),
+            Flag.new[Float16](name="num", usage="usage", default=Optional[Float16](Float16(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.Float16]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.Float16.value)
-    testing.assert_equal(cmd.flags.get_float16("num").value(), Float16(0))
+    testing.assert_equal(cmd.flags.get[Float16]("num").value(), Float16(0))
 
 
 def test_float32() raises:
@@ -211,13 +211,13 @@ def test_float32() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.float32(name="num", usage="usage", default=Float32(0)),
+            Flag.new[Float32](name="num", usage="usage", default=Optional[Float32](Float32(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.Float32]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.Float32.value)
-    testing.assert_equal(cmd.flags.get_float32("num").value(), Float32(0))
+    testing.assert_equal(cmd.flags.get[Float32]("num").value(), Float32(0))
 
 
 def test_float64() raises:
@@ -226,13 +226,13 @@ def test_float64() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.float64(name="num", usage="usage", default=Float64(0)),
+            Flag.new[Float64](name="num", usage="usage", default=Optional[Float64](Float64(0))),
         ],
     )
 
     var flag = cmd.flags.lookup[OptType.Float64]("num")
     testing.assert_equal(flag.value()[].type.value, OptType.Float64.value)
-    testing.assert_equal(cmd.flags.get_float64("num").value(), Float64(0))
+    testing.assert_equal(cmd.flags.get[Float64]("num").value(), Float64(0))
 
 
 def test_string_list() raises:
@@ -241,13 +241,13 @@ def test_string_list() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.string_list(name="num", usage="usage", default=["a", "b"]),
+            Flag.new[List[String]](name="num", usage="usage", default=Optional[List[String]](["a", "b"])),
         ],
     )
 
-    var flag = cmd.flags.lookup[OptType.StringList]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.StringList.value)
-    testing.assert_equal(cmd.flags.get_string_list("num").value(), ["a", "b"])
+    var flag = cmd.flags.lookup[OptType.List]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.List.value)
+    testing.assert_equal(cmd.flags.get[List[String]]("num").value(), ["a", "b"])
 
 
 def test_int_list() raises:
@@ -256,14 +256,14 @@ def test_int_list() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.int_list(name="num", usage="usage", default=[0, 1]),
+            Flag.new[List[Int]](name="num", usage="usage", default=Optional[List[Int]]([0, 1])),
         ],
     )
 
-    var flag = cmd.flags.lookup[OptType.IntList]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.IntList.value)
+    var flag = cmd.flags.lookup[OptType.List]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.List.value)
 
-    ref result = cmd.flags.get_int_list("num").value()
+    ref result = cmd.flags.get[List[Int]]("num").value()
     testing.assert_equal(result[0], 0)
     testing.assert_equal(result[1], 1)
 
@@ -274,14 +274,14 @@ def test_float64_list() raises:
         usage="Base command.",
         run=dummy,
         flags=[
-            Flag.float64_list(name="num", usage="usage", default=[0.0, 1.0]),
+            Flag.new[List[Float64]](name="num", usage="usage", default=Optional[List[Float64]]([0.0, 1.0])),
         ],
     )
 
-    var flag = cmd.flags.lookup[OptType.Float64List]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.Float64List.value)
+    var flag = cmd.flags.lookup[OptType.List]("num")
+    testing.assert_equal(flag.value()[].type.value, OptType.List.value)
 
-    ref result = cmd.flags.get_float64_list("num").value()
+    ref result = cmd.flags.get[List[Float64]]("num").value()
     testing.assert_equal(result[0], Float64(0))
     testing.assert_equal(result[1], Float64(1))
 
@@ -311,12 +311,12 @@ def test_double_dash_terminates_flag_parsing() raises:
     var args: List[String] = ["--output", "x", "--", "-V", "positional"]
     var remaining = flag_set.from_args(Span(args))
 
-    testing.assert_equal(flag_set.get_string("output").value(), "x")
+    testing.assert_equal(flag_set.get[String]("output").value(), "x")
     # Everything after `--` is positional, even though `-V` names a real flag.
     testing.assert_equal(len(remaining), 2)
     testing.assert_equal(remaining[0], "-V")
     testing.assert_equal(remaining[1], "positional")
-    testing.assert_false(flag_set.get_bool("verbose").or_else(False))
+    testing.assert_false(flag_set.get[Bool]("verbose").or_else(False))
 
 
 def test_repeated_scalar_flag_last_wins() raises:
@@ -326,16 +326,16 @@ def test_repeated_scalar_flag_last_wins() raises:
     var args: List[String] = ["--name", "a", "--name", "b"]
     _ = flag_set.from_args(Span(args))
 
-    testing.assert_equal(flag_set.get_string("name").value(), "b")
+    testing.assert_equal(flag_set.get[String]("name").value(), "b")
 
 
 def test_repeated_list_flag_accumulates() raises:
-    var flags: List[Flag] = [Flag.string_list(name="tags", usage="Tags.")]
+    var flags: List[Flag] = [Flag.new[List[String]](name="tags", usage="Tags.")]
     var flag_set = FlagSet(flags^)
     var args: List[String] = ["--tags", "x", "--tags", "y"]
     _ = flag_set.from_args(Span(args))
 
-    var tags = flag_set.get_string_list("tags").value().copy()
+    var tags = flag_set.get[List[String]]("tags").value().copy()
     testing.assert_equal(len(tags), 2)
     testing.assert_equal(tags[0], "x")
     testing.assert_equal(tags[1], "y")
@@ -352,8 +352,8 @@ def test_generic_get_scalars() raises:
     var flags: List[Flag] = [
         Flag.new[String](name="region", usage="Region."),
         Flag.new[Int](name="port", usage="Port."),
-        Flag.uint8(name="small", usage="Small."),
-        Flag.float64(name="ratio", usage="Ratio."),
+        Flag.new[UInt8](name="small", usage="Small."),
+        Flag.new[Float64](name="ratio", usage="Ratio."),
         Flag.new[Bool](name="verbose", usage="Verbose."),
     ]
     var args: List[String] = ["--region", "us", "--port", "8080", "--small", "7", "--ratio", "0.25", "--verbose"]
@@ -368,9 +368,9 @@ def test_generic_get_scalars() raises:
 
 def test_generic_get_lists() raises:
     var flags: List[Flag] = [
-        Flag.string_list(name="tags", usage="Tags."),
-        Flag.int_list(name="nums", usage="Nums."),
-        Flag.float64_list(name="rates", usage="Rates."),
+        Flag.new[List[String]](name="tags", usage="Tags."),
+        Flag.new[List[Int]](name="nums", usage="Nums."),
+        Flag.new[List[Float64]](name="rates", usage="Rates."),
     ]
     var args: List[String] = ["--tags", "a", "--tags", "b", "--nums", "1", "--nums", "2", "--rates", "1.5"]
     var flag_set = _parsed(flags^, args^)
@@ -403,15 +403,15 @@ def test_generic_get_unknown_flag_is_none() raises:
     testing.assert_false(Bool(flag_set.get[Int]("nope")), "an undefined flag should read as None")
 
 
-def test_generic_get_reports_a_parse_failure() raises:
-    # Unlike the typed accessors, which return None when the declared OptType does not match, the
-    # generic accessor matches by name and reports that the value is not readable as a `T`.
+def test_generic_get_type_mismatch_is_none() raises:
+    # `get[T]` matches on the flag's declared OptType as well as its name, so asking for the wrong
+    # type reads as None rather than attempting the parse and failing.
     var flags: List[Flag] = [Flag.new[String](name="region", usage="Region.")]
     var args: List[String] = ["--region", "us-east"]
     var flag_set = _parsed(flags^, args^)
 
-    with assert_raises():
-        _ = flag_set.get[Int]("region")
+    testing.assert_false(Bool(flag_set.get[Int]("region")), "a type mismatch should read as None")
+    testing.assert_equal(flag_set.get[String]("region").value(), "us-east")
 
 
 def main() raises:

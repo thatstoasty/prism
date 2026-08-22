@@ -1,5 +1,5 @@
 """The `FromValue` trait, which turns a flag's raw text into a typed value."""
-from std.builtin.rebind import rebind_var
+from std.builtin.rebind import rebind_var, downcast
 
 
 trait FromValue(Movable, Deinitable):
@@ -21,6 +21,9 @@ trait FromValue(Movable, Deinitable):
 
         Args:
             value: The text the flag was given.
+
+        Returns:
+            The parsed value.
 
         Raises:
             Error: If the text does not represent a valid value of this type.
@@ -99,35 +102,32 @@ __extension List(FromValue):
         Raises:
             Error: If an element does not parse as the list's element type.
         """
-        # Each arm builds a concrete list and rebinds it, rather than appending `Self.T` values
-        # directly. Parsing an element can raise, and a partially filled `List[Self.T]` cannot be
-        # unwound, because `List`'s own parameter bound does not promise the elements are
-        # `Deinitable`. A concrete element type does.
-        comptime if Self.T == String:
-            var parsed = List[String]()
-            for item in value.split(sep=" "):
-                parsed.append(String(item))
-            return rebind_var[List[Self.T]](parsed^)
-        elif Self.T == Int:
-            var parsed = List[Int]()
-            for item in value.split(sep=" "):
-                parsed.append(atol(item))
-            return rebind_var[List[Self.T]](parsed^)
-        elif Self.T == Float64:
-            var parsed = List[Float64]()
-            for item in value.split(sep=" "):
-                parsed.append(atof(item))
-            return rebind_var[List[Self.T]](parsed^)
-        else:
-            comptime assert False, String(
-                "List flags hold String, Int or Float64 elements. ",
-                reflect[Self.T].name(),
-                " is not one of them.",
-            )
+        comptime assert conforms_to(Self.T, FromValue), String(t"The type of the list elements must conform to `FromValue`. {reflect[Self.T].name()} does not.")
+
+        # We checked if it conforms to FromValue, so we can downcast here.
+        var parsed = List[downcast[Self.T, FromValue]]()
+        for item in value.split(sep=" "):
+            parsed.append(Self.T.from_value(item))
+        return parsed^
 
 
 trait ToValue(Movable, Deinitable):
+    """A type that can be rendered as the text a flag or argument carries.
+
+    `Flag.new` and `Arg.new` store a `default`, and `Arg.new` its `valid_values`, by calling this.
+    Those are read back with `FromValue.from_value`, so the two must be inverses of each other:
+    `T.from_value(x.to_value())` has to reproduce `x`, or a default will not survive being declared.
+
+    The types a flag can hold already conform, via extensions, so this trait is mostly of interest
+    when adding a type of your own.
+    """
+
     def to_value(self) -> String:
+        """Renders the value as the text `FromValue.from_value` accepts.
+
+        Returns:
+            The value as a string.
+        """
         ...
 
 
@@ -168,10 +168,21 @@ __extension SIMD(ToValue):
 
 __extension List(ToValue):
     def to_value(self) -> String:
-        """Constructs a list from a flag's space separated raw value.
+        """Renders the list as a flag's space separated raw value.
 
         Returns:
-            The List as a string.
+            The elements separated by spaces.
+
+        #### Notes:
+        - This has to be the inverse of `List.from_value`, which splits on spaces. `String(self)`
+          renders a list as `[a, b]`, which that split reads back as `["[a,", "b]"]`, so a list
+          flag's default never survived the round trip.
         """
         comptime assert conforms_to(Self.T, Writable), "The elements of the List must conform to `Writable`."
-        return String(self)
+        var builder = String()
+        for i in range(len(self)):
+            if i > 0:
+                builder.write(" ")
+            builder.write(self[i])
+
+        return builder^

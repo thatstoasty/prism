@@ -51,7 +51,7 @@ def _zsh_flag_spec(flag: Flag) -> String:
     var escaped_usage = String(capacity=DEFAULT_BUFFER_SIZE)
     _zsh_escape(flag.usage, escaped_usage)
     var is_bool = flag.type == OptType.Bool
-    var prefix = "'*" if flag.type.is_list_type() else "'"
+    var prefix = "'*" if flag.type == OptType.List else "'"
 
     if flag.shorthand:
         # Flag has both long and short forms

@@ -85,6 +85,12 @@ TEST_CASES: dict[str, list[list[str]]] = {
         ["logs", "api"],
         ["hello", "world"],
     ],
+    "custom_types": [
+        ["localhost:8080"],
+        ["0.0.0.0:443", "--timeout", "5m"],
+        ["api.example.com:9000", "-t", "2h"],
+        ["--help"],
+    ],
     "configure_help_version": [
         ["--custom-help"],
         ["--custom-version"],
