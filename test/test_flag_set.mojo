@@ -353,12 +353,12 @@ def test_double_dash_terminates_flag_parsing() raises:
     var args: List[String] = ["--output", "x", "--", "-V", "positional"]
     var remaining = flag_set.from_args(Span(args))
 
-    testing.assert_equal(flag_set.get_string("output").value(), "x")
+    testing.assert_equal(flag_set.get[String]("output").value(), "x")
     # Everything after `--` is positional, even though `-V` names a real flag.
     testing.assert_equal(len(remaining), 2)
     testing.assert_equal(remaining[0], "-V")
     testing.assert_equal(remaining[1], "positional")
-    testing.assert_false(flag_set.get_bool("verbose").or_else(False))
+    testing.assert_false(flag_set.get[Bool]("verbose").or_else(False))
 
 
 def test_repeated_scalar_flag_last_wins() raises:
@@ -368,16 +368,16 @@ def test_repeated_scalar_flag_last_wins() raises:
     var args: List[String] = ["--name", "a", "--name", "b"]
     _ = flag_set.from_args(Span(args))
 
-    testing.assert_equal(flag_set.get_string("name").value(), "b")
+    testing.assert_equal(flag_set.get[String]("name").value(), "b")
 
 
 def test_repeated_list_flag_accumulates() raises:
-    var flags: List[Flag] = [Flag.string_list(name="tags", usage="Tags.")]
+    var flags: List[Flag] = [Flag.new[List[String]](name="tags", usage="Tags.")]
     var flag_set = FlagSet(flags^)
     var args: List[String] = ["--tags", "x", "--tags", "y"]
     _ = flag_set.from_args(Span(args))
 
-    var tags = flag_set.get_string_list("tags").value().copy()
+    var tags = flag_set.get[List[String]]("tags").value().copy()
     testing.assert_equal(len(tags), 2)
     testing.assert_equal(tags[0], "x")
     testing.assert_equal(tags[1], "y")
@@ -394,8 +394,8 @@ def test_generic_get_scalars() raises:
     var flags: List[Flag] = [
         Flag.new[String](name="region", usage="Region."),
         Flag.new[Int](name="port", usage="Port."),
-        Flag.uint8(name="small", usage="Small."),
-        Flag.float64(name="ratio", usage="Ratio."),
+        Flag.new[UInt8](name="small", usage="Small."),
+        Flag.new[Float64](name="ratio", usage="Ratio."),
         Flag.new[Bool](name="verbose", usage="Verbose."),
     ]
     var args: List[String] = ["--region", "us", "--port", "8080", "--small", "7", "--ratio", "0.25", "--verbose"]
@@ -410,9 +410,9 @@ def test_generic_get_scalars() raises:
 
 def test_generic_get_lists() raises:
     var flags: List[Flag] = [
-        Flag.string_list(name="tags", usage="Tags."),
-        Flag.int_list(name="nums", usage="Nums."),
-        Flag.float64_list(name="rates", usage="Rates."),
+        Flag.new[List[String]](name="tags", usage="Tags."),
+        Flag.new[List[Int]](name="nums", usage="Nums."),
+        Flag.new[List[Float64]](name="rates", usage="Rates."),
     ]
     var args: List[String] = ["--tags", "a", "--tags", "b", "--nums", "1", "--nums", "2", "--rates", "1.5"]
     var flag_set = _parsed(flags^, args^)
@@ -445,15 +445,15 @@ def test_generic_get_unknown_flag_is_none() raises:
     testing.assert_false(Bool(flag_set.get[Int]("nope")), "an undefined flag should read as None")
 
 
-def test_generic_get_reports_a_parse_failure() raises:
-    # Unlike the typed accessors, which return None when the declared OptType does not match, the
-    # generic accessor matches by name and reports that the value is not readable as a `T`.
+def test_generic_get_type_mismatch_is_none() raises:
+    # `get[T]` matches on the flag's declared OptType as well as its name, so asking for the wrong
+    # type reads as None rather than attempting the parse and failing.
     var flags: List[Flag] = [Flag.new[String](name="region", usage="Region.")]
     var args: List[String] = ["--region", "us-east"]
     var flag_set = _parsed(flags^, args^)
 
-    with assert_raises():
-        _ = flag_set.get[Int]("region")
+    testing.assert_false(Bool(flag_set.get[Int]("region")), "a type mismatch should read as None")
+    testing.assert_equal(flag_set.get[String]("region").value(), "us-east")
 
 
 def main() raises:
