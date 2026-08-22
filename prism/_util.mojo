@@ -1,3 +1,4 @@
+from std.os import abort
 from std.sys import exit, stderr
 from prism.value import ToValue
 

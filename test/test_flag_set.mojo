@@ -346,8 +346,8 @@ def test_generic_get_type_mismatch_is_none() raises:
 def test_double_dash_terminates_flag_parsing() raises:
     # Regression: `--` was parsed as a flag with an empty name and rejected as unknown.
     var flags: List[Flag] = [
-        Flag.string(name="output", shorthand="o", usage="Output path."),
-        Flag.bool(name="verbose", shorthand="V", usage="Verbose."),
+        Flag.new[String](name="output", shorthand="o", usage="Output path."),
+        Flag.new[Bool](name="verbose", shorthand="V", usage="Verbose."),
     ]
     var flag_set = FlagSet(flags^)
     var args: List[String] = ["--output", "x", "--", "-V", "positional"]
@@ -363,7 +363,7 @@ def test_double_dash_terminates_flag_parsing() raises:
 
 def test_repeated_scalar_flag_last_wins() raises:
     # Regression: repeats were concatenated for every type, so this produced the value "a b".
-    var flags: List[Flag] = [Flag.string(name="name", usage="A name.")]
+    var flags: List[Flag] = [Flag.new[String](name="name", usage="A name.")]
     var flag_set = FlagSet(flags^)
     var args: List[String] = ["--name", "a", "--name", "b"]
     _ = flag_set.from_args(Span(args))
@@ -392,11 +392,11 @@ def _parsed(var flags: List[Flag], var args: List[String]) raises -> FlagSet:
 
 def test_generic_get_scalars() raises:
     var flags: List[Flag] = [
-        Flag.string(name="region", usage="Region."),
-        Flag.int(name="port", usage="Port."),
+        Flag.new[String](name="region", usage="Region."),
+        Flag.new[Int](name="port", usage="Port."),
         Flag.uint8(name="small", usage="Small."),
         Flag.float64(name="ratio", usage="Ratio."),
-        Flag.bool(name="verbose", usage="Verbose."),
+        Flag.new[Bool](name="verbose", usage="Verbose."),
     ]
     var args: List[String] = ["--region", "us", "--port", "8080", "--small", "7", "--ratio", "0.25", "--verbose"]
     var flag_set = _parsed(flags^, args^)
@@ -430,7 +430,7 @@ def test_generic_get_lists() raises:
 
 
 def test_generic_get_falls_back_to_default() raises:
-    var flags: List[Flag] = [Flag.int(name="port", usage="Port.", default=Optional[Int](9000))]
+    var flags: List[Flag] = [Flag.new[Int](name="port", usage="Port.", default=Optional[Int](9000))]
     var args = List[String]()
     var flag_set = _parsed(flags^, args^)
 
@@ -438,7 +438,7 @@ def test_generic_get_falls_back_to_default() raises:
 
 
 def test_generic_get_unknown_flag_is_none() raises:
-    var flags: List[Flag] = [Flag.int(name="port", usage="Port.")]
+    var flags: List[Flag] = [Flag.new[Int](name="port", usage="Port.")]
     var args = List[String]()
     var flag_set = _parsed(flags^, args^)
 
@@ -448,7 +448,7 @@ def test_generic_get_unknown_flag_is_none() raises:
 def test_generic_get_reports_a_parse_failure() raises:
     # Unlike the typed accessors, which return None when the declared OptType does not match, the
     # generic accessor matches by name and reports that the value is not readable as a `T`.
-    var flags: List[Flag] = [Flag.string(name="region", usage="Region.")]
+    var flags: List[Flag] = [Flag.new[String](name="region", usage="Region.")]
     var args: List[String] = ["--region", "us-east"]
     var flag_set = _parsed(flags^, args^)
 
