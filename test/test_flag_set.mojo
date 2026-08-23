@@ -9,296 +9,225 @@ from prism import ArgSet, Command, FlagSet
 def dummy(args: ArgSet, flags: FlagSet) -> None:
     return None
 
+comptime BASE_COMMAND = Command(
+    name="root",
+    usage="Base command.",
+    run=dummy,
+)
 
 def test_string() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[String](name="key", usage="usage", default=Optional[String](String("default"))),
-        ],
-    )
+    var name = "key"
+    var expected = "default"
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[String](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.String]("key")
-    testing.assert_equal(flag.value()[].type.value, OptType.String.value)
-    testing.assert_equal(cmd.flags.get[String]("key").value(), "default")
+    var flag = cmd.flags.lookup[String](name)
+    testing.assert_equal(flag.value()[].type, OptType.String)
+    testing.assert_equal(cmd.flags.get[String](name).value(), expected)
 
 
 def test_bool() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[Bool](name="flag", usage="usage", default=False),
-        ],
-    )
+    var name = "flag"
+    var expected = False
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[Bool](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.Bool]("flag")
-    testing.assert_equal(flag.value()[].type.value, OptType.Bool.value)
-    testing.assert_equal(cmd.flags.get[Bool]("flag").value(), False)
+    var flag = cmd.flags.lookup[Bool](name)
+    testing.assert_equal(flag.value()[].type, OptType.Bool)
+    testing.assert_equal(cmd.flags.get[Bool](name).value(), expected)
 
 
 def test_int() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[Int](name="num", usage="usage", default=0),
-        ],
-    )
+    var name = "flag"
+    var expected = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[Int](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.Int]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.Int.value)
-    testing.assert_equal(cmd.flags.get[Int]("num").value(), 0)
+    var flag = cmd.flags.lookup[Int](name)
+    testing.assert_equal(flag.value()[].type, OptType.Int)
+    testing.assert_equal(cmd.flags.get[Int](name).value(), expected)
 
 
 def test_int8() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[Int8](name="num", usage="usage", default=Optional[Int8](Int8(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: Int8 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[Int8](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.Int8]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.Int8.value)
-    testing.assert_equal(cmd.flags.get[Int8]("num").value(), Int8(0))
+    var flag = cmd.flags.lookup[Int8](name)
+    testing.assert_equal(flag.value()[].type, OptType.Int8)
+    testing.assert_equal(cmd.flags.get[Int8](name).value(), expected)
 
 
 def test_int16() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[Int16](name="num", usage="usage", default=Optional[Int16](Int16(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: Int16 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[Int16](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.Int16]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.Int16.value)
-    testing.assert_equal(cmd.flags.get[Int16]("num").value(), Int16(0))
+    var flag = cmd.flags.lookup[Int16](name)
+    testing.assert_equal(flag.value()[].type, OptType.Int16)
+    testing.assert_equal(cmd.flags.get[Int16](name).value(), expected)
 
 
 def test_int32() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[Int32](name="num", usage="usage", default=Optional[Int32](Int32(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: Int32 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[Int32](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.Int32]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.Int32.value)
-    testing.assert_equal(cmd.flags.get[Int32]("num").value(), Int32(0))
+    var flag = cmd.flags.lookup[Int32](name)
+    testing.assert_equal(flag.value()[].type, OptType.Int32)
+    testing.assert_equal(cmd.flags.get[Int32](name).value(), expected)
 
 
 def test_int64() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[Int64](name="num", usage="usage", default=Optional[Int64](Int64(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: Int64 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[Int64](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.Int64]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.Int64.value)
-    testing.assert_equal(cmd.flags.get[Int64]("num").value(), Int64(0))
+    var flag = cmd.flags.lookup[Int64](name)
+    testing.assert_equal(flag.value()[].type, OptType.Int64)
+    testing.assert_equal(cmd.flags.get[Int64](name).value(), expected)
 
 
 def test_uint() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[UInt](name="num", usage="usage", default=Optional[UInt](UInt(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: UInt = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[UInt](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.UInt]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.UInt.value)
-    testing.assert_equal(cmd.flags.get[UInt]("num").value(), UInt(0))
+    var flag = cmd.flags.lookup[UInt](name)
+    testing.assert_equal(flag.value()[].type, OptType.UInt)
+    testing.assert_equal(cmd.flags.get[UInt](name).value(), expected)
 
 
 def test_uint8() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[UInt8](name="num", usage="usage", default=Optional[UInt8](UInt8(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: UInt8 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[UInt8](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.UInt8]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.UInt8.value)
-    testing.assert_equal(cmd.flags.get[UInt8]("num").value(), UInt8(0))
+    var flag = cmd.flags.lookup[UInt8](name)
+    testing.assert_equal(flag.value()[].type, OptType.UInt8)
+    testing.assert_equal(cmd.flags.get[UInt8](name).value(), expected)
 
 
 def test_uint16() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[UInt16](name="num", usage="usage", default=Optional[UInt16](UInt16(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: UInt16 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[UInt16](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.UInt16]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.UInt16.value)
-    testing.assert_equal(cmd.flags.get[UInt16]("num").value(), UInt16(0))
+    var flag = cmd.flags.lookup[UInt16](name)
+    testing.assert_equal(flag.value()[].type, OptType.UInt16)
+    testing.assert_equal(cmd.flags.get[UInt16](name).value(), expected)
 
 
 def test_uint32() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[UInt32](name="num", usage="usage", default=Optional[UInt32](UInt32(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: UInt32 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new[UInt32](name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.UInt32]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.UInt32.value)
-    testing.assert_equal(cmd.flags.get[UInt32]("num").value(), UInt32(0))
+    var flag = cmd.flags.lookup[UInt32](name)
+    testing.assert_equal(flag.value()[].type, OptType.UInt32)
+    testing.assert_equal(cmd.flags.get[UInt32](name).value(), expected)
 
 
 def test_uint64() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[UInt64](name="num", usage="usage", default=Optional[UInt64](UInt64(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: UInt64 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new(name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.UInt64]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.UInt64.value)
-    testing.assert_equal(cmd.flags.get[UInt64]("num").value(), UInt64(0))
+    var flag = cmd.flags.lookup[UInt64](name)
+    testing.assert_equal(flag.value()[].type, OptType.UInt64)
+    testing.assert_equal(cmd.flags.get[UInt64](name).value(), expected)
 
 
 def test_float16() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[Float16](name="num", usage="usage", default=Optional[Float16](Float16(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: Float16 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new(name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.Float16]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.Float16.value)
-    testing.assert_equal(cmd.flags.get[Float16]("num").value(), Float16(0))
+    var flag = cmd.flags.lookup[Float16](name)
+    testing.assert_equal(flag.value()[].type, OptType.Float16)
+    testing.assert_equal(cmd.flags.get[Float16](name).value(), expected)
 
 
 def test_float32() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[Float32](name="num", usage="usage", default=Optional[Float32](Float32(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: Float32 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new(name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.Float32]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.Float32.value)
-    testing.assert_equal(cmd.flags.get[Float32]("num").value(), Float32(0))
+    var flag = cmd.flags.lookup[Float32](name)
+    testing.assert_equal(flag.value()[].type, OptType.Float32)
+    testing.assert_equal(cmd.flags.get[Float32](name).value(), expected)
 
 
 def test_float64() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[Float64](name="num", usage="usage", default=Optional[Float64](Float64(0))),
-        ],
-    )
+    var name = "flag"
+    var expected: Float64 = 0
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new(name=name, usage="usage", default=0.0))
 
-    var flag = cmd.flags.lookup[OptType.Float64]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.Float64.value)
-    testing.assert_equal(cmd.flags.get[Float64]("num").value(), Float64(0))
+    var flag = cmd.flags.lookup[Float64](name)
+    testing.assert_equal(flag.value()[].type, OptType.Float64)
+    testing.assert_equal(cmd.flags.get[Float64](name).value(), expected)
 
 
 def test_string_list() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[List[String]](name="num", usage="usage", default=Optional[List[String]](["a", "b"])),
-        ],
-    )
+    var name = "flag"
+    var expected: List[String] = ["a", "b"]
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new(name=name, usage="usage", default=expected.copy()))
 
-    var flag = cmd.flags.lookup("num")
+    var flag = cmd.flags.lookup(name)
     testing.assert_true(flag.value()[].type.is_list_type())
-    testing.assert_equal(cmd.flags.get[List[String]]("num").value(), ["a", "b"])
+    testing.assert_equal(cmd.flags.get[List[String]](name).value(), expected)
 
 
 def test_int_list() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[List[Int]](name="num", usage="usage", default=Optional[List[Int]]([0, 1])),
-        ],
-    )
+    var name = "flag"
+    var expected: List[Int] = [0, 1]
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new(name=name, usage="usage", default=expected.copy()))
 
-    var flag = cmd.flags.lookup("num")
+    var flag = cmd.flags.lookup(name)
     testing.assert_true(flag.value()[].type.is_list_type())
 
-    ref result = cmd.flags.get[List[Int]]("num").value()
+    ref result = cmd.flags.get[List[Int]](name).value()
     testing.assert_equal(result[0], 0)
     testing.assert_equal(result[1], 1)
 
 
 def test_float64_list() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[List[Float64]](name="num", usage="usage", default=Optional[List[Float64]]([0.0, 1.0])),
-        ],
-    )
+    var name = "flag"
+    var expected: List[Float64] = [0.0, 1.0]
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new(name=name, usage="usage", default=expected.copy()))
 
-    var flag = cmd.flags.lookup("num")
+    var flag = cmd.flags.lookup(name)
     testing.assert_true(flag.value()[].type.is_list_type())
 
-    ref result = cmd.flags.get[List[Float64]]("num").value()
-    testing.assert_equal(result[0], Float64(0))
-    testing.assert_equal(result[1], Float64(1))
+    ref result = cmd.flags.get[List[Float64]](name).value()
+    testing.assert_equal(result[0], 0)
+    testing.assert_equal(result[1], 1)
 
 
 def test_unicode_flag_name() raises:
-    var cmd = Command(
-        name="root",
-        usage="Base command.",
-        run=dummy,
-        flags=[
-            Flag.new[String](name="cléf", usage="usage", default="valeur"),
-        ],
-    )
+    var name = "cléf"
+    var expected = "valeur"
+    var cmd = materialize[BASE_COMMAND]()
+    cmd.flags.append(Flag.new(name=name, usage="usage", default=expected))
 
-    var flag = cmd.flags.lookup[OptType.String]("cléf")
-    testing.assert_equal(flag.value()[].name, "cléf")
-    testing.assert_equal(cmd.flags.get[String]("cléf").value(), "valeur")
+    var flag = cmd.flags.lookup[String](name)
+    testing.assert_equal(flag.value()[].name, name)
+    testing.assert_equal(cmd.flags.get[String](name).value(), expected)
 
 
 def test_double_dash_terminates_flag_parsing() raises:

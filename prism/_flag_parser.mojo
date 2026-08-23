@@ -104,7 +104,7 @@ struct FlagParser[origin: ImmOrigin](Writable):
             raise Error(UNKNOWN_FLAG_ERROR, name_slice)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-        if flags.lookup[OptType.Bool](name_slice):
+        if flags.lookup[Bool](name_slice):
             return ParseFlagResult(name=name_slice, value="True", increment=1)
 
         if self.index + 1 >= len(self.arguments):
