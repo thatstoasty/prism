@@ -1,39 +1,8 @@
 """The set of positional arguments a command received."""
 from std.collections.list import _ListIter
 
-from prism._util import string_to_bool
 from prism.arg import Arg
 from prism.value import FromValue
-from prism.opt_type import OptType
-
-
-def _validate_value(type: OptType, name: ImmStringSpan, value: ImmStringSpan) raises -> None:
-    """Checks that an argument's text parses as its declared type.
-
-    Args:
-        type: The declared type.
-        name: The argument's name, for the error message.
-        value: The text bound to the argument.
-
-    Raises:
-        Error: If the text does not parse as the declared type.
-
-    #### Notes:
-    - This runs before the command's `run` function, so a mistyped argument is reported instead of
-      surfacing later as a failure inside `get`.
-    """
-    if type == OptType.String:
-        return
-
-    try:
-        if type == OptType.Bool:
-            _ = string_to_bool(String(value))
-        elif type.is_int_type():
-            _ = atol(value)
-        elif type.is_float_type():
-            _ = atof(value)
-    except e:
-        raise Error(t"Invalid value for argument `{name}`: {e}")
 
 
 struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
@@ -195,7 +164,10 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
             if not arg.value:
                 continue
 
-            _validate_value(arg.type, arg.name, arg.value.value())
+            try:
+                arg.parse_check(arg.value.value())
+            except e:
+                raise Error(t"Invalid value for argument `{arg.name}`: {e}")
 
             # An argument that names the values it accepts rejects anything else, and says what it
             # would have taken instead.

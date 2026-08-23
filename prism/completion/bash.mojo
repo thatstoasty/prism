@@ -2,7 +2,6 @@
 
 from prism.command import Command
 from prism.flag import Flag
-from prism.opt_type import OptType
 from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates
 
 

@@ -2,7 +2,7 @@ from std import testing
 from prism.flag import Flag
 from prism.opt_type import OptType
 from prism.value import FromValue, ToValue
-from std.testing import TestSuite
+from std.testing import TestSuite, assert_raises
 
 from prism import ArgSet, Command, FlagSet, Version
 
@@ -127,6 +127,68 @@ def test_custom_type_is_reported_as_custom() raises:
     testing.assert_true(flag.type.is_custom_type(), "should report as a custom type")
     testing.assert_false(flag.type == OptType.Custom, "carries its own name, so it is not equal")
     testing.assert_false(Flag.new[Int](name="i", usage="u").type.is_custom_type())
+
+
+def test_narrow_int_rejects_out_of_range() raises:
+    # Regression: `Scalar[dtype](atol(value))` narrowed silently, so `--n 999` on an Int8 flag
+    # became -25 and the command ran on corrupt data.
+    var flags: List[Flag] = [Flag.new[Int8](name="n", usage="A small number.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--n", "999"]
+    _ = flag_set.from_args(Span(args))
+
+    with assert_raises():
+        _ = flag_set.get[Int8]("n")
+
+
+def test_unsigned_rejects_negative() raises:
+    var flags: List[Flag] = [Flag.new[UInt8](name="u", usage="An unsigned number.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--u", "-5"]
+    _ = flag_set.from_args(Span(args))
+
+    with assert_raises():
+        _ = flag_set.get[UInt8]("u")
+
+
+def test_widest_unsigned_accepts_zero() raises:
+    # The range check compares in a width that holds the bound: `UInt64.MAX` does not fit in a
+    # signed Int, and converting it wrapped to -1, which rejected every value including 0.
+    var flags: List[Flag] = [
+        Flag.new[UInt64](name="a", usage="u"),
+        Flag.new[UInt](name="b", usage="u"),
+        Flag.new[Int64](name="c", usage="u"),
+    ]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--a", "0", "--b", "7", "--c", "-9"]
+    _ = flag_set.from_args(Span(args))
+
+    testing.assert_equal(flag_set.get[UInt64]("a").value(), UInt64(0))
+    testing.assert_equal(flag_set.get[UInt]("b").value(), UInt(7))
+    testing.assert_equal(flag_set.get[Int64]("c").value(), Int64(-9))
+
+
+def test_in_range_narrow_int_still_works() raises:
+    var flags: List[Flag] = [Flag.new[Int8](name="n", usage="u")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--n", "-128"]
+    _ = flag_set.from_args(Span(args))
+
+    testing.assert_equal(flag_set.get[Int8]("n").value(), Int8(-128))
+
+
+def test_list_element_types_do_not_collide() raises:
+    # Regression: every list collapsed to one `OptType.List`, so a lookup for `List[Int]` matched a
+    # `List[String]` flag and then threw a raw parse error instead of reading as None.
+    var flags: List[Flag] = [Flag.new[List[String]](name="tags", usage="Tags.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--tags", "a", "--tags", "b"]
+    _ = flag_set.from_args(Span(args))
+
+    testing.assert_equal(len(flag_set.get[List[String]]("tags").value()), 2)
+    testing.assert_false(
+        Bool(flag_set.get[List[Int]]("tags")), "a list of a different element type should not match"
+    )
 
 
 def main() raises:

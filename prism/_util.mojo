@@ -1,6 +1,5 @@
 from std.sys import exit, stderr
-from prism.opt_type import OptType
-from prism.value import ToValue, FromValue
+from prism.value import ToValue
 
 
 comptime UNKNOWN_FLAG_ERROR = "Command does not accept the flag supplied. Name: "

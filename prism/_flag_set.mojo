@@ -166,7 +166,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 )
             if not flag.value()[].changed:
                 flag.value()[].set(value)
-            elif flag.value()[].type == OptType.List:
+            elif flag.value()[].type.is_list_type():
                 # Repeating a list flag accumulates: `--tags a --tags b` is a two-element list.
                 flag.value()[].value.value().write(" ", value)
             else:
@@ -298,12 +298,12 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    def lookup[type: OptType](ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup[T: AnyType](ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
         Parameters:
-            type: The type of the Flag to lookup.
+            T: The type of the Flag to lookup.
 
         Args:
             name: The name of the Flag to lookup.
@@ -311,8 +311,10 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Returns:
             Optional Pointer to the Flag.
         """
+        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime opt_type = OptType(reflect[T].name())
         for ref flag in self.flags:
-            if flag.name == name and flag.type == type:
+            if flag.name == name and flag.type == opt_type:
                 return Pointer(to=flag)
 
         return None
@@ -333,12 +335,12 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    def lookup_shorthand[type: OptType](ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup_shorthand[T: AnyType](ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
         Parameters:
-            type: The type of the Flag to lookup.
+            T: The type of the Flag to lookup.
 
         Args:
             name: The shorthand name of the Flag to lookup.
@@ -346,8 +348,10 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Returns:
             Optional Pointer to the Flag.
         """
+        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime opt_type = OptType(reflect[T].name())
         for ref flag in self.flags:
-            if flag.shorthand == name and flag.type == type:
+            if flag.shorthand == name and flag.type == opt_type:
                 return Pointer(to=flag)
 
         return None
@@ -470,8 +474,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
           nothing, the same as asking for a name that was never declared.
         """
         comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
-        comptime opt_type = OptType(reflect[T].name())
-        var flag = self.lookup[opt_type](name)
+        var flag = self.lookup[T](name)
         if not flag:
             return None
 

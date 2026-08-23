@@ -245,8 +245,8 @@ def test_string_list() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[OptType.List]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.List.value)
+    var flag = cmd.flags.lookup("num")
+    testing.assert_true(flag.value()[].type.is_list_type())
     testing.assert_equal(cmd.flags.get[List[String]]("num").value(), ["a", "b"])
 
 
@@ -260,8 +260,8 @@ def test_int_list() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[OptType.List]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.List.value)
+    var flag = cmd.flags.lookup("num")
+    testing.assert_true(flag.value()[].type.is_list_type())
 
     ref result = cmd.flags.get[List[Int]]("num").value()
     testing.assert_equal(result[0], 0)
@@ -278,8 +278,8 @@ def test_float64_list() raises:
         ],
     )
 
-    var flag = cmd.flags.lookup[OptType.List]("num")
-    testing.assert_equal(flag.value()[].type.value, OptType.List.value)
+    var flag = cmd.flags.lookup("num")
+    testing.assert_true(flag.value()[].type.is_list_type())
 
     ref result = cmd.flags.get[List[Float64]]("num").value()
     testing.assert_equal(result[0], Float64(0))

@@ -1,5 +1,5 @@
 """The `FromValue` trait, which turns a flag's raw text into a typed value."""
-from std.builtin.rebind import rebind_var, downcast
+from std.builtin.rebind import downcast
 
 
 trait FromValue(Movable, Deinitable):
@@ -88,7 +88,28 @@ __extension SIMD(FromValue):
         comptime if Self.dtype in (DType.float16, DType.float32, DType.float64):
             return Scalar[Self.dtype](atof(value))
         else:
-            return Scalar[Self.dtype](atol(value))
+            # `atol` parses at the native width, and narrowing to a smaller type wraps rather than
+            # failing, so 999 read as an Int8 silently became -25. Check the range first.
+            #
+            # The comparison is done in a width that can hold the bound: `UInt64.MAX` does not fit
+            # in a signed `Int`, so converting it to one wraps to -1 and rejects every value.
+            var parsed = atol(value)
+            var out_of_range: Bool
+            comptime if Self.dtype.is_signed():
+                out_of_range = (
+                    Int64(parsed) < Int64(Scalar[Self.dtype].MIN)
+                    or Int64(parsed) > Int64(Scalar[Self.dtype].MAX)
+                )
+            else:
+                out_of_range = parsed < 0 or UInt64(parsed) > UInt64(Scalar[Self.dtype].MAX)
+
+            if out_of_range:
+                raise Error(
+                    t"Value out of range for {reflect[Self].name()}: {parsed}. "
+                    t"Expected {Scalar[Self.dtype].MIN} to {Scalar[Self.dtype].MAX}."
+                )
+
+            return Scalar[Self.dtype](parsed)
 
 
 __extension List(FromValue):
@@ -178,11 +199,13 @@ __extension List(ToValue):
           renders a list as `[a, b]`, which that split reads back as `["[a,", "b]"]`, so a list
           flag's default never survived the round trip.
         """
-        comptime assert conforms_to(Self.T, Writable), "The elements of the List must conform to `Writable`."
+        comptime assert conforms_to(Self.T, ToValue), String(
+            t"The elements of the List must conform to `ToValue`. {reflect[Self.T].name()} does not."
+        )
         var builder = String()
         for i in range(len(self)):
             if i > 0:
                 builder.write(" ")
-            builder.write(self[i])
+            builder.write(self[i].to_value())
 
         return builder^

@@ -92,7 +92,9 @@ struct OptType(Equatable, ImplicitlyCopyable, Writable):
         elif type == "SIMD[DType.float64, 1]":
             return Self.Float64
         elif type.startswith("List"):
-            return Self.List
+            # Keep the name: `List[String]` and `List[Int]` are different types, and without it a
+            # lookup for one matches a flag declared as the other.
+            return Self(Self.List.value, type)
         else:
             # Keep the name: it is the only thing distinguishing one custom type from another.
             return Self(Self.Custom.value, type)
@@ -109,6 +111,19 @@ struct OptType(Equatable, ImplicitlyCopyable, Writable):
           field-wise. This compares only the discriminant.
         """
         return self.value == Self.Custom.value
+
+    def is_list_type(self) -> Bool:
+        """Returns if the type is a list of values.
+
+        Returns:
+            True if the type is a list type, False otherwise.
+
+        #### Notes:
+        - Comparing against `OptType.List` directly does not work, because a list carries its
+          element type in its name to stay distinct from lists of other elements, and equality is
+          field-wise. This compares only the discriminant.
+        """
+        return self.value == Self.List.value
 
     def is_int_type(self) -> Bool:
         """Returns if the type is an integer type.

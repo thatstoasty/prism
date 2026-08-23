@@ -1,4 +1,5 @@
 from std import testing
+from prism.value import FromValue, ToValue
 from std.memory import ArcPointer
 from prism.args import (  # match_all,
     arbitrary_args,
@@ -152,6 +153,56 @@ def test_named_args_accept_a_valid_value() raises:
     var bound = _bound(args^, values^)
 
     testing.assert_equal(bound.get[String]("env").value(), "staging")
+
+
+@fieldwise_init
+struct _Tag(FromValue, ToValue, ImplicitlyCopyable, Movable, Writable):
+    """A custom argument type whose display differs from its wire form."""
+
+    var v: String
+
+    @staticmethod
+    def from_value(value: StringSpan) raises -> Self:
+        if not value.startswith("#"):
+            raise Error(t"Tag must start with '#': {value}")
+        return Self(String(value))
+
+    def to_value(self) -> String:
+        return self.v.copy()
+
+    def write_to(self, mut writer: Some[Writer]) -> None:
+        writer.write("Tag<", self.v, ">")
+
+
+def test_custom_typed_arg_is_validated_at_bind() raises:
+    # Regression: binding switched on the runtime OptType, which cannot name a user-defined type,
+    # so custom and list arguments were never checked. The failure surfaced later inside `get`,
+    # from the command's own `run`, rather than being reported before it started.
+    var args: List[Arg] = [Arg.new[_Tag](name="tag", usage="A tag.")]
+    var values: List[String] = ["nope"]
+
+    with assert_raises():
+        _ = _bound(args^, values^)
+
+
+def test_custom_typed_arg_accepts_a_valid_value() raises:
+    var args: List[Arg] = [Arg.new[_Tag](name="tag", usage="A tag.")]
+    var values: List[String] = ["#release"]
+    var bound = _bound(args^, values^)
+
+    testing.assert_equal(bound.get[_Tag]("tag").value().v, "#release")
+
+
+def test_list_round_trips_through_to_value() raises:
+    # Regression: `List.to_value` rendered elements with `Writable` while `from_value` parses them
+    # with `FromValue`, so a type whose display differs from its wire form did not survive.
+    var tags: List[_Tag] = [_Tag("#a"), _Tag("#b")]
+    var rendered = tags.to_value()
+    testing.assert_equal(rendered, "#a #b")
+
+    var back = List[_Tag].from_value(rendered)
+    testing.assert_equal(len(back), 2)
+    testing.assert_equal(back[1].v, "#b")
 
 
 def main() raises:
