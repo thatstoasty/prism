@@ -166,7 +166,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 )
             if not flag.value()[].changed:
                 flag.value()[].set(value)
-            elif flag.value()[].type == OptType.List:
+            elif flag.value()[].type.is_list_type():
                 # Repeating a list flag accumulates: `--tags a --tags b` is a two-element list.
                 flag.value()[].value.value().write(" ", value)
             else:

@@ -227,6 +227,19 @@ struct OptType(Equatable, ImplicitlyCopyable, Writable):
         """
         return self.value == Self.Custom.value
 
+    def is_list_type(self) -> Bool:
+        """Returns if the type is a list of values.
+
+        Returns:
+            True if the type is a list type, False otherwise.
+
+        #### Notes:
+        - Comparing against `OptType.List` directly does not work, because a list carries its
+          element type in its name to stay distinct from lists of other elements, and equality is
+          field-wise. This compares only the discriminant.
+        """
+        return self.value == Self.List.value
+
     def is_int_type(self) -> Bool:
         """Returns if the type is an integer type.
 
