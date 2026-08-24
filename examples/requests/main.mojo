@@ -5,12 +5,10 @@ from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 def base(args: ArgSet, flags: FlagSet) -> None:
     print("This is the base command!")
-    return None
 
 
 def print_information(args: ArgSet, flags: FlagSet) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
-    return None
 
 
 def get_cat_fact(args: ArgSet, flags: FlagSet) raises -> None:
