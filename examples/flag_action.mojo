@@ -1,8 +1,8 @@
-from prism import Command, Flag, FlagSet, read_args
+from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 
-def test(args: List[String], flags: FlagSet) raises -> None:
-    if name := flags.get_string("name"):
+def test(args: ArgSet, flags: FlagSet) raises -> None:
+    if var name := flags.get[String]("name"):
         print("Hello", name[])
     else:
         print("Hello World")
@@ -19,11 +19,11 @@ def main() -> None:
         usage="Greet a user!",
         run=test,
         flags=[
-            Flag.string(
+            Flag.new[String](
                 name="name",
                 shorthand="n",
                 usage="The name of the person to greet.",
-                default=String("World"),
+                default="World",
                 action=validate_name,
             )
         ],

@@ -1,20 +1,18 @@
 from std.python import Python
 
-from prism import Command, Flag, FlagSet, read_args
+from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 
-def base(args: List[String], flags: FlagSet) -> None:
+def base(args: ArgSet, flags: FlagSet) -> None:
     print("This is the base command!")
-    return None
 
 
-def print_information(args: List[String], flags: FlagSet) -> None:
+def print_information(args: ArgSet, flags: FlagSet) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
-    return None
 
 
-def get_cat_fact(args: List[String], flags: FlagSet) raises -> None:
-    var lover = flags.get_bool("lover")
+def get_cat_fact(args: ArgSet, flags: FlagSet) raises -> None:
+    var lover = flags.get[Bool]("lover")
     if lover:
         print("Hello fellow cat lover!")
 
@@ -24,7 +22,7 @@ def get_cat_fact(args: List[String], flags: FlagSet) raises -> None:
     var url = "https://catfact.ninja/fact"
 
     # Send the GET requests
-    var count = flags.get_int("count")
+    var count = flags.get[Int]("count")
     if not count:
         raise Error("Count flag was not found.")
 
@@ -39,7 +37,7 @@ def get_cat_fact(args: List[String], flags: FlagSet) raises -> None:
             raise Error("Request failed!")
 
 
-def get_dog_breeds(args: List[String], flags: FlagSet) raises -> None:
+def get_dog_breeds(args: ArgSet, flags: FlagSet) raises -> None:
     var requests = Python.import_module("requests")
     # URL you want to send a GET request to
     var url = "https://dog.ceo/api/breeds/list/all"
@@ -61,8 +59,8 @@ def main() -> None:
         usage="Get some cat facts!",
         run=get_cat_fact,
         flags=[
-            Flag.int(name="count", shorthand="c", usage="Number of facts to get.", default=1),
-            Flag.bool(name="lover", shorthand="l", usage="Are you a cat lover?"),
+            Flag.new[Int](name="count", shorthand="c", usage="Number of facts to get.", default=1),
+            Flag.new[Bool](name="lover", shorthand="l", usage="Are you a cat lover?"),
         ],
     )
 

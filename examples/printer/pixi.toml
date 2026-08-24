@@ -1,6 +1,6 @@
 [workspace]
 authors = ["Mikhail Tavarez <miktavarez@gmail.com>"]
-channels = ["conda-forge", "https://conda.modular.com/max", "https://prefix.dev/pixi-build-backends"]
+channels = ["conda-forge", "https://conda.modular.com/max"]
 description = "Add a short description here"
 platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
 preview = ["pixi-build"]
@@ -15,5 +15,5 @@ version = "0.1.0"
 backend = { name = "pixi-build-mojo", version = "*" }
 
 [dependencies]
-mojo = ">=1.0.0b1,<1.0.0b2"
+mojo = ">=1.0.0,<1.1.0"
 prism = { path = "../.." }

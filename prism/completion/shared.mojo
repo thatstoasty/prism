@@ -1,3 +1,5 @@
+"""Shared pieces of shell completion script generation."""
+
 from prism.command import Command
 from prism.flag import Flag
 from prism.completion.bash import generate_bash_completion
@@ -32,3 +34,18 @@ def default_completion(cmd: Command, shell: String) raises -> String:
         return generate_bash_completion(cmd)
     else:
         raise Error(t"Unsupported shell: '{shell}'. Supported shells: zsh, bash")
+
+
+def _arg_candidates(cmd: Command) -> List[String]:
+    """Returns the values a command's declared arguments accept, for completion candidates.
+
+    Args:
+        cmd: The command to collect candidates for.
+
+    Returns:
+        Every value named by an argument's `valid_values`, in declaration order.
+    """
+    var candidates = List[String]()
+    for arg in cmd.args:
+        candidates.extend(arg.valid_values.copy())
+    return candidates^

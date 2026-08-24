@@ -8,8 +8,9 @@ from prism._flag_group import (
     validate_required_flag_group,
 )
 from prism._flag_parser import FlagParser
-from prism._util import string_to_bool
-from prism.flag import Flag, FlagActionFn, FType, Annotation
+from prism.flag import Flag, FlagActionFn, Annotation
+from prism.opt_type import OptType
+from prism.value import FromValue
 
 
 comptime FlagVisitorFn = def (Flag) thin -> None
@@ -116,7 +117,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         """
         writer.write(self.flags)
 
-    def set_annotation[annotation: Annotation](mut self, name: StringSlice, var value: String) raises -> None:
+    def set_annotation[annotation: Annotation](mut self, name: ImmStringSpan, var value: String) raises -> None:
         """Sets an annotation for a flag.
 
         Parameters:
@@ -141,9 +142,9 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         try:
             flag.value()[].annotations[annotation].append(value^)
         except:
-            flag.value()[].annotations[annotation] = [value]
+            flag.value()[].annotations[annotation] = [value^]
 
-    def from_args[origin: ImmutOrigin, //](mut self, arguments: Span[String, origin]) raises -> List[String]:
+    def from_args[origin: ImmOrigin, //](mut self, arguments: Span[String, origin]) raises -> List[String]:
         """Parses flags and args from the args passed via the command line and adds them to their appropriate collections.
 
         Args:
@@ -156,7 +157,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             Error: If a flag is not recognized.
         """
         @parameter
-        def set_flag_value(mut flags: FlagSet, name: StringSlice, value: StringSlice) raises -> None:
+        def set_flag_value(mut flags: FlagSet, name: ImmStringSpan, value: StringSpan) raises -> None:
             # Set the value of the flag.
             var flag = flags.lookup(name)
             if not flag:
@@ -165,8 +166,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 )
             if not flag.value()[].changed:
                 flag.value()[].set(value)
-            else:
+            elif flag.value()[].type.is_list_type():
+                # Repeating a list flag accumulates: `--tags a --tags b` is a two-element list.
                 flag.value()[].value.value().write(" ", value)
+            else:
+                # Repeating a scalar flag replaces. Appending would turn `--name a --name b` into
+                # the single value "a b" rather than letting the last one win.
+                flag.value()[].set(value)
 
         var remaining_args = List[String](capacity=len(arguments))
         var state = ParserState.FIND_FLAG
@@ -176,6 +182,15 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
             # Find the next flag in the set of arguments.
             if state == ParserState.FIND_FLAG:
+                # A bare `--` ends flag parsing. Everything after it is positional, even when it
+                # looks like a flag, which is how a value such as `--weird` is passed through.
+                if argument == "--":
+                    parser.index += 1
+                    while parser.index < len(arguments):
+                        remaining_args.append(arguments[parser.index])
+                        parser.index += 1
+                    break
+
                 # Positional argument
                 if not argument.startswith("-", 0, 1):
                     parser.index += 1
@@ -207,7 +222,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         for ref flag in self:
             if not flag.value:
                 if flag.environment_variable:
-                    value = os.getenv(flag.environment_variable.value())
+                    var value = os.getenv(flag.environment_variable.value())
                     if value != "":
                         flag.set(value)
                 elif flag.file_path:
@@ -267,7 +282,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         if len(missing_flag_names) > 0:
             raise Error(t"Required flag(s): {missing_flag_names} not set.")
 
-    def lookup(ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup(ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -283,12 +298,12 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    def lookup[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup[T: AnyType](ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
         Parameters:
-            type: The type of the Flag to lookup.
+            T: The type of the Flag to lookup.
 
         Args:
             name: The name of the Flag to lookup.
@@ -296,13 +311,15 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Returns:
             Optional Pointer to the Flag.
         """
+        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime opt_type = OptType(reflect[T].name())
         for ref flag in self.flags:
-            if flag.name == name and flag.type == type:
+            if flag.name == name and flag.type == opt_type:
                 return Pointer(to=flag)
 
         return None
 
-    def lookup_shorthand(ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup_shorthand(ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
@@ -318,12 +335,12 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    def lookup_shorthand[type: FType](ref self, name: StringSlice) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
+    def lookup_shorthand[T: AnyType](ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.
 
         Parameters:
-            type: The type of the Flag to lookup.
+            T: The type of the Flag to lookup.
 
         Args:
             name: The shorthand name of the Flag to lookup.
@@ -331,13 +348,15 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Returns:
             Optional Pointer to the Flag.
         """
+        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime opt_type = OptType(reflect[T].name())
         for ref flag in self.flags:
-            if flag.shorthand == name and flag.type == type:
+            if flag.shorthand == name and flag.type == opt_type:
                 return Pointer(to=flag)
 
         return None
 
-    def lookup_name(self, shorthand: StringSlice) -> Optional[String]:
+    def lookup_name(self, shorthand: ImmStringSpan) -> Optional[String]:
         """Returns the name of a flag given its shorthand.
 
         Args:
@@ -352,7 +371,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return None
 
-    def has_all_flags[origin: ImmutOrigin, //](self, flag_names: Span[String, origin]) -> Bool:
+    def has_all_flags[origin: ImmOrigin, //](self, flag_names: Span[String, origin]) -> Bool:
         """Checks if all flags are defined in the flag set.
 
         Args:
@@ -361,9 +380,10 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Returns:
             True if all flags are defined, False otherwise.
         """
-        var names = self.names()
+        # `lookup` scans without allocating; `self.names()` copies every flag name into a new list,
+        # and this runs once per flag group.
         for name in flag_names:
-            if name not in names:
+            if not self.lookup(name):
                 return False
         return True
 
@@ -382,29 +402,32 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Raises:
             Error: If an error occurred while processing the flag.
         """
-        var fg_annotations = flag.annotations.get(annotation, List[String]())
+        var fg_annotations = flag.annotations.get(annotation, [])
         if not fg_annotations:
             return
 
         for group in fg_annotations:
-            if len(group_status.get(group, Dict[String, Bool]())) == 0:
+            if len(group_status.get(group, {})) == 0:
                 var flag_names = [String(name) for name in group.split(sep=" ")]
 
                 # Only consider this flag group at all if all the flags are defined.
                 if not self.has_all_flags(flag_names):
                     continue
 
-                for name in flag_names:
-                    var entry = Dict[String, Bool]()
-                    entry[name] = False
-                    group_status[group] = entry.copy()
+                # Seed every member of the group as unset in one dict. Building a fresh dict per
+                # name and assigning it each time leaves only the last name seeded, so a member
+                # that carries the annotation but is never itself visited goes unaccounted for.
+                var entry: Dict[String, Bool] = {}
+                for var name in flag_names^:
+                    entry[name^] = False
+                group_status[group] = entry^
 
             # If flag.changed = True, then it had a value set on it.
             try:
                 group_status[group][flag.name] = flag.changed
             except e:
                 raise Error(
-                    "process_group_annotations: Failed to set group status for annotation ", annotation.value, ": ", e
+                    t"process_group_annotations: Failed to set group status for annotation {annotation.value}: ", e
                 )
 
     def validate_flag_groups(self) raises -> None:
@@ -429,325 +452,29 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         validate_one_required_flag_group(one_required_group_status)
         validate_mutually_exclusive_flag_group(mutually_exclusive_group_status)
 
-    def get_string(self, name: StringSlice) -> Optional[String]:
-        """Returns the value of a flag as a `String`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `String`.
-        """
-        var flag = self.lookup[FType.String](name)
-        if not flag:
-            return None
-
-        return flag.value()[].value_or_default()
-
-    def get_bool(self, name: StringSlice) raises -> Optional[Bool]:
-        """Returns the value of a flag as a `Bool`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Bool`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        var flag = self.lookup[FType.Bool](name)
-        if not flag:
-            return None
-
-        var result = flag.value()[].value_or_default()
-        if not result:
-            return None
-
-        return string_to_bool(result.value())
-
-    def get_int[type: FType = FType.Int](self, name: StringSlice) raises -> Optional[Int]:
-        """Returns the value of a flag as an `Int`. If it isn't set, then return the default value.
+    def get[T: AnyType](self, name: ImmStringSpan) raises -> Optional[T]:
+        """Returns the value of a flag as a `T`. If it isn't set, then return the default value.
 
         Parameters:
-            type: The type of the flag.
+            T: The type to read the flag as. Must conform to `FromValue`.
 
         Args:
             name: The name of the flag.
 
         Returns:
-            The value of the flag as an `Int`.
+            The value of the flag as a `T`, or `None` if no flag of that name *and type* is defined,
+            or it has neither a value nor a default.
 
         Raises:
-            Error: If the flag is not found.
+            Error: If the flag's value cannot be read as a `T`.
+
+        #### Notes:
+        - `T` is matched against the flag's declared `OptType`, so asking for the wrong type reads
+          as `None` rather than as a parse failure. `get[Int]("region")` on a `String` flag finds
+          nothing, the same as asking for a name that was never declared.
         """
-        comptime assert type.is_int_type(), "get_int can only be used to get flags of integer types, but was used to get a flag of type: {type}"
-        var flag = self.lookup[type](name)
-        if not flag:
-            return None
-
-        var result = flag.value()[].value_or_default()
-        if not result:
-            return None
-        return atol(result.value())
-
-    def get_int8(self, name: StringSlice) raises -> Optional[Int8]:
-        """Returns the value of a flag as a `Int8`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Int8`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.Int8.is_int_type()
-        var result = self.get_int[FType.Int8](name)
-        if not result:
-            return None
-        return Int8(result.value())
-
-    def get_int16(self, name: StringSlice) raises -> Optional[Int16]:
-        """Returns the value of a flag as a `Int16`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Int16`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.Int16.is_int_type()
-        var result = self.get_int[FType.Int16](name)
-        if not result:
-            return None
-        return Int16(result.value())
-
-    def get_int32(self, name: StringSlice) raises -> Optional[Int32]:
-        """Returns the value of a flag as a `Int32`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Int32`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.Int32.is_int_type()
-        var result = self.get_int[FType.Int32](name)
-        if not result:
-            return None
-        return Int32(result.value())
-
-    def get_int64(self, name: StringSlice) raises -> Optional[Int64]:
-        """Returns the value of a flag as a `Int64`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Int64`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.Int64.is_int_type()
-        var result = self.get_int[FType.Int64](name)
-        if not result:
-            return None
-        return Int64(result.value())
-
-    def get_uint(self, name: StringSlice) raises -> Optional[UInt]:
-        """Returns the value of a flag as a `UInt`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `UInt`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.UInt.is_int_type()
-        var result = self.get_int[FType.UInt](name)
-        if not result:
-            return None
-        return UInt(result.value())
-
-    def get_uint8(self, name: StringSlice) raises -> Optional[UInt8]:
-        """Returns the value of a flag as a `UInt8`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `UInt8`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.UInt8.is_int_type()
-        var result = self.get_int[FType.UInt8](name)
-        if not result:
-            return None
-        return UInt8(result.value())
-
-    def get_uint16(self, name: StringSlice) raises -> Optional[UInt16]:
-        """Returns the value of a flag as a `UInt16`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `UInt16`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.UInt16.is_int_type()
-        var result = self.get_int[FType.UInt16](name)
-        if not result:
-            return None
-        return UInt16(result.value())
-
-    def get_uint32(self, name: StringSlice) raises -> Optional[UInt32]:
-        """Returns the value of a flag as a `UInt32`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `UInt32`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.UInt32.is_int_type()
-        var result = self.get_int[FType.UInt32](name)
-        if not result:
-            return None
-        return UInt32(result.value())
-
-    def get_uint64(self, name: StringSlice) raises -> Optional[UInt64]:
-        """Returns the value of a flag as a `UInt64`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `UInt64`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.UInt64.is_int_type()
-        var result = self.get_int[FType.UInt64](name)
-        if not result:
-            return None
-        return UInt64(result.value())
-
-    def get_float[type: FType](self, name: StringSlice) raises -> Optional[Float64] where type.is_float_type():
-        """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
-
-        Parameters:
-            type: The type of the flag.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Float64`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert type.is_float_type()
-        var flag = self.lookup[type](name)
-        if not flag:
-            return None
-
-        var result = flag.value()[].value_or_default()
-        if not result:
-            return None
-        return atof(result.value())
-
-    def get_float16(self, name: StringSlice) raises -> Optional[Float16]:
-        """Returns the value of a flag as a `Float16`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Float16`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.Float16.is_float_type()
-        var result = self.get_float[FType.Float16](name)
-        if not result:
-            return None
-        return result.value().cast[DType.float16]()
-
-    def get_float32(self, name: StringSlice) raises -> Optional[Float32]:
-        """Returns the value of a flag as a `Float32`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Float32`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.Float32.is_float_type()
-        var result = self.get_float[FType.Float32](name)
-        if not result:
-            return None
-        return result.value().cast[DType.float32]()
-
-    def get_float64(self, name: StringSlice) raises -> Optional[Float64]:
-        """Returns the value of a flag as a `Float64`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `Float64`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.Float64.is_float_type()
-        var result = self.get_float[FType.Float64](name)
-        if not result:
-            return None
-        return result.value()
-
-    def _get_list[type: FType](self, name: StringSlice) raises -> Optional[List[String]] where type.is_list_type():
-        """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
-
-        Parameters:
-            type: The type of the flag.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `List[String]`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        var flag = self.lookup[type](name)
+        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        var flag = self.lookup[T](name)
         if not flag:
             return None
 
@@ -755,66 +482,4 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         if not result:
             return None
 
-        return Optional([String(item) for item in result.value().split(sep=" ")])
-
-    def get_string_list(self, name: StringSlice) raises -> Optional[List[String]]:
-        """Returns the value of a flag as a `List[String]`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `List[String]`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.StringList.is_list_type()
-        var result = self._get_list[FType.StringList](name)
-        if not result:
-            return None
-        return result^
-
-    def get_int_list(self, name: StringSlice) raises -> Optional[List[Int]]:
-        """Returns the value of a flag as a `List[Int]`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `List[Int]`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.IntList.is_list_type()
-        var result = self._get_list[FType.IntList](name)
-        if not result:
-            return None
-
-        var ints = List[Int](capacity=len(result.value()))
-        for value in result.value():
-            ints.append(atol(value))
-        return ints^
-
-    def get_float64_list(self, name: StringSlice) raises -> Optional[List[Float64]]:
-        """Returns the value of a flag as a `List[Float64]`. If it isn't set, then return the default value.
-
-        Args:
-            name: The name of the flag.
-
-        Returns:
-            The value of the flag as a `List[Float64]`.
-
-        Raises:
-            Error: If the flag is not found.
-        """
-        comptime assert FType.Float64List.is_list_type()
-        var result = self._get_list[FType.Float64List](name)
-        if not result:
-            return None
-
-        var floats = List[Float64](capacity=len(result.value()))
-        for value in result.value():
-            floats.append(Float64(value))
-        return floats^
+        return T.from_value(result.value())

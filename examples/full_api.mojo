@@ -1,14 +1,14 @@
 from std.sys import exit, stderr
 
-from prism import Command, Flag, FlagSet, Version, no_args, read_args
+from prism import ArgSet, Command, Flag, FlagSet, Version, no_args, read_args
 
 
-def base(args: List[String], flags: FlagSet) -> None:
+def base(args: ArgSet, flags: FlagSet) -> None:
     print("Pass a subcommand!")
 
 
-def connect(args: List[String], flags: FlagSet) raises -> None:
-    if host := flags.get_string("host"):
+def connect(args: ArgSet, flags: FlagSet) raises -> None:
+    if var host := flags.get[String]("host"):
         print("Connecting to", host.value())
     else:
         raise Error("Error: Exit Code 2")
@@ -23,8 +23,8 @@ def my_exit(e: Error) -> None:
         exit(1)
 
 
-def allow_hosts(args: List[String], flags: FlagSet) raises -> None:
-    var hosts = flags.get_string_list("hosts")
+def allow_hosts(args: ArgSet, flags: FlagSet) raises -> None:
+    var hosts = flags.get[List[String]]("hosts")
     if not hosts:
         print("Received no names to print.")
         return
@@ -32,7 +32,7 @@ def allow_hosts(args: List[String], flags: FlagSet) raises -> None:
     print("Allowing: ", hosts.value())
 
 
-def version(version: String) -> String:
+def version(name: String, version: String) -> String:
     return "MyCLI version: " + version
 
 
@@ -58,8 +58,8 @@ def main() -> None:
         version=Version("0.1.0", action=version),
         suggest=True,
         flags=[
-            Flag.bool(name="required", shorthand="r0", usage="Always required.", required=True, persistent=True),
-            Flag.string(
+            Flag.new[Bool](name="required", shorthand="r0", usage="Always required.", required=True, persistent=True),
+            Flag.new[String](
                 name="host",
                 shorthand="h",
                 usage="Host",
@@ -68,19 +68,19 @@ def main() -> None:
                 file_path="~/.myapp/config",
                 default="localhost",
             ),
-            Flag.string(
+            Flag.new[String](
                 name="port",
                 shorthand="p",
                 usage="Port",
                 persistent=True,
             ),
-            Flag.bool(
+            Flag.new[Bool](
                 name="automation",
                 shorthand="a",
                 usage="In automation?",
                 persistent=True,
             ),
-            Flag.bool(
+            Flag.new[Bool](
                 name="verbose",
                 shorthand="vv",
                 usage="Verbose output.",
@@ -95,13 +95,13 @@ def main() -> None:
                 run=connect,
                 aliases=["db-connect"],
                 flags=[
-                    Flag.bool(
+                    Flag.new[Bool](
                         name="also",
                         shorthand="a",
                         usage="Also always required.",
                         required=True,
                     ),
-                    Flag.string(
+                    Flag.new[String](
                         name="uri",
                         shorthand="u",
                         usage="URI",
@@ -115,11 +115,11 @@ def main() -> None:
                 usage="Add hosts to the allow list!",
                 run=allow_hosts,
                 flags=[
-                    Flag.string_list(
+                    Flag.new[List[String]](
                         name="hosts",
                         shorthand="hl",
                         usage="Hosts to add to the allowlist.",
-                        default=["localhost", "0.0.0.0"],
+                        default=List[String](["localhost", "0.0.0.0"]),
                         action=validate_hosts,
                     )
                 ],

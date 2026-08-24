@@ -1,3 +1,5 @@
+"""The output and error writers a command writes through."""
+
 from std.sys import stderr
 
 

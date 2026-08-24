@@ -1,7 +1,7 @@
-from prism import Command, Flag, FlagSet, Help, Version, read_args
+from prism import ArgSet, Command, Flag, FlagSet, Help, Version, read_args
 
 
-def test(args: List[String], flags: FlagSet) -> None:
+def test(args: ArgSet, flags: FlagSet) -> None:
     print("Pass -ch to see helpful information!")
 
 
@@ -10,7 +10,7 @@ def main() -> None:
         name="hello",
         usage="This is a dummy command!",
         run=test,
-        help=Help(flag=Flag.bool(name="custom-help", shorthand="ch", usage="My Cool Help Flag.")),
-        version=Version("0.1.0", flag=Flag.bool(name="custom-version", shorthand="cv", usage="My Cool Version Flag.")),
+        help=Help(flag=Flag.new[Bool](name="custom-help", shorthand="ch", usage="My Cool Help Flag.")),
+        version=Version("0.1.0", flag=Flag.new[Bool](name="custom-version", shorthand="cv", usage="My Cool Version Flag.")),
     )
     cli.execute(read_args())

@@ -1,7 +1,7 @@
-from prism import Command, Flag, FlagSet, read_args
+from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 
-def printer(args: List[String], flags: FlagSet) -> None:
+def printer(args: ArgSet, flags: FlagSet) -> None:
     if len(args) == 0:
         print("No args provided.")
         return
@@ -9,20 +9,20 @@ def printer(args: List[String], flags: FlagSet) -> None:
     print(args[0])
 
 
-def say(args: List[String], flags: FlagSet) -> None:
+def say(args: ArgSet, flags: FlagSet) -> None:
     print("Shouldn't be here!")
 
 
-def say_hello(args: List[String], flags: FlagSet) -> None:
+def say_hello(args: ArgSet, flags: FlagSet) -> None:
     print("Hello World!")
 
 
-def say_goodbye(args: List[String], flags: FlagSet) -> None:
+def say_goodbye(args: ArgSet, flags: FlagSet) -> None:
     print("Goodbye World!")
 
 
-def test(args: List[String], flags: FlagSet) -> None:
-    if env := flags.get_string("env"):
+def test(args: ArgSet, flags: FlagSet) raises -> None:
+    if var env := flags.get[String]("env"):
         print("Env:", env.value())
     else:
         print("No env flag provided.")
@@ -39,7 +39,7 @@ def main() -> None:
         name="tones",
         usage="This is a dummy command!",
         run=test,
-        flags=[Flag.string(name="env", shorthand="e", usage="Environment.")],
+        flags=[Flag.new[String](name="env", shorthand="e", usage="Environment.")],
         children=[
             Command(
                 name="printer",

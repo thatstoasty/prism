@@ -1,4 +1,6 @@
 from prism import (
+    Arg,
+    ArgSet,
     Command,
     FlagSet,
     exact_args,
@@ -7,16 +9,15 @@ from prism import (
     no_args,
     range_args,
     read_args,
-    valid_args,
 )
 
 
-def test(args: List[String], flags: FlagSet) -> None:
+def test(args: ArgSet, flags: FlagSet) -> None:
     for arg in args:
         print("Received", arg)
 
 
-def hello(args: List[String], flags: FlagSet) -> None:
+def hello(args: ArgSet, flags: FlagSet) -> None:
     print("Hello from Chromeria!")
 
 
@@ -35,11 +36,10 @@ def main() -> None:
             Command(name="exact_args", usage="This is a dummy command!", run=hello, arg_validator=exact_args[1]()),
             Command(name="range_args", usage="This is a dummy command!", run=hello, arg_validator=range_args[0, 1]()),
             Command(
-                name="valid_args",
+                name="valid_values",
                 usage="This is a dummy command!",
                 run=hello,
-                valid_args=["Pineapple"],
-                arg_validator=valid_args,
+                args=[Arg.new[String](name="fruit", usage="Which fruit.", valid_values=["Pineapple"])],
             ),
             Command(name="no_args", usage="This is a dummy command!", run=hello, arg_validator=no_args),
         ],

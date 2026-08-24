@@ -1,9 +1,9 @@
 from std.sys import exit
 
-from prism import Command, FlagSet, read_args
+from prism import ArgSet, Command, FlagSet, read_args
 
 
-def test(args: List[String], flags: FlagSet) raises -> None:
+def test(args: ArgSet, flags: FlagSet) raises -> None:
     raise Error("Error: Exit Code 2")
 
 

@@ -12,22 +12,22 @@ Install Bash completions:
     ./completion_example completion bash > ~/.local/share/bash-completion/completions/completion_example
     # Or source directly: source <(./completion_example completion bash)
 """
-from prism import Command, FlagSet, Flag, read_args
+from prism import Arg, ArgSet, Command, FlagSet, Flag, read_args
 
 
-def serve(args: List[String], flags: FlagSet) raises -> None:
+def serve(args: ArgSet, flags: FlagSet) raises -> None:
     print("Starting server...")
 
 
-def build(args: List[String], flags: FlagSet) raises -> None:
+def build(args: ArgSet, flags: FlagSet) raises -> None:
     print("Building project...")
 
 
-def deploy(args: List[String], flags: FlagSet) raises -> None:
+def deploy(args: ArgSet, flags: FlagSet) raises -> None:
     print("Deploying...")
 
 
-def base(args: List[String], flags: FlagSet) raises -> None:
+def base(args: ArgSet, flags: FlagSet) raises -> None:
     print("Use --help for usage information.")
 
 
@@ -38,8 +38,8 @@ def main():
         run=base,
         enable_completion=True,
         flags=[
-            Flag.string(name="config", shorthand="c", usage="Path to config file.", persistent=True),
-            Flag.bool(name="verbose", shorthand="v", usage="Enable verbose output.", persistent=True),
+            Flag.new[String](name="config", shorthand="c", usage="Path to config file.", persistent=True),
+            Flag.new[Bool](name="verbose", shorthand="v", usage="Enable verbose output.", persistent=True),
         ],
         children=[
             Command(
@@ -48,8 +48,8 @@ def main():
                 run=serve,
                 aliases=["s"],
                 flags=[
-                    Flag.int(name="port", shorthand="p", usage="Port to listen on.", default=8080),
-                    Flag.string(name="host", usage="Host to bind to.", default="localhost"),
+                    Flag.new[Int](name="port", shorthand="p", usage="Port to listen on.", default=8080),
+                    Flag.new[String](name="host", usage="Host to bind to.", default="localhost"),
                 ],
             ),
             Command(
@@ -57,15 +57,15 @@ def main():
                 usage="Build the project.",
                 run=build,
                 flags=[
-                    Flag.bool(name="release", shorthand="r", usage="Build in release mode."),
-                    Flag.string(name="target", shorthand="t", usage="Build target."),
+                    Flag.new[Bool](name="release", shorthand="r", usage="Build in release mode."),
+                    Flag.new[String](name="target", shorthand="t", usage="Build target."),
                 ],
             ),
             Command(
                 name="deploy",
                 usage="Deploy the project.",
                 run=deploy,
-                valid_args=["staging", "production"],
+                args=[Arg.new[String](name="action", usage="What to do.", valid_values=["staging", "production"])],
             ),
         ],
     )

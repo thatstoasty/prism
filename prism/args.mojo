@@ -1,13 +1,14 @@
-comptime ArgValidatorFn = def (args: List[String], valid_args: List[String]) raises thin -> None
+"""Validators for the positional arguments a command accepts."""
+
+comptime ArgValidatorFn = def (args: List[String]) raises thin -> None
 """The function for an argument validator."""
 
 
-def no_args(args: List[String], valid_args: List[String]) raises -> None:
+def no_args(args: List[String]) raises -> None:
     """Returns an error if This command has any arguments.
 
     Args:
         args: The arguments passed to This command.
-        valid_args: The valid arguments for This command.
 
     Raises:
         An error if This command has any arguments.
@@ -16,12 +17,11 @@ def no_args(args: List[String], valid_args: List[String]) raises -> None:
         raise Error("This command does not take any arguments.")
 
 
-def arbitrary_args(args: List[String], valid_args: List[String]) -> None:
+def arbitrary_args(args: List[String]) -> None:
     """Never returns an error.
 
     Args:
         args: The arguments passed to This command.
-        valid_args: The valid arguments for This command.
     """
     return None
 
@@ -36,7 +36,7 @@ def minimum_n_args[n: Int]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    def less_than_n_args(args: List[String], valid_args: List[String]) raises -> None:
+    def less_than_n_args(args: List[String]) raises -> None:
         if len(args) < n:
             raise Error(
                 t"This command accepts at least {n} argument(s). Received: {len(args)}."
@@ -55,7 +55,7 @@ def maximum_n_args[n: UInt]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    def more_than_n_args(args: List[String], valid_args: List[String]) raises -> None:
+    def more_than_n_args(args: List[String]) raises -> None:
         if UInt(len(args)) > n:
             raise Error(t"This command accepts at most {n} argument(s). Received: {len(args)}.")
 
@@ -72,27 +72,11 @@ def exact_args[n: UInt]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    def exactly_n_args(args: List[String], valid_args: List[String]) raises -> None:
+    def exactly_n_args(args: List[String]) raises -> None:
         if UInt(len(args)) != n:
             raise Error(t"This command accepts exactly {n} argument(s). Received: {len(args)}.")
 
     return exactly_n_args
-
-
-def valid_args(args: List[String], valid_args: List[String]) raises -> None:
-    """Returns an error if there are any positional args that are not in this command's `valid_args`.
-
-    Args:
-        args: The arguments passed to this command.
-        valid_args: The valid arguments for this command.
-
-    Raises:
-        An error if there are any positional args that are not in this command's `valid_args`.
-    """
-    if valid_args:
-        for arg in args:
-            if arg not in valid_args:
-                raise Error(t"Invalid argument: `{arg}`, for this command.")
 
 
 def range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
@@ -106,7 +90,7 @@ def range_args[minimum: UInt, maximum: UInt]() -> ArgValidatorFn:
         A function that checks the number of arguments.
     """
 
-    def range_n_args(args: List[String], valid_args: List[String]) raises -> None:
+    def range_n_args(args: List[String]) raises -> None:
         if UInt(len(args)) < minimum or UInt(len(args)) > maximum:
             raise Error(
                 t"This command accepts between {minimum} to {maximum} argument(s). Received: {len(args)}.",
@@ -125,8 +109,8 @@ def match_all[*arg_validators: ArgValidatorFn]() -> ArgValidatorFn:
         A function that checks all the arguments using the arg_validators list.
     """
 
-    def match_all_args(args: List[String], valid_args: List[String]) raises -> None:
+    def match_all_args(args: List[String]) raises -> None:
         comptime for i in range(len(arg_validators)):
-            arg_validators[i](args, valid_args)
+            arg_validators[i](args)
 
     return match_all_args

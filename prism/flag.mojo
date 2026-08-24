@@ -1,3 +1,8 @@
+"""Flags, their types, and the annotations used to group them."""
+from prism.opt_type import OptType
+from prism._util import _to_opt_string
+from prism.value import FromValue, ToValue, String, Bool, SIMD, List
+
 comptime FlagActionFn = def (String) raises thin -> None
 """The type of a function that runs after a flag has been processed."""
 
@@ -39,78 +44,6 @@ struct Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
             writer.write("unknown_annotation")
 
 
-@fieldwise_init
-struct FType(Equatable, ImplicitlyCopyable):
-    """Flag types enum helper."""
-
-    var value: UInt8
-    """The value of the flag type."""
-    comptime String = Self(0)
-    comptime Bool = Self(1)
-    comptime Int = Self(2)
-    comptime Int8 = Self(3)
-    comptime Int16 = Self(4)
-    comptime Int32 = Self(5)
-    comptime Int64 = Self(6)
-    comptime UInt = Self(7)
-    comptime UInt8 = Self(8)
-    comptime UInt16 = Self(9)
-    comptime UInt32 = Self(10)
-    comptime UInt64 = Self(11)
-    comptime Float16 = Self(12)
-    comptime Float32 = Self(13)
-    comptime Float64 = Self(14)
-    comptime StringList = Self(15)
-    comptime IntList = Self(16)
-    comptime Float64List = Self(17)
-
-    def is_int_type(self) -> Bool:
-        """Returns if the type is an integer type.
-
-        Returns:
-            True if the type is an integer type, False otherwise.
-        """
-        return self in [
-            Self.Int,
-            Self.Int8,
-            Self.Int16,
-            Self.Int32,
-            Self.Int64,
-            Self.UInt,
-            Self.UInt8,
-            Self.UInt16,
-            Self.UInt32,
-            Self.UInt64,
-        ]
-
-    def is_float_type(self) -> Bool:
-        """Returns if the type is an float type.
-
-        Returns:
-            True if the type is an float type, False otherwise.
-        """
-        return self in [Self.Float16, Self.Float32, Self.Float64]
-
-    def is_list_type(self) -> Bool:
-        """Returns if the type is a list type.
-
-        Returns:
-            True if the type is a list type, False otherwise.
-        """
-        return self in [Self.StringList, Self.IntList, Self.Float64List]
-
-    def __eq__(self, other: Self) -> Bool:
-        """Compares two FType objects for equality.
-
-        Args:
-            other: The other FType to compare against.
-
-        Returns:
-            True if the FTypes are equal, False otherwise.
-        """
-        return self.value == other.value
-
-
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
 # needing to cast values to and from string.
 @fieldwise_init
@@ -133,7 +66,7 @@ struct Flag(Copyable, Writable):
     """If no value is provided, will optionally check read this file for a value. `environment_variable` takes precedence over this option."""
     var default: Optional[String]
     """The default value of the flag."""
-    var type: FType
+    var type: OptType
     """The type of the flag."""
     var annotations: Dict[Annotation, List[String]]
     """The annotations of the flag which are used to determine grouping."""
@@ -149,7 +82,7 @@ struct Flag(Copyable, Writable):
     def __init__(
         out self,
         name: String,
-        type: FType,
+        type: OptType,
         *,
         shorthand: String = "",
         usage: String = "",
@@ -213,26 +146,13 @@ struct Flag(Copyable, Writable):
         Args:
             writer: The formatter to write to.
         """
-        @parameter
-        def write_optional(opt: Optional[String]):
-            if opt:
-                writer.write(repr(opt.value()))
-            else:
-                writer.write(repr(None))
-
         writer.write("Flag(name=", self.name)
         if self.shorthand != "":
             writer.write(", shorthand=", self.shorthand)
-        writer.write(", Usage=", self.usage)
-        if self.value:
-            writer.write(", value=")
-            write_optional(self.value)
-        if self.default:
-            writer.write(", default=")
-            write_optional(self.default)
         writer.write(
+            ", usage=", self.usage, ", value=", self.value, ", default=", self.default,
             ", type=",
-            self.type.value,
+            self.type,
             ", changed=",
             self.changed,
             ", required=",
@@ -242,7 +162,7 @@ struct Flag(Copyable, Writable):
             ")",
         )
 
-    def set(mut self, value: StringSlice) -> None:
+    def set(mut self, value: ImmStringSpan) -> None:
         """Sets the value of the flag.
 
         Args:
@@ -252,7 +172,7 @@ struct Flag(Copyable, Writable):
         self.changed = True
 
     def get_with_transform[
-        T: ImplicitlyCopyable, //, transform: def (value: StringSlice) thin -> T
+        T: ImplicitlyCopyable, //, transform: def (value: StringSpan) thin -> T
     ](self) -> Optional[T]:
         """Returns the value of the flag with a transformation applied to it.
 
@@ -294,847 +214,56 @@ struct Flag(Copyable, Writable):
         return names^
 
     @staticmethod
-    def string(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[String] = None,
+    def new[T: AnyType](
+        name: ImmStringSpan,
+        usage: ImmStringSpan,
+        *,
+        shorthand: ImmStringSpan = "",
+        var default: Optional[T] = None,
         environment_variable: Optional[String] = None,
         file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
         required: Bool = False,
         persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `String` flag.
+    ) -> Self:
+        """Constructs a flag holding a `T`.
+
+        Parameters:
+            T: The type of value the flag holds. Must conform to `ToValue`, and to `FromValue` to
+                be read back with `FlagSet.get`.
 
         Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
+            name: The name of the flag, matched as `--name`.
+            usage: What the flag is for. Shown in help output.
+            shorthand: A single character alias, matched as `-s`.
+            default: The value to use when the flag is not passed. Supplying one makes the flag
+                optional even if `required` is True.
+            environment_variable: An environment variable to read the value from when the flag is
+                not passed.
+            file_path: A file to read the value from when the flag is not passed and the
+                environment variable is unset.
+            action: A function to run once the flag has been parsed.
+            required: Whether the flag must be passed.
+            persistent: Whether child commands inherit the flag.
 
         Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
+            The flag.
 
-        return Flag(
+        #### Notes:
+        - `T` determines the flag's `OptType`, which is what tells the parser whether the flag takes
+          a following value. A `Bool` flag consumes nothing, so `--verbose` stands alone.
+        """
+        comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
+        comptime opt_type = OptType(reflect[T].name())
+        return Self(
             name=String(name),
-            shorthand=shorthand,
+            shorthand=String(shorthand),
             usage=String(usage),
-            default=default_value,
-            type=FType.String,
+            type=opt_type,
             environment_variable=environment_variable,
             file_path=file_path,
             action=action,
-            required=required,
+            required=required and not default,
             persistent=persistent,
-        )
-
-    @staticmethod
-    def bool(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[Bool] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `Bool` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.Bool,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def int(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[Int] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Adds an `Int` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.Int,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def int8(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[Int8] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Adds an `Int8` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.Int8,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def int16(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[Int16] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Adds an `Int16` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.Int16,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def int32(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[Int32] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Adds an `Int32` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.Int32,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def int64(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[Int64] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Adds an `Int64` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.Int64,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def uint(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[UInt] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `UInt` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.UInt,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def uint8(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[UInt8] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `UInt8` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.UInt8,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def uint16(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[UInt16] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `UInt16` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.UInt16,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def uint32(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[UInt32] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `UInt32` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.UInt32,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def uint64(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[UInt64] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `UInt64` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.UInt64,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def float16(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[Float16] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `Float16` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.Float16,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def float32(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[Float32] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `Float32` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.Float32,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def float64(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: Optional[Float64] = None,
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `Float64` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = String(default.value())
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.Float64,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def string_list(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: List[String] = [],
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `StringList` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = " ".join(default)
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.StringList,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def int_list(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: List[Int] = [],
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `IntList` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = " ".join(default)
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.IntList,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
-        )
-
-    @staticmethod
-    def float64_list(
-        name: StringSlice,
-        usage: StringSlice,
-        shorthand: String = "",
-        default: List[Float64] = [],
-        environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
-        action: Optional[FlagActionFn] = None,
-        required: Bool = False,
-        persistent: Bool = False,
-    ) -> Flag:
-        """Constructs a `Float64List` flag.
-
-        Args:
-            name: The name of the flag.
-            usage: The usage of the flag.
-            shorthand: The shorthand of the flag.
-            default: The default value of the flag.
-            environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
-            action: Function to run after the flag has been processed.
-            required: If the flag is required.
-            persistent: If the flag should persist to children commands.
-
-        Returns:
-            Flag: The flag object.
-        """
-        var default_value: Optional[String]
-        if default:
-            default_value = " ".join(default)
-        else:
-            default_value = None
-
-        return Flag(
-            name=String(name),
-            shorthand=shorthand,
-            usage=String(usage),
-            default=default_value,
-            type=FType.Float64List,
-            environment_variable=environment_variable,
-            file_path=file_path,
-            action=action,
-            required=required,
-            persistent=persistent,
+            default=default^.and_then(_to_opt_string[T]),
         )

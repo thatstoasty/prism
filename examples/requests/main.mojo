@@ -1,20 +1,18 @@
 from std.python import Python
 import prism
-from prism import Command, Flag, FlagSet, read_args
+from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 
-def base(args: List[String], flags: FlagSet) -> None:
+def base(args: ArgSet, flags: FlagSet) -> None:
     print("This is the base command!")
-    return None
 
 
-def print_information(args: List[String], flags: FlagSet) -> None:
+def print_information(args: ArgSet, flags: FlagSet) -> None:
     print("Pass cat or dog as a subcommand, and see what you get!")
-    return None
 
 
-def get_cat_fact(args: List[String], flags: FlagSet) raises -> None:
-    var lover = flags.get_bool("lover")
+def get_cat_fact(args: ArgSet, flags: FlagSet) raises -> None:
+    var lover = flags.get[Bool]("lover")
     if lover:
         print("Hello fellow cat lover!")
 
@@ -24,7 +22,7 @@ def get_cat_fact(args: List[String], flags: FlagSet) raises -> None:
     var url = "https://catfact.ninja/fact"
 
     # Send the GET requests
-    var count = flags.get_int("count")
+    var count = flags.get[Int]("count")
     if not count:
         raise Error("Count flag was not found.")
 
@@ -39,8 +37,8 @@ def get_cat_fact(args: List[String], flags: FlagSet) raises -> None:
             raise Error("Request failed!")
 
 
-def get_dog_breeds(args: List[String], flags: FlagSet) raises -> None:
-    var lover = flags.get_bool("lover")
+def get_dog_breeds(args: ArgSet, flags: FlagSet) raises -> None:
+    var lover = flags.get[Bool]("lover")
     if lover:
         print("Hello fellow dog lover!")
 
@@ -58,11 +56,11 @@ def get_dog_breeds(args: List[String], flags: FlagSet) raises -> None:
         raise Error("Request failed!")
 
 
-def pre_hook(args: List[String], flags: FlagSet) raises -> None:
+def pre_hook(args: ArgSet, flags: FlagSet) raises -> None:
     print("Pre-hook executed!")
 
 
-def post_hook(args: List[String], flags: FlagSet) raises -> None:
+def post_hook(args: ArgSet, flags: FlagSet) raises -> None:
     print("Post-hook executed!")
 
 
@@ -72,7 +70,7 @@ def main() -> None:
         usage="Get some cat facts!",
         run=get_cat_fact,
         flags=[
-            Flag.int(
+            Flag.new[Int](
                 name="count",
                 shorthand="c",
                 usage="Number of facts to get.",
@@ -95,7 +93,7 @@ def main() -> None:
         persistent_pre_run=pre_hook,
         persistent_post_run=post_hook,
         flags=[
-            Flag.bool(
+            Flag.new[Bool](
                 name="lover",
                 shorthand="l",
                 usage="Are you an animal lover?",

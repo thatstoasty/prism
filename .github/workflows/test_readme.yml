@@ -1,4 +1,4 @@
-name: Test package creation
+name: Test README Examples
 
 on:
   pull_request:
@@ -8,10 +8,15 @@ permissions:
   contents: read
   pull-requests: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  package:
-    name: Package
-    runs-on: ubuntu-latest
+  test_readme:
+    name: Test README Examples
+    runs-on: macos-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -22,5 +27,5 @@ jobs:
           pixi-version: v0.70.2
           cache: true
 
-      - name: Try Building The Package
-        run: pixi publish
+      - name: Test README Examples
+        run: pixi run test_readme_examples

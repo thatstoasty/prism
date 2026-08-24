@@ -2,16 +2,16 @@ import mist
 from std.memory import ArcPointer
 
 import prism
-from prism import Command, Flag, FlagSet, exact_args, read_args
+from prism import ArgSet, Command, Flag, FlagSet, exact_args, read_args
 
 
-def printer(args: List[String], flags: FlagSet) raises -> None:
+def printer(args: ArgSet, flags: FlagSet) raises -> None:
     if len(args) <= 0:
         print("No text to print! Pass in some text as a positional argument.")
         return None
 
-    var color = flags.get_uint32("color")
-    var formatting = flags.get_string("formatting")
+    var color = flags.get[UInt32]("color")
+    var formatting = flags.get[String]("formatting")
     var style = mist.Style().foreground(color.value())
 
     if not formatting:
@@ -29,11 +29,11 @@ def printer(args: List[String], flags: FlagSet) raises -> None:
     print(style.render(args[0]))
 
 
-def pre_hook(args: List[String], flags: FlagSet) raises -> None:
+def pre_hook(args: ArgSet, flags: FlagSet) raises -> None:
     print("Pre-hook executed!")
 
 
-def post_hook(args: List[String], flags: FlagSet) raises -> None:
+def post_hook(args: ArgSet, flags: FlagSet) raises -> None:
     print("Post-hook executed!")
 
 
@@ -46,8 +46,8 @@ def main() -> None:
         post_run=post_hook,
         arg_validator=exact_args[1](),
         flags=[
-            Flag.uint32(name="color", shorthand="c", usage="Text color", default=UInt32(0x3464EB)),
-            Flag.string(name="formatting", shorthand="f", usage="Text formatting"),
+            Flag.new[UInt32](name="color", shorthand="c", usage="Text color", default=UInt32(0x3464EB)),
+            Flag.new[String](name="formatting", shorthand="f", usage="Text formatting"),
         ],
     )
     cli.execute(read_args())

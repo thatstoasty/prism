@@ -1,7 +1,7 @@
-from prism import Command, FlagSet, read_args
+from prism import ArgSet, Command, FlagSet, read_args
 
 
-def test(args: List[String], flags: FlagSet) -> None:
+def test(args: ArgSet, flags: FlagSet) -> None:
     for arg in args:
         print("Received:", arg)
 
