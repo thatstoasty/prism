@@ -23,4 +23,4 @@ jobs:
           cache: true
 
       - name: Try Building The Package
-        run: pixi run build
+        run: pixi publish
