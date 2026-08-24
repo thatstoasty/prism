@@ -193,7 +193,7 @@ def test_flag_from_error() raises:
 
 def test_flag_from_error_wrong_error() raises:
     var error = Error("Some other error.")
-    result = flag_from_error(error)
+    var result = flag_from_error(error)
     testing.assert_false(Bool(result))
 
 

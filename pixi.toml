@@ -12,7 +12,8 @@ preview = ["pixi-build"]
 
 [tasks]
 tests = "sh -c 'status=0; for f in test/test_*.mojo; do echo \"== $f\"; mojo -D ASSERT=all -I . \"$f\" || status=1; done; exit $status'"
-examples = "python3 scripts/examples.py"
+examples = "python3 utils/examples.py"
+test_readme_examples = "python3 utils/test_readme_examples.py"
 
 # Linting and Formatting
 lint_docs = "mojo doc --Werror --diagnose-missing-doc-strings -o /dev/null ./prism"

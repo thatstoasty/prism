@@ -232,9 +232,9 @@ struct Command(Copyable, Writable):
     """A struct representing a command that can be executed from the command line.
 
     ```mojo
-     from prism import Command, FlagSet, read_args
+     from prism import Command, FlagSet, ArgSet, read_args
 
-     def test(args: List[String], flags: FlagSet) -> None:
+     def test(args: ArgSet, flags: FlagSet) -> None:
          print("Hello from Chromeria!")
 
      def main():
