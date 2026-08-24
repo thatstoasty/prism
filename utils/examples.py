@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 
+import os
 import shutil
+import sys
 import subprocess
 import tempfile
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 PACKAGE_NAME = "prism"
@@ -118,24 +121,39 @@ def main() -> int:
             return 1
 
         # 2. Build all example .mojo files into the temp directory.
-        logger.info("Building example binaries.")
         mojo_files = sorted(EXAMPLES_DIR.glob("*.mojo"))
         if not mojo_files:
             logger.info("[ERROR] No .mojo files found in examples directory.")
             return 1
 
-        built: set[str] = set()
-        for mojo_file in mojo_files:
-            binary_name = mojo_file.stem
-            output_path = temp_dir / binary_name
-            result = run([
+        # Builds dominate the runtime of this script -- the examples themselves finish in
+        # milliseconds -- so they run concurrently. Threads are enough because the work happens in
+        # subprocesses. Output is captured per build and printed after the pool joins, since
+        # letting a dozen compilers write to the terminal at once interleaves their diagnostics
+        # into something unreadable. Diagnostics go to stderr so they stay next to the warning
+        # that introduces them: the logger writes to stderr unbuffered, and printing to block
+        # buffered stdout lands them somewhere else entirely once output is redirected.
+        workers = min(len(mojo_files), os.cpu_count() or 4)
+        logger.info(f"Building {len(mojo_files)} example binaries across {workers} workers.")
+
+        def build(mojo_file: Path) -> tuple[Path, subprocess.CompletedProcess]:
+            command = [
                 "mojo", "build", "-D", "ASSERT=all", "-I", ".",
-                str(mojo_file), "-o", str(output_path),
-            ])
+                str(mojo_file), "-o", str(temp_dir / mojo_file.stem),
+            ]
+            return mojo_file, subprocess.run(command, capture_output=True, text=True)
+
+        built: set[str] = set()
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            results = list(pool.map(build, mojo_files))
+
+        for mojo_file, result in results:
             if result.returncode != 0:
                 logger.warning(f"Failed to build {mojo_file}")
+                if result.stderr:
+                    print(result.stderr, end="", file=sys.stderr)
             else:
-                built.add(binary_name)
+                built.add(mojo_file.stem)
 
         # 3. Run each binary with its test-case args.
         logger.info("Running examples...")
