@@ -357,9 +357,6 @@ from prism import ArgSet, Command, Flag, FlagSet, read_args
 def tool_func(args: ArgSet, flags: FlagSet) -> None:
     print("Running tool!")
 
-def tool_func(args: ArgSet, flags: FlagSet) -> None:
-    print("Running tool!")
-
 def main():
     var cli = Command(
         name="tool",
