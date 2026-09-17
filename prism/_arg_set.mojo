@@ -183,7 +183,7 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
         Returns:
             The rendered arguments, or an empty string when none are declared.
         """
-        var builder = String(capacity=128)
+        var builder = String(capacity_bytes=128)
         for i in range(len(self.args)):
             if i > 0:
                 builder.write(" ")

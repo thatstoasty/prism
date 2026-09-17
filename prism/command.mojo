@@ -35,9 +35,9 @@ one step. The pre and post run hooks are `Optional[CmdFn]`, and reaching an Opti
 step that the compiler will not chain, so a hook function must be declared `raises` even when it
 never raises. Omitting it reports a `Command` constructor mismatch rather than naming the hook.
 """
-comptime ParentVisitorFn = def (Command) capturing thin -> None
+comptime ParentVisitorFn = def (Command) -> None
 """The function for visiting parents of a command."""
-comptime RaisingParentVisitorFn = def (Command) capturing raises thin -> None
+comptime RaisingParentVisitorFn = def (Command) raises -> None
 """The function for visiting parents of a command."""
 
 
@@ -351,7 +351,7 @@ struct Command(Copyable, Writable):
         output_writer: WriterFn = default_output_writer,
         error_writer: WriterFn = default_error_writer,
         var args: List[Arg] = [],
-        var children: List[Self] = [],
+        var children: List[Self] = {},
         pre_run: Optional[CmdFn] = None,
         post_run: Optional[CmdFn] = None,
         persistent_pre_run: Optional[CmdFn] = None,
@@ -497,13 +497,12 @@ struct Command(Copyable, Writable):
         """
         var flags = List[Flag]()
 
-        @parameter
-        def add_parent_persistent_flags(parent: Self) capturing -> None:
+        def add_parent_persistent_flags(parent: Self) {mut flags} -> None:
             for flag in parent.flags:
                 if flag.persistent:
                     flags.append(flag.copy())
 
-        self.visit_parents[add_parent_persistent_flags]()
+        self.visit_parents(add_parent_persistent_flags)
         return FlagSet(flags^)
 
     def _parent_link(mut self) -> ArcPointer[Self]:
@@ -582,11 +581,13 @@ struct Command(Copyable, Writable):
         """
         return Bool(self.parent)
 
-    def visit_parents[func: ParentVisitorFn, reverse: Bool = False](self) -> None:
+    def visit_parents[FuncType: ParentVisitorFn, //, reverse: Bool = False](self, func: FuncType) -> None:
         """Visits all parents of the command and invokes func on each parent.
 
-        Parameters:
+        Args:
             func: The function to invoke on each parent.
+
+        Parameters:
             reverse: If True, visits parents in reverse order (from child to root).
         """
         if not self.has_parent():
@@ -596,17 +597,19 @@ struct Command(Copyable, Writable):
         # once the base case is reached, we make our way back down the command tree
         # and invoke the function on each parent in reverse order.
         comptime if reverse:
-            self.parent[0][].visit_parents[func, reverse]()
+            self.parent[0][].visit_parents[reverse](func)
             func(self.parent[0][])
         else:
             func(self.parent[0][])
-            self.parent[0][].visit_parents[func, reverse]()
+            self.parent[0][].visit_parents[reverse](func)
 
-    def visit_parents[func: RaisingParentVisitorFn, reverse: Bool = False](self) raises -> None:
+    def visit_parents[FuncType: RaisingParentVisitorFn, //, reverse: Bool = False](self, func: FuncType) raises -> None:
         """Visits all parents of the command and invokes func on each parent.
 
-        Parameters:
+        Args:
             func: The function to invoke on each parent.
+
+        Parameters:
             reverse: If True, visits parents in reverse order (from child to root).
 
         Raises:
@@ -619,11 +622,11 @@ struct Command(Copyable, Writable):
         # once the base case is reached, we make our way back down the command tree
         # and invoke the function on each parent in reverse order.
         comptime if reverse:
-            self.parent[0][].visit_parents[func, reverse]()
+            self.parent[0][].visit_parents[reverse](func)
             func(self.parent[0][])
         else:
             func(self.parent[0][])
-            self.parent[0][].visit_parents[func, reverse]()
+            self.parent[0][].visit_parents[reverse](func)
 
     def _execute_pre_run_hooks(self, cmd: Self, args: ArgSet) raises -> None:
         """Runs the pre-run hooks for the command.
@@ -636,14 +639,13 @@ struct Command(Copyable, Writable):
             Any error that occurs while running the pre-run hooks.
         """
 
-        @parameter
-        def run_action(parent: Self) raises -> None:
+        def run_action(parent: Self) raises {cmd, args} -> None:
             if parent.persistent_pre_run:
                 parent.persistent_pre_run.value()(args, cmd.flags)
 
         try:
             # Run the persistent pre-run hooks.
-            cmd.visit_parents[run_action, reverse=ENABLE_TRAVERSE_RUN_HOOKS]()
+            cmd.visit_parents[reverse=ENABLE_TRAVERSE_RUN_HOOKS](run_action)
 
             # Run the pre-run hooks.
             if cmd.pre_run:
@@ -663,15 +665,14 @@ struct Command(Copyable, Writable):
             Any error that occurs while running the post-run hooks.
         """
 
-        @parameter
-        def run_action(parent: Self) raises -> None:
+        def run_action(parent: Self) raises {cmd, args} -> None:
             if parent.persistent_post_run:
                 parent.persistent_post_run.value()(args, cmd.flags)
 
         try:
             # Run the persistent post-run hooks.
             # If ENABLE_TRAVERSE_RUN_HOOKS is True, so we traverse downward from the root command.
-            cmd.visit_parents[run_action, reverse=ENABLE_TRAVERSE_RUN_HOOKS]()
+            cmd.visit_parents[reverse=ENABLE_TRAVERSE_RUN_HOOKS](run_action)
 
             # Run the post-run hooks.
             if cmd.post_run:

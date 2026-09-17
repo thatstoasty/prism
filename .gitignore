@@ -160,7 +160,7 @@ cython_debug/
 #.idea/
 
 # magic environments
-.magic
+.pixi
 
 # Rattler
 output
@@ -169,5 +169,5 @@ output
 .vscode/
 
 # Mojo
-*.mojopkg
+*.mojoc
 kgen.*

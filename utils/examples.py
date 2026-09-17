@@ -114,7 +114,7 @@ def main() -> int:
         # 1. Build the mojo package.
         logger.info(f"Building {PACKAGE_NAME} package.")
         result = run(
-            ["mojo", "package", PACKAGE_NAME, "-o", str(temp_dir / f"{PACKAGE_NAME}.mojopkg")]
+            ["mojo", "precompile", PACKAGE_NAME, "-o", str(temp_dir / f"{PACKAGE_NAME}.mojoc")]
         )
         if result.returncode != 0:
             logger.error("Failed to build package.")

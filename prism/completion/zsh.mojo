@@ -48,7 +48,7 @@ def _zsh_flag_spec(flag: Flag) -> String:
     Returns:
         A ZSH _arguments spec string for the flag.
     """
-    var escaped_usage = String(capacity=DEFAULT_BUFFER_SIZE)
+    var escaped_usage = String(capacity_bytes=DEFAULT_BUFFER_SIZE)
     _zsh_escape(flag.usage, escaped_usage)
     var is_bool = flag.type == OptType.Bool
     var prefix = "'*" if flag.type.is_list_type() else "'"
@@ -88,7 +88,7 @@ def _zsh_command_function(
         If an error occurs during generation.
     """
     var has_children = Bool(cmd.children)
-    var builder = String(capacity=DEFAULT_BUFFER_SIZE)
+    var builder = String(capacity_bytes=DEFAULT_BUFFER_SIZE)
 
     builder.write(t"_{root_name}{prefix}", "() {\n")
 
@@ -181,7 +181,7 @@ def _zsh_command_function(
         # Leaf command - complete the values its arguments accept, if any
         var leaf_candidates = _arg_candidates(cmd)
         if leaf_candidates:
-            var args_list = String(capacity=SMALL_BUFFER_SIZE)
+            var args_list = String(capacity_bytes=SMALL_BUFFER_SIZE)
             for i in range(len(leaf_candidates)):
                 if i > 0:
                     args_list.write(" ")
@@ -237,7 +237,7 @@ def generate_zsh_completion(cmd: Command) raises -> String:
         If an error occurs during generation.
     """
     ref root_name = cmd.name
-    var builder = String(capacity=DEFAULT_BUFFER_SIZE)
+    var builder = String(capacity_bytes=DEFAULT_BUFFER_SIZE)
 
     # Header
     builder.write(t"#compdef {root_name}\n", SCRIPT_HEADER)

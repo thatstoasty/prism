@@ -41,12 +41,10 @@ def _sorted_by_name(var flags: List[Flag]) -> List[Flag]:
     Returns:
         The same flags in alphabetical order.
     """
-
-    @parameter
     def by_name(a: Flag, b: Flag) -> Bool:
         return a.name < b.name
 
-    sort[by_name](flags)
+    sort(flags, by_name)
     return flags^
 
 
@@ -166,11 +164,10 @@ def default_help(cmd: HelpContext) raises -> String:
         var command_style = style.width(UInt16(option_width) - 2) if option_width > 0 else style
         var children = cmd.children.copy()
 
-        @parameter
         def by_command_name(a: Tuple[String, String], b: Tuple[String, String]) -> Bool:
             return a[0] < b[0]
 
-        sort[by_command_name](children)
+        sort(children, by_command_name)
 
         builder.write("\nCommands:")
         for i in range(len(children)):

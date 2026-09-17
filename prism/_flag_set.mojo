@@ -32,6 +32,23 @@ struct ParserState(TrivialRegisterPassable, Writable, Equatable):
     """State when the parser is trying to parse a shorthand flag that starts with '-' and can be in the format of either '-f=value', '-f value', or a combination of multiple bool shorthand flags like '-abc' which is equivalent to '-a -b -c'."""
 
 
+def _set_flag_value(mut flags: FlagSet, name: ImmStringSpan, value: StringSpan) raises -> None:
+    # Set the value of the flag.
+    var flag = flags.lookup(name)
+    if not flag:
+        raise Error(
+            t"FlagSet.from_args: Failed to set flag, {name}, with value: {value}. Flag could not be found."
+        )
+    if not flag.value()[].changed:
+        flag.value()[].set(value)
+    elif flag.value()[].type.is_list_type():
+        # Repeating a list flag accumulates: `--tags a --tags b` is a two-element list.
+        flag.value()[].value.value().write(" ", value)
+    else:
+        # Repeating a scalar flag replaces. Appending would turn `--name a --name b` into
+        # the single value "a b" rather than letting the last one win.
+        flag.value()[].set(value)
+
 @fieldwise_init
 struct _FlagSetIter[mut: Bool, //, origin: Origin[mut=mut]](Copyable, Iterator):
     comptime Element = Flag
@@ -156,24 +173,6 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Raises:
             Error: If a flag is not recognized.
         """
-        @parameter
-        def set_flag_value(mut flags: FlagSet, name: ImmStringSpan, value: StringSpan) raises -> None:
-            # Set the value of the flag.
-            var flag = flags.lookup(name)
-            if not flag:
-                raise Error(
-                    t"FlagSet.from_args: Failed to set flag, {name}, with value: {value}. Flag could not be found."
-                )
-            if not flag.value()[].changed:
-                flag.value()[].set(value)
-            elif flag.value()[].type.is_list_type():
-                # Repeating a list flag accumulates: `--tags a --tags b` is a two-element list.
-                flag.value()[].value.value().write(" ", value)
-            else:
-                # Repeating a scalar flag replaces. Appending would turn `--name a --name b` into
-                # the single value "a b" rather than letting the last one win.
-                flag.value()[].set(value)
-
         var remaining_args = List[String](capacity=len(arguments))
         var state = ParserState.FIND_FLAG
         var parser = FlagParser(arguments)
@@ -205,7 +204,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             # Parse out a flag and set the value on the flag.
             elif state == ParserState.PARSE_FLAG:
                 var result = parser.parse_flag(argument, self)
-                set_flag_value(self, result.name, result.value)
+                _set_flag_value(self, result.name, result.value)
                 parser.index += result.increment
                 state = ParserState.FIND_FLAG
 
@@ -213,7 +212,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             elif state == ParserState.PARSE_SHORTHAND_FLAG:
                 var result = parser.parse_shorthand_flag(argument, self)
                 for name in result.names:
-                    set_flag_value(self, name, result.value)
+                    _set_flag_value(self, name, result.value)
                 parser.index += result.increment
                 state = ParserState.FIND_FLAG
 
