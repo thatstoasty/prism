@@ -11,15 +11,6 @@ those would replace a precise message ("flag requires a value") with a misleadin
 """
 
 
-comptime UNKNOWN_FLAG_ERROR = "Command does not accept the flag supplied. Name: "
-"""Prefix of the error raised when an argument names a flag the command does not define.
-
-`flag_from_error` keys off this to decide whether an error is worth suggesting a correction for, so
-it must stay specific to unknown flags. Other parse errors also mention a flag name, and matching
-those would replace a precise message ("flag requires a value") with a misleading "did you mean".
-"""
-
-
 def panic(message: Some[Writable], code: Int = 1) -> None:
     """Panics with the given message.
 
