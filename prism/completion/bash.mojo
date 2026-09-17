@@ -55,7 +55,7 @@ def _bash_command_function(
         If an error occurs during generation.
     """
     var has_children = Bool(cmd.children)
-    var builder = String(capacity=DEFAULT_BUFFER_SIZE)
+    var builder = String(capacity_bytes=DEFAULT_BUFFER_SIZE)
 
     builder.write(
         t"__{root_name}{prefix}() ", "{", "\n",
@@ -145,7 +145,7 @@ def _bash_command_function(
         # Leaf command
         var candidates = _arg_candidates(cmd)
         if candidates:
-            var args_list = String(capacity=SMALL_BUFFER_SIZE)
+            var args_list = String(capacity_bytes=SMALL_BUFFER_SIZE)
             for i in range(len(candidates)):
                 if i > 0:
                     args_list.write(" ")
@@ -205,7 +205,7 @@ def generate_bash_completion(cmd: Command) raises -> String:
         If an error occurs during generation.
     """
     ref root_name = cmd.name
-    var builder = String(capacity=DEFAULT_BUFFER_SIZE)
+    var builder = String(capacity_bytes=DEFAULT_BUFFER_SIZE)
 
     # Header
     builder.write("#!/usr/bin/env bash\n", SCRIPT_HEADER)
