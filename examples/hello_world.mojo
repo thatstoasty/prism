@@ -22,7 +22,8 @@ def say_goodbye(args: ArgSet, flags: FlagSet) -> None:
 
 
 def test(args: ArgSet, flags: FlagSet) raises -> None:
-    if var env := flags.get[String]("env"):
+    var env = flags.get[String]("env")
+    if env:
         print("Env:", env.value())
     else:
         print("No env flag provided.")

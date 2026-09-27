@@ -28,7 +28,7 @@ There's two ways to build `prism` from source: directly from the Git repository 
 Run the following commands in your terminal:
 
 ```bash
-pixi add prism --git "https://github.com/thatstoasty/prism.git" --tag "v0.4.1" && pixi install
+pixi add prism --git "https://github.com/thatstoasty/prism.git" --tag "v0.4.2" && pixi install
 ```
 
 #### Building from source: Local
