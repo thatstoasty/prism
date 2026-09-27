@@ -191,5 +191,17 @@ def test_list_element_types_do_not_collide() raises:
     )
 
 
+def test_repeated_list_flag_keeps_each_value_whole() raises:
+    # Regression: repeated values were joined and split on spaces, so curl-style headers
+    # `-H "A: 1" -H "B: 2"` read back as ["A:", "1", "B:", "2"].
+    var flags: List[Flag] = [Flag.new[List[String]](name="header", shorthand="H", usage="Headers.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["-H", "A: 1", "--header", "B: 2", "-H=C: 3"]
+    _ = flag_set.from_args(Span(args))
+
+    var expected: List[String] = ["A: 1", "B: 2", "C: 3"]
+    testing.assert_equal(flag_set.get[List[String]]("header").value(), expected)
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

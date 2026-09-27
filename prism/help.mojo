@@ -6,6 +6,8 @@ from prism.command import Command
 from prism._arg_set import ArgSet
 from prism.arg import Arg
 from prism.flag import Flag
+from prism.opt_type import OptType
+from prism.value import LIST_SEPARATOR
 
 
 @fieldwise_init
@@ -30,6 +32,21 @@ struct HelpContext:
 
 comptime HelpFn = def (HelpContext) raises thin -> String
 """The function to generate help output."""
+
+
+def _render_default(default: String, type: OptType) -> String:
+    """Renders a default for help output, showing a list's elements separated by spaces.
+
+    Args:
+        default: The raw default value.
+        type: The type of the flag or argument the default belongs to.
+
+    Returns:
+        The default as it should be displayed.
+    """
+    if type.is_list_type():
+        return default.replace(LIST_SEPARATOR, " ")
+    return default
 
 
 def _sorted_by_name(var flags: List[Flag]) -> List[Flag]:
@@ -76,7 +93,7 @@ def _write_flag_section(
         if flag.required:
             builder.write(" (required)")
         elif flag.default:
-            builder.write(" (default: ", flag.default.value(), ")")
+            builder.write(" (default: ", _render_default(flag.default.value(), flag.type), ")")
 
     builder.write("\n")
 
@@ -149,7 +166,7 @@ def default_help(cmd: HelpContext) raises -> String:
             )
             builder.write("\n", arg_style.render(rendered), arg.usage)
             if arg.default:
-                builder.write(" (default: ", arg.default.value(), ")")
+                builder.write(" (default: ", _render_default(arg.default.value(), arg.type), ")")
         builder.write("\n")
 
     if local_flags:

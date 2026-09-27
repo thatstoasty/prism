@@ -198,7 +198,7 @@ def test_list_round_trips_through_to_value() raises:
     # with `FromValue`, so a type whose display differs from its wire form did not survive.
     var tags: List[_Tag] = [_Tag("#a"), _Tag("#b")]
     var rendered = tags.to_value()
-    testing.assert_equal(rendered, "#a #b")
+    testing.assert_equal(rendered, "#a\0#b")
 
     var back = List[_Tag].from_value(rendered)
     testing.assert_equal(len(back), 2)

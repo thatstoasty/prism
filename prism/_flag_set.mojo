@@ -10,7 +10,7 @@ from prism._flag_group import (
 from prism._flag_parser import FlagParser
 from prism.flag import Flag, FlagActionFn, Annotation
 from prism.opt_type import OptType
-from prism.value import FromValue
+from prism.value import FromValue, LIST_SEPARATOR
 
 
 comptime FlagVisitorFn = def (Flag) thin -> None
@@ -42,8 +42,8 @@ def _set_flag_value(mut flags: FlagSet, name: ImmStringSpan, value: StringSpan) 
     if not flag.value()[].changed:
         flag.value()[].set(value)
     elif flag.value()[].type.is_list_type():
-        # Repeating a list flag accumulates: `--tags a --tags b` is a two-element list.
-        flag.value()[].value.value().write(" ", value)
+        # Repeating a list flag accumulates: `-H "A: 1" -H "B: 2"` is a two-element list.
+        flag.value()[].value.value().write(LIST_SEPARATOR, value)
     else:
         # Repeating a scalar flag replaces. Appending would turn `--name a --name b` into
         # the single value "a b" rather than letting the last one win.

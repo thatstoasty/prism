@@ -2,6 +2,27 @@
 from std.builtin.rebind import downcast
 
 
+comptime LIST_SEPARATOR = "\0"
+"""Separates the elements of a list flag's raw value.
+
+Why NUL: argv entries and environment variables are C strings, which end at the first NUL byte, so
+no value from the command line can contain one. Every printable separator collides with some real
+value: spaces split `-H "A: 1"`, commas split `Accept: text/html, application/json`, and a quoted
+argument can hold a newline. With NUL, each occurrence of a repeated flag stays exactly one element
+and no escaping is needed.
+
+Caveats:
+- A value read from `file_path`, or a string handed to `FlagSet.from_args` directly, could contain
+  a NUL and would be split there.
+- A raw list value is not printable as is. Help swaps the separator for spaces when showing a
+  default, and anything else that displays one must do the same.
+- A `ToValue` element type must not emit NUL.
+
+Storing list values as `List[String]` on `Flag` would remove the in-band separator entirely, but
+`Flag.value` and `FromValue.from_value` are string based, so that is a breaking API change.
+"""
+
+
 trait FromValue(Movable, Deinitable):
     """A type that can be constructed from the text a flag was given on the command line.
 
@@ -115,10 +136,10 @@ __extension SIMD(FromValue):
 __extension List(FromValue):
     @staticmethod
     def from_value(value: StringSpan) raises -> Self:
-        """Constructs a list from a flag's space separated raw value.
+        """Constructs a list from a flag's raw value.
 
         Args:
-            value: The text the flag was given, with elements separated by spaces.
+            value: The text the flag was given, with elements separated by `LIST_SEPARATOR`.
 
         Raises:
             Error: If an element does not parse as the list's element type.
@@ -127,7 +148,7 @@ __extension List(FromValue):
 
         # We checked if it conforms to FromValue, so we can downcast here.
         var parsed = List[downcast[Self.T, FromValue]]()
-        for item in value.split(sep=" "):
+        for item in value.split(sep=LIST_SEPARATOR):
             parsed.append(Self.T.from_value(item))
         return parsed^
 
@@ -189,15 +210,15 @@ __extension SIMD(ToValue):
 
 __extension List(ToValue):
     def to_value(self) -> String:
-        """Renders the list as a flag's space separated raw value.
+        """Renders the list as a flag's raw value.
 
         Returns:
-            The elements separated by spaces.
+            The elements separated by `LIST_SEPARATOR`.
 
         #### Notes:
-        - This has to be the inverse of `List.from_value`, which splits on spaces. `String(self)`
-          renders a list as `[a, b]`, which that split reads back as `["[a,", "b]"]`, so a list
-          flag's default never survived the round trip.
+        - This has to be the inverse of `List.from_value`, which splits on `LIST_SEPARATOR`.
+          `String(self)` renders a list as `[a, b]`, which does not split back into its elements,
+          so a list flag's default would not survive the round trip.
         """
         comptime assert conforms_to(Self.T, ToValue), String(
             t"The elements of the List must conform to `ToValue`. {reflect[Self.T].name()} does not."
@@ -205,7 +226,7 @@ __extension List(ToValue):
         var builder = String()
         for i in range(len(self)):
             if i > 0:
-                builder.write(" ")
+                builder.write(LIST_SEPARATOR)
             builder.write(self[i].to_value())
 
         return builder^
