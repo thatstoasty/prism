@@ -3,38 +3,11 @@ from std.collections.list import _ListIter
 
 from prism.opt_type import OptType
 from prism._util import _to_opt_string
-from prism.value import FromValue, ToValue
+from prism.value import FromValue, ParseCheckFn, ToValue, _parse_check
 
 
-comptime ArgParseFn = def (ImmStringSpan) raises thin -> None
+comptime ArgParseFn = ParseCheckFn
 """Checks that an argument's text parses as its declared type."""
-
-
-def _parse_check[T: Movable & Deinitable]() -> ArgParseFn:
-    """Builds the parse check for an argument declared as `T`.
-
-    Parameters:
-        T: The type the argument holds.
-
-    Returns:
-        A function that raises if its input does not parse as a `T`.
-
-    #### Notes:
-    - `bind` only has the runtime `OptType`, which cannot name a user-defined type, so it could
-      never dispatch to the right `from_value`. Capturing it here, where `T` is still known, is
-      what lets every type be checked the same way instead of a switch that silently skipped
-      lists and custom types.
-    - `T` is bounded loosely and asserted instead, because a type conforming through an
-      `__extension` does not satisfy a `FromValue` parameter bound.
-    """
-    comptime assert conforms_to(T, FromValue), String(
-        t"`T` must conform to `FromValue`. {reflect[T].name()} does not."
-    )
-
-    def check(value: ImmStringSpan) raises -> None:
-        _ = T.from_value(value)
-
-    return check
 
 
 @fieldwise_init

@@ -44,7 +44,7 @@ struct OptType(Equatable, ImplicitlyCopyable, Writable):
     comptime Float64 = Self(14, "Float64")
     """A 64-bit floating point value."""
     comptime List = Self(15, "List")
-    """A space separated list of values that can be converted to/from strings."""
+    """A list of values that can be converted to/from strings."""
     comptime Custom = Self(16, "Custom")
     """Custom types."""
 

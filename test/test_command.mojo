@@ -158,5 +158,37 @@ def test_hooks_are_optional_and_raising() raises:
     testing.assert_false(Bool(bare.persistent_post_run), "persistent_post_run should be unset")
 
 
+def test_execute_leaves_the_callers_tree_untouched() raises:
+    # Regression: `execute` copied the root but shared its children, so parsing merged inherited
+    # flags into the caller's subcommand and left values on it. A second `execute` saw the first
+    # run's values, and every run added another copy of the inherited flags.
+    def dummy(args: ArgSet, flags: FlagSet) raises -> None:
+        return None
+
+    var cli = Command(
+        name="app",
+        usage="Base command.",
+        run=dummy,
+        flags=[Flag.new[Bool](name="verbose", usage="Verbose.", persistent=True)],
+        children=[
+            Command(
+                name="child",
+                usage="Child command.",
+                run=dummy,
+                flags=[Flag.new[List[String]](name="tags", usage="Tags.")],
+            )
+        ],
+    )
+    var flag_count = len(cli.children[0][].flags)
+
+    cli.execute(["child", "--tags", "a", "--verbose"])
+    cli.execute(["child", "--tags", "b"])
+
+    ref child = cli.children[0][]
+    testing.assert_equal(len(child.flags), flag_count)
+    testing.assert_false(Bool(child.flags.lookup("tags").value()[].value))
+    testing.assert_false(child.has_parent())
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

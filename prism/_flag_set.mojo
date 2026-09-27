@@ -281,6 +281,26 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         if len(missing_flag_names) > 0:
             raise Error(t"Required flag(s): {missing_flag_names} not set.")
 
+    def validate_flag_values(self) raises -> None:
+        """Validates that every flag given a value can be read as its declared type.
+
+        Raises:
+            Error: Naming the first flag whose value does not parse.
+
+        #### Notes:
+        - Without this, `--port abc` parsed cleanly and only failed when `run` called `get`, after
+          the pre-run hooks had already had their side effects, and without naming the flag.
+        - Defaults are not checked. `Flag.new` renders them from a typed value, so they parse.
+        """
+        for flag in self.flags:
+            if not flag.value:
+                continue
+
+            try:
+                flag.parse_check(flag.value.value())
+            except e:
+                raise Error(t"Invalid value for flag `--{flag.name}`: {e}")
+
     def lookup(ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
         Mutable if FlagSet is mutable, immutable if FlagSet is immutable.

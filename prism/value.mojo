@@ -143,14 +143,52 @@ __extension List(FromValue):
 
         Raises:
             Error: If an element does not parse as the list's element type.
+
+        #### Notes:
+        - An empty value is an empty list. `to_value` renders an empty list as `""`, and splitting
+          that yields one empty element, so an empty default read back as `[""]`, or failed to
+          parse for a `List[Int]`. The cost is that a lone `--tags ""` also reads as empty.
         """
         comptime assert conforms_to(Self.T, FromValue), String(t"The type of the list elements must conform to `FromValue`. {reflect[Self.T].name()} does not.")
 
         # We checked if it conforms to FromValue, so we can downcast here.
         var parsed = List[downcast[Self.T, FromValue]]()
+        if not value:
+            return parsed^
         for item in value.split(sep=LIST_SEPARATOR):
             parsed.append(Self.T.from_value(item))
         return parsed^
+
+
+comptime ParseCheckFn = def (ImmStringSpan) raises thin -> None
+"""Checks that a flag or argument's text parses as its declared type."""
+
+
+def _parse_check[T: Movable & Deinitable]() -> ParseCheckFn:
+    """Builds the parse check for a flag or argument declared as `T`.
+
+    Parameters:
+        T: The type the flag or argument holds.
+
+    Returns:
+        A function that raises if its input does not parse as a `T`.
+
+    #### Notes:
+    - Parsing only has the runtime `OptType`, which cannot name a user-defined type, so it could
+      never dispatch to the right `from_value`. Capturing it here, where `T` is still known, is
+      what lets every type be checked the same way instead of a switch that silently skipped
+      lists and custom types.
+    - `T` is bounded loosely and asserted instead, because a type conforming through an
+      `__extension` does not satisfy a `FromValue` parameter bound.
+    """
+    comptime assert conforms_to(T, FromValue), String(
+        t"`T` must conform to `FromValue`. {reflect[T].name()} does not."
+    )
+
+    def check(value: ImmStringSpan) raises -> None:
+        _ = T.from_value(value)
+
+    return check
 
 
 trait ToValue(Movable, Deinitable):

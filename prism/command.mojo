@@ -525,6 +525,29 @@ struct Command(Copyable, Writable):
         self.children = children^
         return ArcPointer(link^)
 
+    def _deep_copy(self) -> Self:
+        """Copies this command and every command below it.
+
+        Returns:
+            A copy of this subtree that shares no children with the original.
+        """
+        # Walked with a queue rather than recursion, which the compiler flags as an infinite loop.
+        # Each node is enqueued once its own fresh copy is in place, so the copies it receives are
+        # never shared with the original tree.
+        var root = self.copy()
+        var queue = List[ArcPointer[Self]]()
+        for i in range(len(root.children)):
+            root.children[i] = ArcPointer(root.children[i][].copy())
+            queue.append(root.children[i])
+
+        while queue:
+            var node = queue.pop()
+            for i in range(len(node[].children)):
+                node[].children[i] = ArcPointer(node[].children[i][].copy())
+                queue.append(node[].children[i])
+
+        return root^
+
     def _wire_parents(mut self) -> None:
         """Links every command in this subtree to its parent, top-down.
 
@@ -712,7 +735,11 @@ struct Command(Copyable, Writable):
             self.exit(Error("Cannot execute from a non-root command. Please execute from the root command."))
             return
 
-        var cmd = ArcPointer(self.copy())
+        # Work on a private copy of the whole tree. `copy()` shares children by reference count, so
+        # merging inherited flags into a subcommand and parsing values onto it changed the caller's
+        # tree too: a second `execute` saw the first run's values and a duplicate set of inherited
+        # flags on every run.
+        var cmd = ArcPointer(self._deep_copy())
 
         # Link the tree's parent pointers once, from the root, before anything reads them.
         cmd[]._wire_parents()
@@ -814,6 +841,10 @@ struct Command(Copyable, Writable):
                 for child in cmd[].children:
                     if not child[]._generated_completion:
                         raise _unknown_command_error(cmd[], remaining_args[0])
+
+            # Check every flag value parses as its declared type before anything runs, so a
+            # mistyped value is reported by name rather than surfacing inside `run`.
+            cmd[].flags.validate_flag_values()
 
             # Validate individual required flags (eg: flag is required)
             cmd[].flags.validate_required_flags()

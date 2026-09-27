@@ -1,7 +1,7 @@
 """Flags, their types, and the annotations used to group them."""
 from prism.opt_type import OptType
 from prism._util import _to_opt_string
-from prism.value import FromValue, ToValue, String, Bool, SIMD, List
+from prism.value import FromValue, ParseCheckFn, ToValue, String, Bool, SIMD, List, _parse_check
 
 comptime FlagActionFn = def (String) raises thin -> None
 """The type of a function that runs after a flag has been processed."""
@@ -78,6 +78,8 @@ struct Flag(Copyable, Writable):
     """If the flag is required."""
     var persistent: Bool
     """If the flag should persist to children commands."""
+    var parse_check: ParseCheckFn
+    """Raises if the flag's value does not parse as its declared type."""
 
     def __init__(
         out self,
@@ -92,6 +94,7 @@ struct Flag(Copyable, Writable):
         default: Optional[String] = None,
         required: Bool = False,
         persistent: Bool = False,
+        parse_check: ParseCheckFn = _parse_check[String](),
     ):
         """Initializes a new Flag.
 
@@ -106,6 +109,8 @@ struct Flag(Copyable, Writable):
             default: The default value of the flag.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+            parse_check: Raises if the flag's value does not parse as `type`. Prefer `Flag.new`,
+                which derives this from its `T`.
         """
         self.name = name
         self.shorthand = shorthand
@@ -120,6 +125,7 @@ struct Flag(Copyable, Writable):
         self.changed = False
         self.required = required
         self.persistent = persistent
+        self.parse_check = parse_check
 
     def __eq__(self, other: Self) -> Bool:
         """Compares two Flags for equality.
@@ -266,4 +272,5 @@ struct Flag(Copyable, Writable):
             required=required and not default,
             persistent=persistent,
             default=default^.and_then(_to_opt_string[T]),
+            parse_check=_parse_check[T](),
         )

@@ -203,5 +203,46 @@ def test_repeated_list_flag_keeps_each_value_whole() raises:
     testing.assert_equal(flag_set.get[List[String]]("header").value(), expected)
 
 
+def test_flag_values_are_checked_against_their_type() raises:
+    # Regression: `--port abc` parsed cleanly and only failed inside `run`, when the handler read
+    # it, after the pre-run hooks had already run, and without naming the flag.
+    var flags: List[Flag] = [
+        Flag.new[Int](name="port", usage="Port."),
+        Flag.new[List[Int]](name="nums", usage="Numbers."),
+    ]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--port", "abc"]
+    _ = flag_set.from_args(Span(args))
+    with assert_raises(contains="--port"):
+        flag_set.validate_flag_values()
+
+    var list_flags: List[Flag] = [Flag.new[List[Int]](name="nums", usage="Numbers.")]
+    var list_set = FlagSet(list_flags^)
+    var list_args: List[String] = ["--nums", "1", "--nums", "x"]
+    _ = list_set.from_args(Span(list_args))
+    with assert_raises(contains="--nums"):
+        list_set.validate_flag_values()
+
+
+def test_valid_flag_values_pass_the_check() raises:
+    var flags: List[Flag] = [Flag.new[Int](name="port", usage="Port."), Flag.new[String](name="name", usage="Name.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--port", "8080", "--name", "x"]
+    _ = flag_set.from_args(Span(args))
+    flag_set.validate_flag_values()
+
+
+def test_empty_list_default_reads_as_an_empty_list() raises:
+    # Regression: an empty list rendered as "", which split back into one empty element, so the
+    # default read as `[""]`, or failed to parse for a list of numbers.
+    var flags: List[Flag] = [
+        Flag.new[List[String]](name="tags", usage="Tags.", default=List[String]()),
+        Flag.new[List[Int]](name="nums", usage="Numbers.", default=List[Int]()),
+    ]
+    var flag_set = FlagSet(flags^)
+    testing.assert_equal(len(flag_set.get[List[String]]("tags").value()), 0)
+    testing.assert_equal(len(flag_set.get[List[Int]]("nums").value()), 0)
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()
