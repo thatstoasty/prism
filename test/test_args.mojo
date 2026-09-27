@@ -1,7 +1,7 @@
 from std import testing
 from prism.value import FromValue, ToValue
 from std.memory import ArcPointer
-from prism.args import (  # match_all,
+from prism.args import (
     arbitrary_args,
     exact_args,
     maximum_n_args,
@@ -13,6 +13,8 @@ from prism.args import (  # match_all,
 from std.testing import TestSuite, assert_raises
 
 from prism import Arg, ArgSet, Command, FlagSet
+
+import prism
 
 
 def dummy(args: ArgSet, flags: FlagSet) -> None:
@@ -51,9 +53,18 @@ def test_range_args() raises:
         range_args[0, 1]()(args=["abc", "123"])
 
 
-# def test_match_all() raises:
-#     with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2"):
-#         match_all[range_args[0, 1](), exact_args[1]()]()(args=["abc", "123"])
+def test_match_all() raises:
+    var validator = match_all[range_args[0, 1](), exact_args[1]()]()
+    validator(["abc"])
+    with testing.assert_raises(contains="accepts between 0 to 1 argument(s). Received: 2"):
+        validator(["abc", "123"])
+    with testing.assert_raises(contains="accepts exactly 1 argument(s). Received: 0"):
+        validator([])
+
+
+def test_match_all_is_exported() raises:
+    # Regression: the README documents `match_all`, but the package did not export it.
+    _ = prism.match_all[no_args]()
 
 
 def _bound(var args: List[Arg], var values: List[String]) raises -> ArgSet:
