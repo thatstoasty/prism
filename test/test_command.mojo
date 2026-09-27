@@ -1,7 +1,7 @@
 from prism import ArgSet
 from std import testing
 from std.memory import ArcPointer
-from prism.command import Command, Flag, FlagSet, _unknown_command_error, _with_usage_hint
+from prism.command import Command, Flag, FlagSet, _parse_command_from_args, _unknown_command_error, _with_usage_hint
 from std.testing import TestSuite
 
 import prism
@@ -188,6 +188,40 @@ def test_execute_leaves_the_callers_tree_untouched() raises:
     testing.assert_equal(len(child.flags), flag_count)
     testing.assert_false(Bool(child.flags.lookup("tags").value()[].value))
     testing.assert_false(child.has_parent())
+
+
+def test_builtin_flag_yields_its_shorthand() raises:
+    # Regression: `Version` added `-v` after the command's own `--verbose -v`, and the first match
+    # won, so the version shorthand was silently unreachable. The command's flag now keeps it.
+    def dummy(args: ArgSet, flags: FlagSet) raises -> None:
+        return None
+
+    var cmd = Command(
+        name="app",
+        usage="Base command.",
+        run=dummy,
+        version=prism.Version("1.0"),
+        flags=[Flag.new[Bool](name="verbose", shorthand="v", usage="Verbose.")],
+    )
+    testing.assert_equal(cmd.flags.lookup_shorthand("v").value()[].name, "verbose")
+    testing.assert_equal(cmd.flags.lookup("version").value()[].shorthand, "")
+
+
+def test_dash_is_positional_during_subcommand_traversal() raises:
+    # `app - child` must not skip over `-` as a flag and dispatch to `child`.
+    def dummy(args: ArgSet, flags: FlagSet) raises -> None:
+        return None
+
+    var cmd = ArcPointer(
+        Command(
+            name="app",
+            usage="Base command.",
+            run=dummy,
+            children=[Command(name="child", usage="Child command.", run=dummy)],
+        )
+    )
+    var args: List[String] = ["-", "child"]
+    testing.assert_false(Bool(_parse_command_from_args(cmd, args)))
 
 
 def main() raises:

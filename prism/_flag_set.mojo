@@ -7,7 +7,7 @@ from prism._flag_group import (
     validate_one_required_flag_group,
     validate_required_flag_group,
 )
-from prism._flag_parser import FlagParser
+from prism._flag_parser import FlagParser, _is_flag
 from prism.flag import Flag, FlagActionFn, Annotation
 from prism.opt_type import OptType
 from prism.value import FromValue, LIST_SEPARATOR
@@ -48,6 +48,32 @@ def _set_flag_value(mut flags: FlagSet, name: ImmStringSpan, value: StringSpan) 
         # Repeating a scalar flag replaces. Appending would turn `--name a --name b` into
         # the single value "a b" rather than letting the last one win.
         flag.value()[].set(value)
+
+def _set_flag_from_file(mut flag: Flag) raises -> None:
+    """Sets a flag from its `file_path`, if that file exists.
+
+    Args:
+        flag: The flag to set. Must have a `file_path`.
+
+    Raises:
+        Error: If the file exists but cannot be read.
+
+    #### Notes:
+    - A missing file leaves the flag unset, the same as an unset environment variable. It used to
+      abort the command even when the flag was optional.
+    - Trailing newlines are dropped. Editors and `echo` add one, and it turned a token file into
+      `"secret\\n"`.
+    """
+    var path = os.path.expanduser(flag.file_path.value())
+    if not os.path.exists(path):
+        return
+
+    try:
+        with open(path, "r") as f:
+            flag.set(f.read().rstrip("\r\n"))
+    except e:
+        raise Error(t"Failed to read the value for flag `--{flag.name}` from {path}: {e}")
+
 
 @fieldwise_init
 struct _FlagSetIter[mut: Bool, //, origin: Origin[mut=mut]](Copyable, Iterator):
@@ -190,8 +216,8 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                         parser.index += 1
                     break
 
-                # Positional argument
-                if not argument.startswith("-", 0, 1):
+                # Positional argument, including a bare `-` and negative numbers.
+                if not _is_flag(argument, self):
                     parser.index += 1
                     remaining_args.append(argument)
                     continue
@@ -216,17 +242,20 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 parser.index += result.increment
                 state = ParserState.FIND_FLAG
 
-        # If flags are not set, check if they can be set from an environment variable or from a file.
-        # Set it from that value if there is one available.
+        # Fill flags not passed on the command line from their environment variable, and failing
+        # that from their file. A flag with both falls back to the file when the variable is unset.
         for ref flag in self:
-            if not flag.value:
-                if flag.environment_variable:
-                    var value = os.getenv(flag.environment_variable.value())
-                    if value != "":
-                        flag.set(value)
-                elif flag.file_path:
-                    with open(os.path.expanduser(flag.file_path.value()), "r") as f:
-                        flag.set(f.read())
+            if flag.value:
+                continue
+
+            if flag.environment_variable:
+                var value = os.getenv(flag.environment_variable.value())
+                if value != "":
+                    flag.set(value)
+                    continue
+
+            if flag.file_path:
+                _set_flag_from_file(flag)
 
         return remaining_args^
 

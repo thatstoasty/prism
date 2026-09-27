@@ -5,6 +5,7 @@ from std.sys import get_defined_bool
 from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
 from prism._arg_set import ArgSet
 from prism._flag_set import Annotation, FlagSet
+from prism._flag_parser import _is_flag
 from prism.arg import Arg
 from prism._util import panic
 from prism.args import ArgValidatorFn, arbitrary_args
@@ -144,14 +145,16 @@ def _parse_command_from_args(command: ArcPointer[Command], mut args: List[String
         # Step over flags rather than stopping at them, so that a subcommand written after a flag
         # is still found. A flag that takes a value swallows the argument after it too, which is
         # what keeps `--output foo sub` from mistaking `foo` for a subcommand.
+        # A bare `-` or a negative number is positional, the same as `FlagSet.from_args` treats it.
         if arg.startswith("-", 0, 1):
+            if not visible_flags_ready:
+                visible_flags = _visible_flags(current[])
+                visible_flags_ready = True
+
+        if arg.startswith("-", 0, 1) and _is_flag(arg, visible_flags):
             var width = 1
-            if "=" not in arg:
-                if not visible_flags_ready:
-                    visible_flags = _visible_flags(current[])
-                    visible_flags_ready = True
-                if _flag_consumes_next(visible_flags, arg):
-                    width = 2
+            if "=" not in arg and _flag_consumes_next(visible_flags, arg):
+                width = 2
 
             for j in range(i, min(i + width, len(args))):
                 passthrough.append(args[j])
@@ -219,6 +222,56 @@ def _unknown_command_error(command: Command, name: ImmStringSpan) -> Error:
             message.write(t"\n\nDid you mean this?\n\t{suggestion}")
 
     return Error(message)
+
+
+def _check_for_duplicate_flags(command_name: StringSpan, flags: FlagSet) -> None:
+    """Panics if two of a command's flags share a name or a shorthand.
+
+    Args:
+        command_name: The command the flags belong to, for the message.
+        flags: The flags to check.
+
+    #### Notes:
+    - A lookup returns the first match, so a duplicate silently made the later flag unreachable.
+      This is a mistake in the program rather than in its input, so it is reported as one.
+    """
+    for i in range(len(flags.flags)):
+        ref flag = flags.flags[i]
+        for j in range(i + 1, len(flags.flags)):
+            ref other = flags.flags[j]
+            if flag.name == other.name:
+                panic(t"Command `{command_name}` defines the flag `--{flag.name}` more than once.")
+            if flag.shorthand and flag.shorthand == other.shorthand:
+                panic(
+                    t"Command `{command_name}` gives the shorthand `-{flag.shorthand}` to both "
+                    t"`--{flag.name}` and `--{other.name}`."
+                )
+
+
+def _add_builtin_flag(command_name: StringSpan, mut flags: FlagSet, var flag: Flag) -> None:
+    """Adds the help or version flag to a command's flags.
+
+    Args:
+        command_name: The command the flags belong to, for the message.
+        flags: The command's flags.
+        flag: The built-in flag to add.
+
+    #### Notes:
+    - A flag of the command's own that takes the built-in's shorthand keeps it, and the built-in is
+      added without one. Otherwise `Version`'s `-v` silently hid a `--verbose` declared as `-v`.
+    - A flag of the command's own with the built-in's name is an error, since the built-in could
+      not be told apart from it. Configure a different name through `Help` or `Version` instead.
+    """
+    if flags.lookup(flag.name):
+        panic(
+            t"Command `{command_name}` defines a flag named `--{flag.name}`, which is reserved. "
+            t"Pass a differently named flag to `Help` or `Version` to use the name yourself."
+        )
+
+    if flag.shorthand and flags.lookup_shorthand(flag.shorthand):
+        flag.shorthand = ""
+
+    flags.append(flag^)
 
 
 # Run flag actions if they have any
@@ -424,9 +477,10 @@ struct Command(Copyable, Writable):
         self.parent = []
         self.children = [ArcPointer(child.copy()) for child in children]
 
-        self.flags.append(self.help.flag.copy())
+        _check_for_duplicate_flags(self.name, self.flags)
+        _add_builtin_flag(self.name, self.flags, self.help.flag.copy())
         if self.version:
-            self.flags.append(self.version.value().flag.copy())
+            _add_builtin_flag(self.name, self.flags, self.version.value().flag.copy())
 
         # Auto-add completion subcommand
         if enable_completion:

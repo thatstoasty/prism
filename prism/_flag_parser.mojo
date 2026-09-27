@@ -19,6 +19,30 @@ def _is_negative_number(argument: StringSpan) -> Bool:
     return first == "." or (first >= "0" and first <= "9")
 
 
+def _is_flag(argument: StringSpan, flags: FlagSet) -> Bool:
+    """Reports whether an argument is a flag, as opposed to a positional value or a flag's value.
+
+    Args:
+        argument: The argument to inspect.
+        flags: The flags the command accepts.
+
+    Returns:
+        True if the argument should be parsed as a flag.
+
+    #### Notes:
+    - A bare `-` is a value, conventionally meaning stdin or stdout, not an empty shorthand.
+    - A negative number such as `-5` is a value too, unless the command defines a shorthand that
+      it would otherwise spell, in which case the flag wins.
+    """
+    if not argument.startswith("-", 0, 1) or argument == "-":
+        return False
+
+    if _is_negative_number(argument) and not flags.lookup_shorthand(argument[byte=1:2]):
+        return False
+
+    return True
+
+
 @fieldwise_init
 struct ShorthandParserState(Equatable, Writable, TrivialRegisterPassable):
     """State of the parser when parsing shorthand flags."""
@@ -111,9 +135,9 @@ struct FlagParser[origin: ImmOrigin](Writable):
             raise Error("Flag requires a value to be set but reached the end of arguments. Name: ", name_slice)
 
         # A leading `-` usually means the next argument is another flag rather than this flag's
-        # value, but a negative number is a legitimate value.
+        # value, but a negative number or a bare `-` is a legitimate value.
         ref next_argument = self.arguments[self.index + 1]
-        if next_argument.startswith("-", 0, 1) and not _is_negative_number(next_argument):
+        if _is_flag(next_argument, flags):
             raise Error("Flag requires a value to be set but found another flag instead. Name: ", name_slice)
 
         # Increment index by 2 because 2 args were used (one for name and value).
@@ -210,10 +234,10 @@ struct FlagParser[origin: ImmOrigin](Writable):
                         "Flag `", flag.value()[].name, "` requires a value to be set but reached the end of arguments."
                     )
 
-                # If the next argument is another flag, raise an error. A negative number is a
-                # value, not a flag.
+                # If the next argument is another flag, raise an error. A negative number or a bare
+                # `-` is a value, not a flag.
                 ref next_argument = self.arguments[self.index + 1]
-                if next_argument.startswith("-", 0, 1) and not _is_negative_number(next_argument):
+                if _is_flag(next_argument, flags):
                     raise Error(
                         "Flag `", flag.value()[].name, "` requires a value to be set but found another flag instead."
                     )

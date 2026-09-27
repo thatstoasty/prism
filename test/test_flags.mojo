@@ -1,4 +1,5 @@
-from std import testing
+from std import os, testing
+from std.tempfile import gettempdir
 from prism.flag import Flag
 from prism.opt_type import OptType
 from prism.value import FromValue, ToValue
@@ -242,6 +243,84 @@ def test_empty_list_default_reads_as_an_empty_list() raises:
     var flag_set = FlagSet(flags^)
     testing.assert_equal(len(flag_set.get[List[String]]("tags").value()), 0)
     testing.assert_equal(len(flag_set.get[List[Int]]("nums").value()), 0)
+
+
+def test_dash_and_negative_numbers_are_values() raises:
+    # Regression: anything starting with `-` went to the shorthand parser, so `-` (stdin) and `-5`
+    # could not be positional arguments, and `--out -` was rejected as a missing value.
+    var flags: List[Flag] = [
+        Flag.new[String](name="out", shorthand="o", usage="Output."),
+        Flag.new[Int](name="num", shorthand="n", usage="Number."),
+    ]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["-", "-5", "--out", "-", "-n", "-3"]
+    var remaining = flag_set.from_args(Span(args))
+
+    var expected: List[String] = ["-", "-5"]
+    testing.assert_equal(remaining, expected)
+    testing.assert_equal(flag_set.get[String]("out").value(), "-")
+    testing.assert_equal(flag_set.get[Int]("num").value(), -3)
+
+
+def test_digit_shorthand_wins_over_negative_number() raises:
+    var flags: List[Flag] = [Flag.new[Bool](name="five", shorthand="5", usage="Five.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["-5"]
+    var remaining = flag_set.from_args(Span(args))
+
+    testing.assert_equal(len(remaining), 0)
+    testing.assert_true(flag_set.get[Bool]("five").value())
+
+
+def _temp_path(name: StringSpan) raises -> String:
+    return os.path.join(gettempdir().value(), String("prism_test_", name))
+
+
+def test_file_value_drops_trailing_newline() raises:
+    # Regression: the file's trailing newline was kept, so a token file read as "secret\n".
+    var path = _temp_path("token")
+    with open(path, "w") as f:
+        f.write("secret\n")
+
+    var flags: List[Flag] = [Flag.new[String](name="token", usage="Token.", file_path=path)]
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(List[String]()))
+    os.remove(path)
+
+    testing.assert_equal(flag_set.get[String]("token").value(), "secret")
+
+
+def test_missing_file_leaves_flag_unset() raises:
+    # Regression: a missing file aborted the command, even for an optional flag.
+    var flags: List[Flag] = [
+        Flag.new[String](name="token", usage="Token.", file_path=_temp_path("does_not_exist"))
+    ]
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(List[String]()))
+
+    testing.assert_false(Bool(flag_set.get[String]("token")))
+
+
+def test_unset_environment_variable_falls_back_to_file() raises:
+    # Regression: a flag with an environment variable never read its file, even when the
+    # variable was unset.
+    var path = _temp_path("fallback")
+    with open(path, "w") as f:
+        f.write("from-file")
+
+    var flags: List[Flag] = [
+        Flag.new[String](
+            name="token",
+            usage="Token.",
+            environment_variable=String("PRISM_TEST_UNSET_VARIABLE"),
+            file_path=path,
+        )
+    ]
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(List[String]()))
+    os.remove(path)
+
+    testing.assert_equal(flag_set.get[String]("token").value(), "from-file")
 
 
 def main() raises:
