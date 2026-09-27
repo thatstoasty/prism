@@ -71,6 +71,7 @@ def _set_flag_from_file(mut flag: Flag) raises -> None:
     try:
         with open(path, "r") as f:
             flag.set(f.read().rstrip("\r\n"))
+        flag.from_fallback = True
     except e:
         raise Error(t"Failed to read the value for flag `--{flag.name}` from {path}: {e}")
 
@@ -252,6 +253,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 var value = os.getenv(flag.environment_variable.value())
                 if value != "":
                     flag.set(value)
+                    flag.from_fallback = True
                     continue
 
             if flag.file_path:
@@ -436,12 +438,14 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         return True
 
     def process_group_annotations[
-        annotation: Annotation
+        annotation: Annotation, *, command_line_only: Bool = False
     ](self, flag: Flag, mut group_status: Dict[String, Dict[String, Bool]]) raises -> None:
         """Processes a flag for a group annotation.
 
         Parameters:
             annotation: The annotation to check for.
+            command_line_only: Count a flag as set only when its value came from the command line,
+                not from its environment variable or file.
 
         Args:
             flag: The flag to process.
@@ -472,7 +476,9 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
             # If flag.changed = True, then it had a value set on it.
             try:
-                group_status[group][flag.name] = flag.changed
+                group_status[group][flag.name] = flag.changed and not (
+                    command_line_only and flag.from_fallback
+                )
             except e:
                 raise Error(
                     t"process_group_annotations: Failed to set group status for annotation {annotation.value}: ", e
@@ -489,11 +495,25 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         var group_status = Dict[String, Dict[String, Bool]]()
         var one_required_group_status = Dict[String, Dict[String, Bool]]()
         var mutually_exclusive_group_status = Dict[String, Dict[String, Bool]]()
+        var mutually_exclusive_command_line_status = Dict[String, Dict[String, Bool]]()
 
         for flag in self.flags:
             self.process_group_annotations[Annotation.REQUIRED_AS_GROUP](flag, group_status)
             self.process_group_annotations[Annotation.ONE_REQUIRED](flag, one_required_group_status)
             self.process_group_annotations[Annotation.MUTUALLY_EXCLUSIVE](flag, mutually_exclusive_group_status)
+            self.process_group_annotations[Annotation.MUTUALLY_EXCLUSIVE, command_line_only=True](
+                flag, mutually_exclusive_command_line_status
+            )
+
+        # The command line overrides the environment. When a member of a mutually exclusive group
+        # was passed on the command line, only command line values count, so `--password x` is not
+        # rejected because a `TOKEN` variable happens to be set. With none passed, values from the
+        # environment and files still conflict with each other.
+        for entry in mutually_exclusive_command_line_status.items():
+            for member in entry.value.values():
+                if member:
+                    mutually_exclusive_group_status[entry.key] = entry.value.copy()
+                    break
 
         # Validate required flag groups
         validate_required_flag_group(group_status)

@@ -74,6 +74,9 @@ struct Flag(Copyable, Writable):
     """Function to run after the flag has been processed."""
     var changed: Bool
     """If the flag has been changed from its default value."""
+    var from_fallback: Bool
+    """If the flag's value came from its `environment_variable` or `file_path` rather than the
+    command line."""
     var required: Bool
     """If the flag is required."""
     var persistent: Bool
@@ -123,6 +126,7 @@ struct Flag(Copyable, Writable):
         self.annotations = Dict[Annotation, List[String]]()
         self.action = action
         self.changed = False
+        self.from_fallback = False
         self.required = required
         self.persistent = persistent
         self.parse_check = parse_check

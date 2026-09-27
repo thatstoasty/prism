@@ -5,24 +5,6 @@ from prism.flag import Flag
 from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates
 
 
-def _bash_escape(s: StringSpan, mut writer: Some[Writer]):
-    """Escapes special characters in a string for use in bash completion descriptions.
-
-    Single quotes in descriptions need to be escaped for bash.
-
-    Args:
-        s: The string to escape.
-        writer: A Writer to write the escaped string to.
-    """
-    comptime QUOTE = Codepoint.ord("'")
-    comptime ESCAPED_QUOTE = "'\\''"
-    for c in s.codepoints():
-        if c == QUOTE:
-            writer.write(ESCAPED_QUOTE)
-        else:
-            writer.write(c)
-
-
 def _write_opts[origin: ImmOrigin, //](flag_names: Span[String, origin], mut builder: Some[Writer]):
     """Writes the opts string for bash completion.
 

@@ -754,8 +754,9 @@ struct Command(Copyable, Writable):
             if cmd.pre_run:
                 cmd.pre_run.value()(args, cmd.flags)
         except e:
-            self.error_writer(String(t"Failed to run pre-run hooks for command: {cmd.name}"))
-            raise e^
+            # One message, through `exit`. Writing a line here and re-raising reported the failure
+            # twice.
+            raise Error(t"Failed to run pre-run hooks for command `{cmd.full_name()}`: {e}")
 
     def _execute_post_run_hooks(self, cmd: Self, args: ArgSet) raises -> None:
         """Runs the post-run hooks for the command.
@@ -781,8 +782,9 @@ struct Command(Copyable, Writable):
             if cmd.post_run:
                 cmd.post_run.value()(args, cmd.flags)
         except e:
-            self.error_writer(String(t"Failed to run post-run hooks for command: {cmd.name}"))
-            raise e^
+            # One message, through `exit`. Writing a line here and re-raising reported the failure
+            # twice.
+            raise Error(t"Failed to run post-run hooks for command `{cmd.full_name()}`: {e}")
 
     def execute(mut self, var args: List[String]) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
