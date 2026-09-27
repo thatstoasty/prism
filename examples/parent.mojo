@@ -4,9 +4,9 @@ from prism import ArgSet, Command, Flag, FlagSet, read_args
 def test(args: ArgSet, flags: FlagSet) raises -> None:
     var host = flags.get[String]("host")
     var port = flags.get[String]("port")
-
-    if var uri := flags.get[String]("uri"):
-        print("URI:", uri[])
+    var uri = flags.get[String]("uri")
+    if uri:
+        print("URI:", uri.value())
     elif host and port:
         print(host[] + ":" + port[])
 

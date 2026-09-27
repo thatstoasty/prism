@@ -2,7 +2,8 @@ from prism import ArgSet, Command, Flag, FlagSet, read_args
 
 
 def test(args: ArgSet, flags: FlagSet) raises -> None:
-    if var name := flags.get[String]("name"):
+    var name = flags.get[String]("name")
+    if name:
         print("Hello", name[])
     else:
         print("Hello World")

@@ -8,7 +8,8 @@ def base(args: ArgSet, flags: FlagSet) -> None:
 
 
 def connect(args: ArgSet, flags: FlagSet) raises -> None:
-    if var host := flags.get[String]("host"):
+    var host = flags.get[String]("host")
+    if host:
         print("Connecting to", host.value())
     else:
         raise Error("Error: Exit Code 2")
