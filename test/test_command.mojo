@@ -1,8 +1,9 @@
 from prism import ArgSet
 from std import testing
 from std.memory import ArcPointer
-from prism.command import Command, Flag, FlagSet, _parse_command_from_args, _unknown_command_error, _with_usage_hint
+from prism.command import Command, Flag, FlagSet, HelpContext, _command_column, _parse_command_from_args, _unknown_command_error, _with_usage_hint
 from std.testing import TestSuite
+from prism.help import default_help
 
 import prism
 
@@ -86,11 +87,12 @@ def test_unknown_command_error_message() raises:
         usage="Base command.",
         run=dummy,
         children=[Command(name="status", usage="Status command.", run=dummy, aliases=["st"])],
+        suggest=False,
     )
     var message = String(_unknown_command_error(cmd, "sttaus"))
 
     testing.assert_true('Unknown command: "sttaus" for "app".' in message, message)
-    # `suggest` defaults to False, so no correction is offered.
+    # With `suggest=False`, no correction is offered.
     testing.assert_false("Did you mean" in message, message)
 
 
@@ -222,6 +224,56 @@ def test_dash_is_positional_during_subcommand_traversal() raises:
     )
     var args: List[String] = ["-", "child"]
     testing.assert_false(Bool(_parse_command_from_args(cmd, args)))
+
+
+def _help_for(cmd: Command) raises -> String:
+    return default_help(
+        HelpContext(
+            full_name=cmd.full_name(),
+            usage=cmd.usage,
+            args=cmd.args.copy(),
+            flags=cmd.flags.flags.copy(),
+            inherited_flags=[],
+            children=[(_command_column(child[]), child[].usage) for child in cmd.children],
+            aliases=cmd.aliases.copy(),
+        )
+    )
+
+
+def test_help_shows_value_hints_and_environment_variables() raises:
+    def dummy(args: ArgSet, flags: FlagSet) raises -> None:
+        return None
+
+    var cmd = Command(
+        name="app",
+        usage="Base command.",
+        run=dummy,
+        flags=[
+            Flag.new[Int](name="port", shorthand="p", usage="Port."),
+            Flag.new[List[String]](name="tag", usage="Tags."),
+            Flag.new[String](name="token", usage="Token.", environment_variable=String("APP_TOKEN")),
+        ],
+    )
+    var help = _help_for(cmd)
+    testing.assert_true("-p, --port <int>" in help, help)
+    testing.assert_true("    --tag <string>..." in help, help)
+    testing.assert_true("[env: APP_TOKEN]" in help, help)
+
+
+def test_help_fits_long_subcommand_names() raises:
+    # Regression: the command column was sized from the flags, so a longer subcommand name wrapped
+    # onto a second line and ran into its description.
+    def dummy(args: ArgSet, flags: FlagSet) raises -> None:
+        return None
+
+    var cmd = Command(
+        name="app",
+        usage="Base command.",
+        run=dummy,
+        children=[Command(name="a-very-long-subcommand-name", usage="Long.", run=dummy, aliases=["l"])],
+    )
+    var help = _help_for(cmd)
+    testing.assert_true("  a-very-long-subcommand-name, l    Long." in help, help)
 
 
 def main() raises:

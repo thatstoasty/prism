@@ -2,7 +2,8 @@
 
 from prism.command import Command
 from prism.flag import Flag
-from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates
+from prism.opt_type import OptType
+from prism.completion.shared import DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates
 
 
 def _write_opts[origin: ImmOrigin, //](flag_names: Span[String, origin], mut builder: Some[Writer]):
@@ -17,6 +18,22 @@ def _write_opts[origin: ImmOrigin, //](flag_names: Span[String, origin], mut bui
         if i > 0:
             builder.write(" ")
         builder.write(flag_names[i])
+
+
+def _write_value_flag_case[origin: ImmOrigin, //](
+    value_flag_names: Span[String, origin], mut builder: Some[Writer]
+):
+    """Writes a case that stops completion when the previous word is a flag that takes a value.
+
+    Args:
+        value_flag_names: The long and short names of the flags that take a value.
+        builder: A Writer to write the case to.
+    """
+    if not value_flag_names:
+        return
+
+    builder.write('    case "${prev}" in\n', "        ", "|".join(value_flag_names), ")\n")
+    builder.write("            return\n", "            ;;\n", "    esac\n\n")
 
 
 def _bash_command_function(
@@ -51,22 +68,26 @@ def _bash_command_function(
     var seen_flags = Dict[String, Bool]()
     var flag_names = List[String]()
 
-    for flag in cmd.flags:
+    # Names of the flags that take a value. Completing right after one of them offers nothing, so
+    # bash falls back to completing file names, instead of suggesting flags where a value belongs.
+    var value_flag_names = List[String]()
+
+    var flags = cmd.flags.flags.copy()
+    # Add inherited persistent flags from ancestors (if not root)
+    if not is_root and cmd.has_parent():
+        for flag in cmd.inherited_flags():
+            flags.append(flag.copy())
+
+    for flag in flags:
         if flag.name not in seen_flags:
             seen_flags[flag.name] = True
             flag_names.append(String(t"--{flag.name}"))
             if flag.shorthand:
                 flag_names.append(String(t"-{flag.shorthand}"))
-
-    # Add inherited persistent flags from ancestors (if not root)
-    if not is_root and cmd.has_parent():
-        var inherited = cmd.inherited_flags()
-        for flag in inherited:
-            if flag.name not in seen_flags:
-                seen_flags[flag.name] = True
-                flag_names.append(String(t"--{flag.name}"))
+            if flag.type != OptType.Bool:
+                value_flag_names.append(String(t"--{flag.name}"))
                 if flag.shorthand:
-                    flag_names.append(String(t"-{flag.shorthand}"))
+                    value_flag_names.append(String(t"-{flag.shorthand}"))
 
     if has_children:
         # Collect subcommand names (including aliases)
@@ -114,6 +135,7 @@ def _bash_command_function(
             )
 
         builder.write("        esac\n", "    done\n\n")
+        _write_value_flag_case(value_flag_names, builder)
 
         # If no subcommand matched, complete commands and flags
         builder.write(
@@ -124,20 +146,18 @@ def _bash_command_function(
             "    fi\n"
         )
     else:
-        # Leaf command
+        # Leaf command: flags when the word starts with `-`, otherwise the values its arguments
+        # accept. With neither, nothing is offered and bash falls back to completing file names.
+        _write_value_flag_case(value_flag_names, builder)
+        _write_opts(flag_names, builder)
+        builder.write('"\n')
+
         var candidates = _arg_candidates(cmd)
+        builder.write('    if [[ "${cur}" == -* ]]; then\n')
+        builder.write('        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )\n')
         if candidates:
-            var args_list = String(capacity_bytes=SMALL_BUFFER_SIZE)
-            for i in range(len(candidates)):
-                if i > 0:
-                    args_list.write(" ")
-                args_list.write(candidates[i])
-            _write_opts(flag_names, builder)
-            builder.write(t' {args_list}"\n')
-        else:
-            _write_opts(flag_names, builder)
-            builder.write(t'"\n')
-        builder.write('    COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )\n')
+            builder.write('    else\n', '        COMPREPLY=( $(compgen -W "', " ".join(candidates), '" -- "${cur}") )\n')
+        builder.write("    fi\n")
 
     builder.write("}\n")
     return builder^
@@ -196,6 +216,8 @@ def generate_bash_completion(cmd: Command) raises -> String:
     builder.write(_bash_functions_recursive(cmd, "", root_name, is_root=True))
 
     # Register the completion
-    builder.write("\ncomplete -F __", root_name, " ", root_name, "\n")
+    # `-o default` falls back to file name completion whenever a function offers nothing, which is
+    # what positional arguments and flag values want.
+    builder.write("\ncomplete -o default -F __", root_name, " ", root_name, "\n")
 
     return builder^

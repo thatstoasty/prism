@@ -37,7 +37,7 @@ def _set_flag_value(mut flags: FlagSet, name: ImmStringSpan, value: StringSpan) 
     var flag = flags.lookup(name)
     if not flag:
         raise Error(
-            t"FlagSet.from_args: Failed to set flag, {name}, with value: {value}. Flag could not be found."
+            t"Cannot set `--{name}` to `{value}`: the flag is not defined."
         )
     if not flag.value()[].changed:
         flag.value()[].set(value)
@@ -180,7 +180,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         var flag = self.lookup(name)
         if not flag:
             raise Error(
-                t"FlagSet.set_annotation: Failed to set flag, {name}, with the following annotation: {annotation}, because the flag could not be found."
+                t"Cannot mark `--{name}` as {annotation}: the flag is not defined."
             )
 
         try:
@@ -238,8 +238,8 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             # Parse out shorthand flag(s) and set the value on the flag(s).
             elif state == ParserState.PARSE_SHORTHAND_FLAG:
                 var result = parser.parse_shorthand_flag(argument, self)
-                for name in result.names:
-                    _set_flag_value(self, name, result.value)
+                for i in range(len(result.names)):
+                    _set_flag_value(self, result.names[i], result.values[i])
                 parser.index += result.increment
                 state = ParserState.FIND_FLAG
 
@@ -304,13 +304,13 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Raises:
             Error: If a required flag is not set.
         """
-        var missing_flag_names = List[String]()
+        var missing = List[String]()
         for flag in self:
             if flag.required and not flag.changed:
-                missing_flag_names.append(flag.name)
+                missing.append(String(t"--{flag.name}"))
 
-        if len(missing_flag_names) > 0:
-            raise Error(t"Required flag(s): {missing_flag_names} not set.")
+        if missing:
+            raise Error(t"Missing required flag(s): {', '.join(missing)}.")
 
     def validate_flag_values(self) raises -> None:
         """Validates that every flag given a value can be read as its declared type.
@@ -481,7 +481,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 )
             except e:
                 raise Error(
-                    t"process_group_annotations: Failed to set group status for annotation {annotation.value}: ", e
+                    t"Failed to check the {annotation} group containing `--{flag.name}`: ", e
                 )
 
     def validate_flag_groups(self) raises -> None:

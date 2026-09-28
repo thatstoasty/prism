@@ -5,7 +5,7 @@ from std.sys import get_defined_bool
 from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
 from prism._arg_set import ArgSet
 from prism._flag_set import Annotation, FlagSet
-from prism._flag_parser import _is_flag
+from prism._flag_parser import _codepoint_offsets, _is_flag, _longest_shorthand
 from prism.arg import Arg
 from prism._util import panic
 from prism.args import ArgValidatorFn, arbitrary_args
@@ -99,14 +99,21 @@ def _flag_consumes_next(flags: FlagSet, arg: ImmStringSpan) -> Bool:
         var flag = flags.lookup(arg[byte=2:])
         return Bool(flag) and flag.value()[].type != OptType.Bool
 
-    # A shorthand argument may be a cluster of bool flags like `-abc`. Only the final shorthand in
-    # such a cluster can take a value, so that is the one that decides.
-    var shorthands = arg[byte=1:]
-    if not shorthands:
-        return False
+    # A shorthand argument may be a cluster like `-abc`. The first shorthand that takes a value
+    # ends it, taking the rest of the argument as its value, or the next argument when it is last.
+    # Mirrors `FlagParser.parse_shorthand_flag`.
+    var body = arg[byte=1:]
+    var offsets = _codepoint_offsets(body)
+    var i = 0
+    while i < len(offsets) - 1:
+        var j = _longest_shorthand(body, offsets, i, flags)
+        if j == -1:
+            return False
+        if flags.lookup_shorthand(body[byte = offsets[i] : offsets[j]]).value()[].type != OptType.Bool:
+            return j == len(offsets) - 1
+        i = j
 
-    var flag = flags.lookup_shorthand(shorthands[byte = shorthands.byte_length() - 1 :])
-    return Bool(flag) and flag.value()[].type != OptType.Bool
+    return False
 
 
 def _parse_command_from_args(command: ArcPointer[Command], mut args: List[String]) -> Optional[ArcPointer[Command]]:
@@ -299,6 +306,20 @@ def _add_builtin_flag(command_name: StringSpan, mut flags: FlagSet, var flag: Fl
     flags.append(flag^)
 
 
+def _command_column(command: Command) -> String:
+    """Renders a subcommand's name for its parent's help, with its aliases, such as `deploy, d`.
+
+    Args:
+        command: The subcommand.
+
+    Returns:
+        The name followed by any aliases.
+    """
+    if not command.aliases:
+        return command.name
+    return String(command.name, ", ", ", ".join(command.aliases))
+
+
 # Run flag actions if they have any
 def _run_flag_action(flag: Flag) raises -> None:
     if flag.action and flag.value:
@@ -399,7 +420,9 @@ struct Command(Copyable, Writable):
     """
 
     var suggest: Bool
-    """If True, the command will suggest flags when an unknown flag is passed."""
+    """If True, the command will suggest flags and subcommands when an unknown one is passed.
+
+    On by default."""
 
     var reject_unknown_subcommands: Bool
     """If True, a leftover positional argument on a command that has subcommands is an error.
@@ -439,7 +462,7 @@ struct Command(Copyable, Writable):
         mutually_exclusive_flags: List[String] = [],
         one_required_flags: List[String] = [],
         arg_validator: ArgValidatorFn = arbitrary_args,
-        suggest: Bool = False,
+        suggest: Bool = True,
         enable_completion: Bool = False,
         reject_unknown_subcommands: Bool = True,
     ):
@@ -889,7 +912,7 @@ struct Command(Copyable, Writable):
                     args=cmd[].args.copy(),
                     flags=cmd[].flags.flags.copy(),
                     inherited_flags=inherited.flags.copy(),
-                    children=[(child[].name, child[].usage) for child in cmd[].children],
+                    children=[(_command_column(child[]), child[].usage) for child in cmd[].children],
                     aliases=cmd[].aliases.copy(),
                 )
                 self.output_writer(cmd[].help.action(help_context))

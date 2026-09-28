@@ -2,7 +2,7 @@
 from std.collections.list import _ListIter
 
 from prism.arg import Arg
-from prism.value import FromValue
+from prism.value import FromValue, LIST_SEPARATOR
 
 
 struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
@@ -134,10 +134,17 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
         #### Notes:
         - A command that declares no arguments accepts any number of them, which is what leaves
           `arg_validator` in charge for commands that do their own checking.
+        - A list argument declared last is variadic: it takes every value left over once the
+          arguments before it are bound, so `cp SOURCES... DEST` style commands read the rest as
+          one `List`.
         """
-        for i in range(len(self.args)):
-            if i < len(values):
-                self.args[i].value = values[i]
+        var variadic = self._is_variadic()
+        var fixed = len(self.args) - 1 if variadic else len(self.args)
+        for i in range(min(fixed, len(values))):
+            self.args[i].value = values[i]
+
+        if variadic and len(values) > fixed:
+            self.args[fixed].value = LIST_SEPARATOR.join(values[fixed:])
 
         self.values = values^
         if not self.args:
@@ -154,7 +161,7 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
                 t"Expected {required} argument(s), received {len(self.values)}."
             )
 
-        if len(self.values) > len(self.args):
+        if not variadic and len(self.values) > len(self.args):
             raise Error(
                 t"Unexpected argument: `{self.values[len(self.args)]}`. "
                 t"This command accepts at most {len(self.args)} argument(s), received {len(self.values)}."
@@ -170,12 +177,28 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
                 raise Error(t"Invalid value for argument `{arg.name}`: {e}")
 
             # An argument that names the values it accepts rejects anything else, and says what it
-            # would have taken instead.
-            if arg.valid_values and arg.value.value() not in arg.valid_values:
-                raise Error(
-                    t"Invalid value for argument `{arg.name}`: `{arg.value.value()}`. "
-                    t"Valid values are: {', '.join(arg.valid_values)}."
-                )
+            # would have taken instead. A list argument checks each of its elements.
+            if not arg.valid_values:
+                continue
+
+            var elements: List[String] = [arg.value.value()]
+            if arg.type.is_list_type():
+                elements = [String(element) for element in arg.value.value().split(LIST_SEPARATOR)]
+
+            for element in elements:
+                if element not in arg.valid_values:
+                    raise Error(
+                        t"Invalid value for argument `{arg.name}`: `{element}`. "
+                        t"Valid values are: {', '.join(arg.valid_values)}."
+                    )
+
+    def _is_variadic(self) -> Bool:
+        """Reports whether the last declared argument is a list, which takes every remaining value.
+
+        Returns:
+            True if the last argument is variadic.
+        """
+        return Bool(self.args) and self.args[len(self.args) - 1].type.is_list_type()
 
     def usage(self) -> String:
         """Renders the declared arguments for a usage line, such as `TARGET [REPLICAS]`.
@@ -193,5 +216,7 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
                 builder.write(name)
             else:
                 builder.write("[", name, "]")
+            if i == len(self.args) - 1 and self._is_variadic():
+                builder.write("...")
 
         return builder^

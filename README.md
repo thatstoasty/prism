@@ -487,7 +487,7 @@ In these cases:
 
 ### Suggesting alternative flags
 
-If a flag is not provided, you can suggest an alternative flag to the user. This can be useful for providing hints to the user about what they may have meant to type.
+When a user mistypes a flag or subcommand, prism suggests the closest match. This is on by default; pass `suggest=False` to turn it off.
 
 ```mojo
 from prism import ArgSet, Command, Flag, FlagSet, read_args

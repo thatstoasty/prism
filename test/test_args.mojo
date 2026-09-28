@@ -216,5 +216,34 @@ def test_list_round_trips_through_to_value() raises:
     testing.assert_equal(back[1].v, "#b")
 
 
+def test_last_list_argument_is_variadic() raises:
+    # A list argument declared last takes every remaining value, so `cp DEST FILES...` works.
+    var args: List[Arg] = [
+        Arg.new[String](name="dest", usage="Where."),
+        Arg.new[List[String]](name="files", usage="Files.", required=False),
+    ]
+    var values: List[String] = ["out", "a", "b c", "d"]
+    var bound = _bound(args^, values^)
+
+    var expected: List[String] = ["a", "b c", "d"]
+    testing.assert_equal(bound.get[String]("dest").value(), "out")
+    testing.assert_equal(bound.get[List[String]]("files").value(), expected)
+    testing.assert_equal(bound.usage(), "DEST [FILES]...")
+
+
+def test_variadic_argument_checks_each_value() raises:
+    var args: List[Arg] = [Arg.new[List[Int]](name="nums", usage="Numbers.")]
+    var values: List[String] = ["1", "x"]
+    with assert_raises(contains="Invalid value for argument `nums`"):
+        _ = _bound(args^, values^)
+
+    var shells: List[Arg] = [
+        Arg.new[List[String]](name="shells", usage="Shells.", valid_values=[List[String](["zsh"]), List[String](["bash"])])
+    ]
+    var shell_values: List[String] = ["zsh", "fish"]
+    with assert_raises(contains="`fish`"):
+        _ = _bound(shells^, shell_values^)
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

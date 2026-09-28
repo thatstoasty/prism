@@ -1,4 +1,5 @@
 from prism._flag_set import FlagSet
+from prism.flag import Flag
 from prism.opt_type import OptType
 from prism._util import UNKNOWN_FLAG_ERROR
 
@@ -43,18 +44,46 @@ def _is_flag(argument: StringSpan, flags: FlagSet) -> Bool:
     return True
 
 
-@fieldwise_init
-struct ShorthandParserState(Equatable, Writable, TrivialRegisterPassable):
-    """State of the parser when parsing shorthand flags."""
+def _codepoint_offsets(s: StringSpan) -> List[Int]:
+    """Returns the byte offset at which each codepoint starts, with a sentinel at the end.
 
-    var value: UInt8
-    """Internal value."""
-    comptime START = Self(0)
-    """State when the parser is trying to parse the full shorthand flag name."""
-    comptime MULTIPLE_BOOLS = Self(1)
-    """State when the parser is trying to parse a combination of multiple bool flags."""
-    comptime CHECK_FLAG = Self(2)
-    """State when the parser has found a match for the full shorthand flag name and is checking if it's a bool flag or not."""
+    Args:
+        s: The string to scan.
+
+    Returns:
+        `count + 1` offsets, so codepoint `i` spans `[result[i], result[i + 1])`.
+    """
+    var offsets = List[Int]()
+    var offset = 0
+    for codepoint in s.codepoint_slices():
+        offsets.append(offset)
+        offset += codepoint.byte_length()
+    offsets.append(offset)
+    return offsets^
+
+
+def _longest_shorthand(body: StringSpan, offsets: List[Int], start: Int, flags: FlagSet) -> Int:
+    """Finds the longest shorthand that begins at a position in a cluster of shorthands.
+
+    Args:
+        body: The cluster, without its leading `-`.
+        offsets: Codepoint offsets into `body`, from `_codepoint_offsets`.
+        start: The index into `offsets` the shorthand begins at.
+        flags: The flags the command accepts.
+
+    Returns:
+        The index into `offsets` just past the shorthand, or -1 if none begins at `start`.
+
+    #### Notes:
+    - Shorthands may be longer than one character, such as `-r0`, so each position tries the
+      longest candidate first. `-r0vvas` is then `-r0 -vv -a -s` when those are defined.
+    """
+    var end = len(offsets) - 1
+    while end > start:
+        if flags.lookup_shorthand(body[byte = offsets[start] : offsets[end]]):
+            return end
+        end -= 1
+    return -1
 
 
 @fieldwise_init
@@ -71,12 +100,12 @@ struct ParseFlagResult[arg_origin: ImmOrigin](Movable, Writable):
 
 @fieldwise_init
 struct ParseShorthandFlagResult(Movable, Writable):
-    """Result of parsing a shorthand flag."""
+    """Result of parsing a shorthand flag, or a cluster of them."""
 
     var names: List[String]
-    """The names of the flag."""
-    var value: String
-    """The value of the flag."""
+    """The full names of the flags, in the order they appeared."""
+    var values: List[String]
+    """The value for each flag in `names`, at the same index."""
     var increment: Int
     """The index to increment by."""
 
@@ -132,124 +161,101 @@ struct FlagParser[origin: ImmOrigin](Writable):
             return ParseFlagResult(name=name_slice, value="True", increment=1)
 
         if self.index + 1 >= len(self.arguments):
-            raise Error("Flag requires a value to be set but reached the end of arguments. Name: ", name_slice)
+            raise Error(t"Flag `--{name_slice}` requires a value, but reached the end of the arguments.")
 
         # A leading `-` usually means the next argument is another flag rather than this flag's
         # value, but a negative number or a bare `-` is a legitimate value.
         ref next_argument = self.arguments[self.index + 1]
         if _is_flag(next_argument, flags):
-            raise Error("Flag requires a value to be set but found another flag instead. Name: ", name_slice)
+            raise Error(t"Flag `--{name_slice}` requires a value, but was followed by another flag: `{next_argument}`.")
 
         # Increment index by 2 because 2 args were used (one for name and value).
         return ParseFlagResult(name=name_slice, value=String(self.arguments[self.index + 1]), increment=2)
 
     def parse_shorthand_flag(self, argument: StringSpan, flags: FlagSet) raises -> ParseShorthandFlagResult:
-        """Parses a shorthand flag and returns the name, value, and the index to increment by.
+        """Parses a shorthand flag, or a cluster of them, into flag names and values.
+
+        Accepts the POSIX forms: `-o value`, `-o=value`, `-ovalue`, and clusters such as `-abc`,
+        where every shorthand before the last value-taking one is a bool. Each position in a
+        cluster matches the longest shorthand defined there, so multi-character ones work too. A value-taking shorthand
+        takes the rest of the argument as its value, or the next argument when it is last:
+        `-ao file`, `-aofile` and `-ao=file` all set `a` and give `o` the value `file`.
 
         Args:
-            argument: The argument to parse.
+            argument: The argument to parse, starting with `-`.
             flags: The flags passed to the command.
 
         Returns:
-            The name, value, the index to increment by, and an error if one occurred.
+            The names and values of the flags, and the index to increment by.
 
         Raises:
-            Error: If an error occurred while parsing the shorthand flag.
+            Error: If a shorthand is not recognized, or a value-taking one has no value.
         """
-        # Flag with value set like "-f=<value>"
-        var sep_index = argument.find("=")
-        if sep_index != -1:
-            var shorthand = argument[byte=1:sep_index]
-            var value = argument[byte = sep_index + 1 :]
-            # `lookup_name` already resolved the shorthand against the set, so a second membership
-            # test against a freshly built list of every name proves nothing.
-            var name = flags.lookup_name(shorthand)
-            if not name:
-                raise Error("Command does not accept the shorthand flag supplied: ", shorthand)
+        var body = argument[byte=1:]
+        var offsets = _codepoint_offsets(body)
+        var names = List[String]()
+        var values = List[String]()
 
-            return ParseShorthandFlagResult(names=[name.take()], value=String(value), increment=1)
+        var i = 0
+        while i < len(offsets) - 1:
+            var j = _longest_shorthand(body, offsets, i, flags)
+            if j == -1:
+                var shorthand = body[byte = offsets[i] : offsets[i + 1]]
+                if shorthand == "=":
+                    raise Error(t"Expected a shorthand flag before `=` in `{argument}`.")
+                raise Error(UNKNOWN_FLAG_ERROR, shorthand)
 
-        # Flag with value set like "-f <value>"
-        var state = ShorthandParserState.START
-        var start = 1
-        var end = argument.byte_length()
-        var flag_names = List[String]()
-        while start != end:
-            var shorthand = argument[byte=start:end]
+            ref flag = flags.lookup_shorthand(body[byte = offsets[i] : offsets[j]]).value()[]
+            names.append(flag.name)
+            var rest = body[byte = offsets[j] :]
+            # A value-taking flag, or a bool given `=value`, ends the cluster.
+            if flag.type != OptType.Bool or rest.startswith("="):
+                return self._shorthand_value(flag, rest, flags, names^, values^)
 
-            # Try to find the flag with the full shorthand flag name.
-            # If that doesn't work, then slice off the last character and check again, until we find a match.
-            # Shorthand flags can be a combination of multiple bool flags, so we need to check for that.
-            if state == ShorthandParserState.START:
-                var flag = flags.lookup_shorthand(shorthand)
-                if not flag:
-                    end -= 1
-                    state = ShorthandParserState.MULTIPLE_BOOLS
-                    continue
+            values.append("True")
+            i = j
 
-                flag_names.append(flag.value()[].name)
-                state = ShorthandParserState.CHECK_FLAG
+        return ParseShorthandFlagResult(names=names^, values=values^, increment=1)
 
-            # Found no matches for the full shorthand flag name, so we need to check for a combination of bool flags.
-            elif state == ShorthandParserState.MULTIPLE_BOOLS:
-                # This block must not swallow its own error. `lookup_shorthand` does not raise, so
-                # the only error reachable here is the non-bool one raised just below; catching it
-                # without re-raising leaves `start` and `end` unchanged and spins this loop forever.
-                var flag = flags.lookup_shorthand(shorthand)
-                if not flag:
-                    end -= 1
-                    continue
+    def _shorthand_value(
+        self, flag: Flag, rest: StringSpan, flags: FlagSet, var names: List[String], var values: List[String]
+    ) raises -> ParseShorthandFlagResult:
+        """Finishes parsing at a shorthand that ends a cluster by taking a value.
 
-                if flag.value()[].type != OptType.Bool:
-                    raise Error(
-                        "Received a combination of shorthand flags that are not all bool flags. flag received: ",
-                        argument,
-                        ". Found the following flag which is not a bool flag: ",
-                        flag.value()[].name,
-                    )
+        Args:
+            flag: The flag the last shorthand named. Its name is already the last of `names`.
+            rest: What follows the shorthand in the same argument.
+            flags: The flags passed to the command.
+            names: The names parsed so far.
+            values: The values of every name but the last.
 
-                flag_names.append(flag.value()[].name)
-                start = end
-                end = argument.byte_length()
-                # Reached the end of the parser, all flags have been matched and will be set to true.
-                if start == end:
-                    return ParseShorthandFlagResult(names=flag_names^, value="True", increment=1)
+        Returns:
+            The finished result.
 
-            # It's a single option
-            elif state == ShorthandParserState.CHECK_FLAG:
-                # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-                var flag = flags.lookup_shorthand(shorthand)  # TODO: Try to lookup only once
-                if not flag:
-                    raise Error(
-                        "FlagParser._parse_shorthand_flag: Command does not accept the shorthand flag supplied: ",
-                        shorthand,
-                    )
+        Raises:
+            Error: If the flag takes a value but none follows.
+        """
+        if rest.startswith("="):
+            values.append(String(rest[byte=1:]))
+            return ParseShorthandFlagResult(names=names^, values=values^, increment=1)
 
-                if flag[][].type == OptType.Bool:
-                    return ParseShorthandFlagResult(names=flag_names^, value="True", increment=1)
+        if flag.type == OptType.Bool:
+            if rest:
+                raise Error(t"Flag `--{flag.name}` does not take a value, but was given `{rest}`.")
+            values.append("True")
+            return ParseShorthandFlagResult(names=names^, values=values^, increment=1)
 
-                # Non bool flags expect a value to be set. If the end of the arguments list is reached, raise an error.
-                if self.index + 1 >= len(self.arguments):
-                    raise Error(
-                        "Flag `", flag.value()[].name, "` requires a value to be set but reached the end of arguments."
-                    )
+        if rest:
+            values.append(String(rest))
+            return ParseShorthandFlagResult(names=names^, values=values^, increment=1)
 
-                # If the next argument is another flag, raise an error. A negative number or a bare
-                # `-` is a value, not a flag.
-                ref next_argument = self.arguments[self.index + 1]
-                if _is_flag(next_argument, flags):
-                    raise Error(
-                        "Flag `", flag.value()[].name, "` requires a value to be set but found another flag instead."
-                    )
+        if self.index + 1 >= len(self.arguments):
+            raise Error(t"Flag `--{flag.name}` requires a value, but reached the end of the arguments.")
 
-                # Increment index by 2 because 2 args were used (one for name and value).
-                return ParseShorthandFlagResult(
-                    names=flag_names^, value=String(self.arguments[self.index + 1]), increment=2
-                )
+        # A negative number or a bare `-` is a value, not a flag.
+        ref next_argument = self.arguments[self.index + 1]
+        if _is_flag(next_argument, flags):
+            raise Error(t"Flag `--{flag.name}` requires a value, but was followed by another flag: `{next_argument}`.")
 
-        raise Error(
-            "FlagParser._parse_shorthand_flag: Parsed out the following flag: ",
-            flag_names,
-            ". Could not find a match for the remaining flags: ",
-            argument[byte=start : argument.byte_length()],
-        )
+        values.append(String(next_argument))
+        return ParseShorthandFlagResult(names=names^, values=values^, increment=2)

@@ -7,6 +7,8 @@ from std.testing import TestSuite, assert_raises
 
 from prism import ArgSet, Command, FlagSet, Version
 
+from prism.suggest import flag_from_error, suggest_flag
+
 
 def dummy(args: ArgSet, flags: FlagSet) -> None:
     return None
@@ -321,6 +323,21 @@ def test_unset_environment_variable_falls_back_to_file() raises:
     os.remove(path)
 
     testing.assert_equal(flag_set.get[String]("token").value(), "from-file")
+
+
+def test_unknown_shorthand_gets_a_suggestion() raises:
+    # Unknown shorthands now raise the same error as unknown long flags, which is what the
+    # suggestion lookup keys off.
+    var flags: List[Flag] = [Flag.new[Bool](name="verbose", shorthand="v", usage="Verbose.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["-V"]
+    try:
+        _ = flag_set.from_args(Span(args))
+        testing.assert_true(False, "expected an unknown flag error")
+    except e:
+        var name = flag_from_error(e)
+        testing.assert_equal(name.value(), "V")
+        testing.assert_equal(suggest_flag(flag_set.flags, name.value()), "-v")
 
 
 def main() raises:

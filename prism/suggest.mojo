@@ -203,7 +203,9 @@ def suggest_flag[origin: ImmOrigin, //](flags: Span[Flag, origin], flag_name: St
             suggestion = flag.name
 
         if compare_shorthands and flag.shorthand:
-            var shorthand_distance = jaro_winkler(flag.shorthand, flag_name)
+            # A one-character shorthand shares nothing with a different character, so the only
+            # typo worth catching is the wrong case: `-V` for `-v`. Compare case-insensitively.
+            var shorthand_distance = jaro_winkler(flag.shorthand.lower(), String(flag_name).lower())
             if shorthand_distance > distance:
                 distance = shorthand_distance
                 suggestion = flag.shorthand
