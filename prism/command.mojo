@@ -65,17 +65,39 @@ def _parse_command(command: Command, arg: ImmStringSpan) -> Optional[ArcPointer[
     return None
 
 
-def _visible_flags(command: Command) -> FlagSet:
-    """Returns the flags a command can accept: its own, plus persistent flags from its ancestors.
+def _inherited_from_path(path: List[ArcPointer[Command]]) -> List[Flag]:
+    """Returns the persistent flags a command inherits from its ancestors along a path.
 
     Args:
-        command: The command to collect flags for.
+        path: The commands from the root down to the command, inclusive.
+
+    Returns:
+        The persistent flags of every ancestor, nearest ancestor first, which is the order
+        `Command.inherited_flags` returns them in.
+
+    #### Notes:
+    - This reads the flags from the path rather than through parent links, so it works on the
+      caller's tree without first copying and linking all of it.
+    """
+    var flags = List[Flag]()
+    for i in range(len(path) - 2, -1, -1):
+        for flag in path[i][].flags:
+            if flag.persistent:
+                flags.append(flag.copy())
+    return flags^
+
+
+def _visible_flags(path: List[ArcPointer[Command]]) -> FlagSet:
+    """Returns the flags the last command on a path accepts: its own, plus the ones it inherits.
+
+    Args:
+        path: The commands from the root down to the command, inclusive.
 
     Returns:
         The command's own flags followed by the persistent flags it inherits.
     """
-    var flags = command.flags.copy()
-    flags.extend(command.inherited_flags())
+    var flags = path[len(path) - 1][].flags.copy()
+    flags.extend(FlagSet(_inherited_from_path(path)))
     return flags^
 
 
@@ -104,35 +126,37 @@ def _flag_consumes_next(flags: FlagSet, arg: ImmStringSpan) -> Bool:
     # Mirrors `FlagParser.parse_shorthand_flag`.
     var body = arg[byte=1:]
     var offsets = _codepoint_offsets(body)
+    var max_length = flags._longest_shorthand_length()
     var i = 0
     while i < len(offsets) - 1:
-        var j = _longest_shorthand(body, offsets, i, flags)
+        var index = -1
+        var j = _longest_shorthand(body, offsets, i, flags, max_length, index)
         if j == -1:
             return False
-        if flags.lookup_shorthand(body[byte = offsets[i] : offsets[j]]).value()[].type != OptType.Bool:
+        if flags.flags[index].type != OptType.Bool:
             return j == len(offsets) - 1
         i = j
 
     return False
 
 
-def _parse_command_from_args(command: ArcPointer[Command], mut args: List[String]) -> Optional[ArcPointer[Command]]:
+def _parse_command_from_args(root: ArcPointer[Command], mut args: List[String]) -> List[ArcPointer[Command]]:
     """Traverses the command tree to find the command that matches the given arguments.
 
-    On a match, `args` is rewritten with the matched command names removed and everything else
-    left in its original order, ready to be handed to `FlagSet.from_args`.
+    `args` is rewritten with the matched command names removed and everything else left in its
+    original order, ready to be handed to `FlagSet.from_args`.
 
     Args:
-        command: The root command to start traversing from.
+        root: The root command to start traversing from.
         args: The arguments to traverse the command tree with. Rewritten in place on a match.
 
     Returns:
-        The command that matches the arguments.
+        The commands from the root down to the matched one, inclusive. Just the root when no
+        subcommand matched.
     """
     # Descend one level per matched argument. Each lookup searches the children of the command
     # matched so far, not the children of the root, so deeply nested subcommands resolve.
-    var current = command
-    var matched = False
+    var path: List[ArcPointer[Command]] = [root]
     var passthrough = List[String](capacity=len(args))
 
     # Collecting the visible flags copies every flag the command can see, including the persistent
@@ -155,7 +179,7 @@ def _parse_command_from_args(command: ArcPointer[Command], mut args: List[String
         # A bare `-` or a negative number is positional, the same as `FlagSet.from_args` treats it.
         if arg.startswith("-", 0, 1):
             if not visible_flags_ready:
-                visible_flags = _visible_flags(current[])
+                visible_flags = _visible_flags(path)
                 visible_flags_ready = True
 
         if arg.startswith("-", 0, 1) and _is_flag(arg, visible_flags):
@@ -168,19 +192,18 @@ def _parse_command_from_args(command: ArcPointer[Command], mut args: List[String
             i += width
             continue
 
-        var result = _parse_command(current[], arg)
+        var result = _parse_command(path[len(path) - 1][], arg)
         if not result:
             break
 
         # The command name is consumed by the match rather than passed through.
-        current = result.value()
+        path.append(result.value())
         visible_flags_ready = False
-        matched = True
         i += 1
 
     # No subcommands matched, this is a root command execution.
-    if not matched:
-        return None
+    if len(path) == 1:
+        return path^
 
     # The first argument that is not a flag or a subcommand name is positional, and so is
     # everything after it. Pass the remainder through untouched.
@@ -189,7 +212,7 @@ def _parse_command_from_args(command: ArcPointer[Command], mut args: List[String
         i += 1
 
     args = passthrough^
-    return current^
+    return path^
 
 
 def _with_usage_hint(command: Command, error: Error) -> Error:
@@ -558,7 +581,6 @@ struct Command(Copyable, Writable):
 
             # TODO: Children are created before the parent, so inherited flags aren't working for
             # these flag groups. Will revisit this at some point.
-            # self._merge_flags()
             if flags_required_together:
                 self._mark_flag_group_as[Annotation.REQUIRED_AS_GROUP](flags_required_together)
             if mutually_exclusive_flags:
@@ -677,10 +699,6 @@ struct Command(Copyable, Writable):
             for command in node[].children:
                 command[].parent = [node_link.copy()]
                 queue.append(command)
-
-    def _merge_flags(mut self) -> None:
-        """Returns all flags for the command and inherited flags from its parent."""
-        self.flags.extend(self.inherited_flags())
 
     def _mark_flag_group_as[annotation: Annotation](mut self, flag_names: List[String]) raises -> None:
         """Marks the given flags with annotations so that `Prism` errors.
@@ -840,35 +858,37 @@ struct Command(Copyable, Writable):
             self.exit(Error("Cannot execute from a non-root command. Please execute from the root command."))
             return
 
-        # Work on a private copy of the whole tree. `copy()` shares children by reference count, so
-        # merging inherited flags into a subcommand and parsing values onto it changed the caller's
-        # tree too: a second `execute` saw the first run's values and a duplicate set of inherited
-        # flags on every run.
-        var cmd = ArcPointer(self._deep_copy())
-
-        # Link the tree's parent pointers once, from the root, before anything reads them.
-        cmd[]._wire_parents()
-
-        # `cmd` moves down the tree during traversal, so hold on to the wired root separately.
-        # Completion generation walks the whole tree and needs the linked copy, not `self`.
-        var root = cmd
-
-        # If there's no children, then the root command is used.
-        # Otherwise, we traverse the command tree to find the command that matches the arguments.
-        # `input_args` comes back with the matched command names stripped and everything else,
-        # flags included, still in place.
+        # Find the command to run by walking the caller's tree, without copying it. Only the root is
+        # copied up front, since the walk reads it through an `ArcPointer`. `input_args` comes back
+        # with the matched command names stripped and everything else, flags included, in place.
+        var root = ArcPointer(self.copy())
+        var path: List[ArcPointer[Command]] = [root]
         if self.children and input_args:
-            var result = _parse_command_from_args(cmd, input_args)
-            if result:
-                cmd = result.value()
-            else:
-                # No subcommand matched, use the root command.
-                pass
+            path = _parse_command_from_args(root, input_args)
+
+        # Run a private copy of the matched command, so parsing values onto it and merging in
+        # inherited flags never touches the caller's tree, and a second `execute` starts clean.
+        # Copying the whole tree for that cost every run time proportional to every flag of every
+        # command. Only the path to the matched command is copied: the command itself, and a
+        # childless link per ancestor for `full_name`, `inherited_flags` and the persistent hooks.
+        var parent_link = List[ArcPointer[Command]]()
+        for i in range(len(path) - 1):
+            var link = path[i][].copy()
+            link.children = []
+            link.parent = parent_link^
+            parent_link = [ArcPointer(link^)]
+
+        var cmd = path[0]
+        if len(path) > 1:
+            var target = path[len(path) - 1][].copy()
+            target.parent = parent_link^
+            cmd = ArcPointer(target^)
 
         var args = Span(input_args)
 
         # Merge persistent flags from ancestors.
-        cmd[]._merge_flags()
+        var inherited = _inherited_from_path(path)
+        cmd[].flags.extend(FlagSet(inherited.copy()))
 
         var remaining_args: List[String]
         try:
@@ -905,13 +925,12 @@ struct Command(Copyable, Writable):
             # Read the help flag from the command being executed, and render with that command's own
             # `Help`, so a subcommand configured with a custom help flag or renderer gets its own.
             if cmd[].flags.get[Bool](cmd[].help.flag.name).or_else(False):
-                var inherited = cmd[].inherited_flags()
                 var help_context = HelpContext(
                     full_name=cmd[].full_name(),
                     usage=cmd[].usage,
                     args=cmd[].args.copy(),
                     flags=cmd[].flags.flags.copy(),
-                    inherited_flags=inherited.flags.copy(),
+                    inherited_flags=inherited^,
                     children=[(_command_column(child[]), child[].usage) for child in cmd[].children],
                     aliases=cmd[].aliases.copy(),
                 )
@@ -932,10 +951,15 @@ struct Command(Copyable, Writable):
             if cmd[]._generated_completion:
                 if not remaining_args:
                     self.exit(
-                        Error(t"Usage: {root[].name} completion <shell>\nSupported shells: zsh, bash")
+                        Error(t"Usage: {self.name} completion <shell>\nSupported shells: zsh, bash")
                     )
                     return
-                self.output_writer(default_completion(root[], remaining_args[0]))
+
+                # Completion walks the whole tree and reads inherited flags at every level, so this
+                # is the one path that needs every command copied and linked to its parent.
+                var tree = self._deep_copy()
+                tree._wire_parents()
+                self.output_writer(default_completion(tree, remaining_args[0]))
                 return
 
             # A command with subcommands of its own is a dispatcher, so a leftover positional

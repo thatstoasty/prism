@@ -62,7 +62,9 @@ def _codepoint_offsets(s: StringSpan) -> List[Int]:
     return offsets^
 
 
-def _longest_shorthand(body: StringSpan, offsets: List[Int], start: Int, flags: FlagSet) -> Int:
+def _longest_shorthand(
+    body: StringSpan, offsets: List[Int], start: Int, flags: FlagSet, max_length: Int, mut flag_index: Int
+) -> Int:
     """Finds the longest shorthand that begins at a position in a cluster of shorthands.
 
     Args:
@@ -70,6 +72,9 @@ def _longest_shorthand(body: StringSpan, offsets: List[Int], start: Int, flags: 
         offsets: Codepoint offsets into `body`, from `_codepoint_offsets`.
         start: The index into `offsets` the shorthand begins at.
         flags: The flags the command accepts.
+        max_length: The length of the longest shorthand defined, in codepoints, from
+            `FlagSet._longest_shorthand_length`.
+        flag_index: Set to the index in `flags` of the flag matched.
 
     Returns:
         The index into `offsets` just past the shorthand, or -1 if none begins at `start`.
@@ -77,10 +82,15 @@ def _longest_shorthand(body: StringSpan, offsets: List[Int], start: Int, flags: 
     #### Notes:
     - Shorthands may be longer than one character, such as `-r0`, so each position tries the
       longest candidate first. `-r0vvas` is then `-r0 -vv -a -s` when those are defined.
+    - Candidates start no longer than the longest shorthand defined. Starting from the whole rest
+      of the argument scanned every flag once per character of an attached value, so
+      `-o/some/long/path` cost a scan per character before `o` matched.
     """
-    var end = len(offsets) - 1
+    var end = min(len(offsets) - 1, start + max_length)
     while end > start:
-        if flags.lookup_shorthand(body[byte = offsets[start] : offsets[end]]):
+        var index = flags._shorthand_index(body[byte = offsets[start] : offsets[end]])
+        if index != -1:
+            flag_index = index
             return end
         end -= 1
     return -1
@@ -92,6 +102,8 @@ struct ParseFlagResult[arg_origin: ImmOrigin](Movable, Writable):
 
     var name: ImmStringSpan[Self.arg_origin]
     """The name of the flag."""
+    var index: Int
+    """The index of the flag in the `FlagSet` it was parsed against."""
     var value: String
     """The value of the flag."""
     var increment: Int
@@ -104,6 +116,8 @@ struct ParseShorthandFlagResult(Movable, Writable):
 
     var names: List[String]
     """The full names of the flags, in the order they appeared."""
+    var indices: List[Int]
+    """The index of each flag in `names` within the `FlagSet` it was parsed against."""
     var values: List[String]
     """The value for each flag in `names`, at the same index."""
     var increment: Int
@@ -140,25 +154,30 @@ struct FlagParser[origin: ImmOrigin](Writable):
         Raises:
             Error: If an error occurred while parsing the flag.
         """
+        # Each branch finds the flag with a single scan, and the index it returns lets the caller set
+        # the value without scanning again.
+
         # Flag with value set like "--flag=<value>"
         var sep_index = argument.find("=")
         if sep_index != -1:
-            # `lookup` finds the flag in a single scan. Testing `name not in flags.names()` instead
-            # copies every flag name into a fresh list on each flag argument parsed.
             var name_slice = argument[byte=2:sep_index]
-            if not flags.lookup(name_slice):
+            var index = flags._index(name_slice)
+            if index == -1:
                 raise Error(UNKNOWN_FLAG_ERROR, name_slice)
 
-            return ParseFlagResult(name=name_slice, value=String(argument[byte=sep_index + 1 :]), increment=1)
+            return ParseFlagResult(
+                name=name_slice, index=index, value=String(argument[byte=sep_index + 1 :]), increment=1
+            )
 
         # Flag with value set like "--flag <value>"
         var name_slice = argument[byte=2:]
-        if not flags.lookup(name_slice):
+        var index = flags._index(name_slice)
+        if index == -1:
             raise Error(UNKNOWN_FLAG_ERROR, name_slice)
 
         # If it's a bool flag, set it to True and only increment the index by 1 (one arg used).
-        if flags.lookup[Bool](name_slice):
-            return ParseFlagResult(name=name_slice, value="True", increment=1)
+        if flags.flags[index].type == OptType.Bool:
+            return ParseFlagResult(name=name_slice, index=index, value="True", increment=1)
 
         if self.index + 1 >= len(self.arguments):
             raise Error(t"Flag `--{name_slice}` requires a value, but reached the end of the arguments.")
@@ -170,7 +189,7 @@ struct FlagParser[origin: ImmOrigin](Writable):
             raise Error(t"Flag `--{name_slice}` requires a value, but was followed by another flag: `{next_argument}`.")
 
         # Increment index by 2 because 2 args were used (one for name and value).
-        return ParseFlagResult(name=name_slice, value=String(self.arguments[self.index + 1]), increment=2)
+        return ParseFlagResult(name=name_slice, index=index, value=String(self.arguments[self.index + 1]), increment=2)
 
     def parse_shorthand_flag(self, argument: StringSpan, flags: FlagSet) raises -> ParseShorthandFlagResult:
         """Parses a shorthand flag, or a cluster of them, into flag names and values.
@@ -193,32 +212,42 @@ struct FlagParser[origin: ImmOrigin](Writable):
         """
         var body = argument[byte=1:]
         var offsets = _codepoint_offsets(body)
+        var max_length = flags._longest_shorthand_length()
         var names = List[String]()
+        var indices = List[Int]()
         var values = List[String]()
 
         var i = 0
         while i < len(offsets) - 1:
-            var j = _longest_shorthand(body, offsets, i, flags)
+            var index = -1
+            var j = _longest_shorthand(body, offsets, i, flags, max_length, index)
             if j == -1:
                 var shorthand = body[byte = offsets[i] : offsets[i + 1]]
                 if shorthand == "=":
                     raise Error(t"Expected a shorthand flag before `=` in `{argument}`.")
                 raise Error(UNKNOWN_FLAG_ERROR, shorthand)
 
-            ref flag = flags.lookup_shorthand(body[byte = offsets[i] : offsets[j]]).value()[]
+            ref flag = flags.flags[index]
             names.append(flag.name)
+            indices.append(index)
             var rest = body[byte = offsets[j] :]
             # A value-taking flag, or a bool given `=value`, ends the cluster.
             if flag.type != OptType.Bool or rest.startswith("="):
-                return self._shorthand_value(flag, rest, flags, names^, values^)
+                return self._shorthand_value(flag, rest, flags, names^, indices^, values^)
 
             values.append("True")
             i = j
 
-        return ParseShorthandFlagResult(names=names^, values=values^, increment=1)
+        return ParseShorthandFlagResult(names=names^, indices=indices^, values=values^, increment=1)
 
     def _shorthand_value(
-        self, flag: Flag, rest: StringSpan, flags: FlagSet, var names: List[String], var values: List[String]
+        self,
+        flag: Flag,
+        rest: StringSpan,
+        flags: FlagSet,
+        var names: List[String],
+        var indices: List[Int],
+        var values: List[String],
     ) raises -> ParseShorthandFlagResult:
         """Finishes parsing at a shorthand that ends a cluster by taking a value.
 
@@ -227,6 +256,7 @@ struct FlagParser[origin: ImmOrigin](Writable):
             rest: What follows the shorthand in the same argument.
             flags: The flags passed to the command.
             names: The names parsed so far.
+            indices: The indices of the flags parsed so far.
             values: The values of every name but the last.
 
         Returns:
@@ -237,17 +267,17 @@ struct FlagParser[origin: ImmOrigin](Writable):
         """
         if rest.startswith("="):
             values.append(String(rest[byte=1:]))
-            return ParseShorthandFlagResult(names=names^, values=values^, increment=1)
+            return ParseShorthandFlagResult(names=names^, indices=indices^, values=values^, increment=1)
 
         if flag.type == OptType.Bool:
             if rest:
                 raise Error(t"Flag `--{flag.name}` does not take a value, but was given `{rest}`.")
             values.append("True")
-            return ParseShorthandFlagResult(names=names^, values=values^, increment=1)
+            return ParseShorthandFlagResult(names=names^, indices=indices^, values=values^, increment=1)
 
         if rest:
             values.append(String(rest))
-            return ParseShorthandFlagResult(names=names^, values=values^, increment=1)
+            return ParseShorthandFlagResult(names=names^, indices=indices^, values=values^, increment=1)
 
         if self.index + 1 >= len(self.arguments):
             raise Error(t"Flag `--{flag.name}` requires a value, but reached the end of the arguments.")
@@ -258,4 +288,4 @@ struct FlagParser[origin: ImmOrigin](Writable):
             raise Error(t"Flag `--{flag.name}` requires a value, but was followed by another flag: `{next_argument}`.")
 
         values.append(String(next_argument))
-        return ParseShorthandFlagResult(names=names^, values=values^, increment=2)
+        return ParseShorthandFlagResult(names=names^, indices=indices^, values=values^, increment=2)

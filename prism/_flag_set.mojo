@@ -32,22 +32,22 @@ struct ParserState(TrivialRegisterPassable, Writable, Equatable):
     """State when the parser is trying to parse a shorthand flag that starts with '-' and can be in the format of either '-f=value', '-f value', or a combination of multiple bool shorthand flags like '-abc' which is equivalent to '-a -b -c'."""
 
 
-def _set_flag_value(mut flags: FlagSet, name: ImmStringSpan, value: StringSpan) raises -> None:
-    # Set the value of the flag.
-    var flag = flags.lookup(name)
-    if not flag:
-        raise Error(
-            t"Cannot set `--{name}` to `{value}`: the flag is not defined."
-        )
-    if not flag.value()[].changed:
-        flag.value()[].set(value)
-    elif flag.value()[].type.is_list_type():
+def _set_flag_value(mut flag: Flag, value: StringSpan) -> None:
+    """Sets a flag parsed from the command line.
+
+    Args:
+        flag: The flag to set. The parser returns its index, so it is reached without a lookup.
+        value: The value to set.
+    """
+    if not flag.changed:
+        flag.set(value)
+    elif flag.type.is_list_type():
         # Repeating a list flag accumulates: `-H "A: 1" -H "B: 2"` is a two-element list.
-        flag.value()[].value.value().write(LIST_SEPARATOR, value)
+        flag.value.value().write(LIST_SEPARATOR, value)
     else:
         # Repeating a scalar flag replaces. Appending would turn `--name a --name b` into
         # the single value "a b" rather than letting the last one win.
-        flag.value()[].set(value)
+        flag.set(value)
 
 def _set_flag_from_file(mut flag: Flag) raises -> None:
     """Sets a flag from its `file_path`, if that file exists.
@@ -231,15 +231,15 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             # Parse out a flag and set the value on the flag.
             elif state == ParserState.PARSE_FLAG:
                 var result = parser.parse_flag(argument, self)
-                _set_flag_value(self, result.name, result.value)
+                _set_flag_value(self.flags[result.index], result.value)
                 parser.index += result.increment
                 state = ParserState.FIND_FLAG
 
             # Parse out shorthand flag(s) and set the value on the flag(s).
             elif state == ParserState.PARSE_SHORTHAND_FLAG:
                 var result = parser.parse_shorthand_flag(argument, self)
-                for i in range(len(result.names)):
-                    _set_flag_value(self, result.names[i], result.values[i])
+                for i in range(len(result.indices)):
+                    _set_flag_value(self.flags[result.indices[i]], result.values[i])
                 parser.index += result.increment
                 state = ParserState.FIND_FLAG
 
@@ -331,6 +331,49 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 flag.parse_check(flag.value.value())
             except e:
                 raise Error(t"Invalid value for flag `--{flag.name}`: {e}")
+
+    def _index(self, name: ImmStringSpan) -> Int:
+        """Returns the index of the flag with the given name.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The flag's index in `flags`, or -1 if no flag has that name.
+
+        #### Notes:
+        - The parser hands this index back so the value can be set without scanning again.
+        """
+        for i in range(len(self.flags)):
+            if self.flags[i].name == name:
+                return i
+        return -1
+
+    def _shorthand_index(self, shorthand: ImmStringSpan) -> Int:
+        """Returns the index of the flag with the given shorthand.
+
+        Args:
+            shorthand: The shorthand of the flag.
+
+        Returns:
+            The flag's index in `flags`, or -1 if no flag has that shorthand.
+        """
+        for i in range(len(self.flags)):
+            if self.flags[i].shorthand == shorthand:
+                return i
+        return -1
+
+    def _longest_shorthand_length(self) -> Int:
+        """Returns the length of the longest shorthand defined, in codepoints.
+
+        Returns:
+            The length, or 0 when no flag has a shorthand.
+        """
+        var longest = 0
+        for flag in self.flags:
+            if flag.shorthand:
+                longest = max(longest, flag.shorthand.count_codepoints())
+        return longest
 
     def lookup(ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
@@ -546,8 +589,11 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         if not flag:
             return None
 
-        var result = flag.value()[].value_or_default()
-        if not result:
-            return None
-
-        return T.from_value(result.value())
+        # Parse straight from the stored text. `value_or_default` returns a copy of it, which cost an
+        # allocation on every call.
+        ref found = flag.value()[]
+        if found.value:
+            return T.from_value(found.value.value())
+        if found.default:
+            return T.from_value(found.default.value())
+        return None

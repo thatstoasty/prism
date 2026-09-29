@@ -223,7 +223,8 @@ def test_dash_is_positional_during_subcommand_traversal() raises:
         )
     )
     var args: List[String] = ["-", "child"]
-    testing.assert_false(Bool(_parse_command_from_args(cmd, args)))
+    # Only the root is on the path: nothing matched.
+    testing.assert_equal(len(_parse_command_from_args(cmd, args)), 1)
 
 
 def _help_for(cmd: Command) raises -> String:
