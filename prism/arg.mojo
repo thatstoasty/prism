@@ -3,7 +3,7 @@ from std.collections.list import _ListIter
 
 from prism.opt_type import OptType
 from prism._util import _to_opt_string
-from prism.value import FromValue, ParseCheckFn, ToValue, _parse_check
+from prism.value import FromValue, LIST_SEPARATOR, ParseCheckFn, ToValue, _parse_check
 
 
 comptime ArgParseFn = ParseCheckFn
@@ -165,12 +165,68 @@ struct Arg(Copyable, Writable):
             t"`T` must conform to `FromValue`. {reflect[T].name()} does not."
         )
         comptime opt_type = OptType(reflect[T].name())
+
+        # `bind` checks a list argument element by element, so a list's valid values are stored as
+        # elements too. Without this, `valid_values=[["zsh", "bash"]]` stored one joined value that
+        # no single element could ever match.
+        var rendered = List[String]()
+        for val in valid_values:
+            var text = val.to_value()
+            if opt_type.is_list_type():
+                for element in text.split(LIST_SEPARATOR):
+                    rendered.append(String(element))
+            else:
+                rendered.append(text^)
+
         return Self(
             name=String(name),
             type=opt_type,
             usage=String(usage),
             required=required and not default,
             default=default^.and_then(_to_opt_string[T]),
-            valid_values=[val.to_value() for val in valid_values],
+            valid_values=rendered^,
             parse_check=_parse_check[T](),
         )
+
+    @staticmethod
+    def new_list[E: Copyable & Deinitable](
+        name: StringSpan,
+        usage: StringSpan = "",
+        var default: Optional[List[E]] = None,
+        required: Bool = True,
+        valid_values: List[E] = [],
+    ) -> Self:
+        """Constructs a list argument, which takes every remaining positional value.
+
+        ```mojo
+        Arg.new_list[String](name="shells", usage="Shells to set up.", valid_values=["zsh", "bash"])
+        ```
+
+        Parameters:
+            E: The type of each element. Must conform to `ToValue` and `FromValue`.
+
+        Args:
+            name: The name of the argument. Used to look the value up, and shown uppercased in
+                usage text.
+            usage: What the argument is for. Shown in help output.
+            default: The values to use when the argument is omitted. Supplying one makes the
+                argument optional even if `required` is True.
+            required: Whether at least one value must be supplied.
+            valid_values: The values each element may take. Empty accepts any value.
+
+        Returns:
+            The argument, holding a `List[E]`.
+
+        #### Notes:
+        - This is `Arg.new[List[E]]` with `valid_values` given as elements. There, `valid_values`
+          is a `List[List[E]]`, since it holds values of the argument's own type.
+        - A list argument must be declared last, since it takes every value left once the
+          arguments before it are bound.
+        """
+        comptime assert conforms_to(E, ToValue), String(t"`E` must conform to `ToValue`. {reflect[E].name()} does not.")
+        comptime assert conforms_to(E, FromValue), String(
+            t"`E` must conform to `FromValue`. {reflect[E].name()} does not."
+        )
+        var arg = Self.new[List[E]](name, usage, default=default^, required=required)
+        arg.valid_values = [val.to_value() for val in valid_values]
+        return arg^

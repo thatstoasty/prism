@@ -682,6 +682,33 @@ deploy: Invalid value for argument `env`: `dev`. Valid values are: staging, prod
 Run 'deploy --help' for usage.
 ```
 
+A list argument declared last takes every remaining value, which suits commands like `cp DEST
+FILES...`. Declare it with `Arg.new_list`, whose `valid_values` constrain each element:
+
+```mojo
+from prism import Command, Arg, ArgSet, FlagSet, read_args
+
+def setup(args: ArgSet, flags: FlagSet) raises -> None:
+    for shell in args.get[List[String]]("shells").value():
+        print("setting up", shell)
+
+def main() -> None:
+    var cli = Command(
+        name="setup",
+        usage="Set up shell completion.",
+        run=setup,
+        args=[Arg.new_list[String](name="shells", usage="Shells to set up.", valid_values=["zsh", "bash"])],
+    )
+    cli.execute(read_args())
+```
+
+```txt
+Usage: setup [OPTIONS] SHELLS...
+```
+
+A list argument must be declared last, since it leaves no values for anything after it; declaring
+one earlier is reported when the command is built.
+
 An argument is required unless it is given a `default`. `ArgSet` still exposes the raw values, so
 `len(args)`, `args[0]` and iteration all work as before, and a command that declares no arguments
 accepts any number of them — which is what leaves `arg_validator` in charge for commands that do

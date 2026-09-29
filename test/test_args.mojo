@@ -238,9 +238,7 @@ def test_variadic_argument_checks_each_value() raises:
     with assert_raises(contains="Invalid value for argument `nums`"):
         _ = _bound(args^, values^)
 
-    var shells: List[Arg] = [
-        Arg.new[List[String]](name="shells", usage="Shells.", valid_values=[List[String](["zsh"]), List[String](["bash"])])
-    ]
+    var shells: List[Arg] = [Arg.new_list[String](name="shells", usage="Shells.", valid_values=["zsh", "bash"])]
     var shell_values: List[String] = ["zsh", "fish"]
     with assert_raises(contains="`fish`"):
         _ = _bound(shells^, shell_values^)
@@ -276,6 +274,28 @@ def test_argument_order_rejects_required_after_optional() raises:
     ]
     var problem = _argument_order_problem(args)
     testing.assert_true("The required argument `second`" in problem.value())
+
+
+def test_new_list_takes_element_valid_values() raises:
+    var args: List[Arg] = [Arg.new_list[String](name="shells", usage="Shells.", valid_values=["zsh", "bash"])]
+    testing.assert_true(args[0].type.is_list_type())
+
+    var values: List[String] = ["bash", "zsh"]
+    var bound = _bound(args^, values^)
+    var expected: List[String] = ["bash", "zsh"]
+    testing.assert_equal(bound.get[List[String]]("shells").value(), expected)
+
+
+def test_nested_list_valid_values_are_flattened() raises:
+    # Regression: `Arg.new[List[String]]` stored each valid value as one joined list, which no
+    # element could match, so `valid_values=[["zsh", "bash"]]` rejected both shells.
+    var nested: List[List[String]] = [["zsh", "bash"]]
+    var args: List[Arg] = [Arg.new[List[String]](name="shells", usage="Shells.", valid_values=nested^)]
+    var expected: List[String] = ["zsh", "bash"]
+    testing.assert_equal(args[0].valid_values, expected)
+
+    var values: List[String] = ["bash"]
+    _ = _bound(args^, values^)
 
 
 def main() raises:
