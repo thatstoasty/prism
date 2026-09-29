@@ -125,6 +125,21 @@ struct OptType(Equatable, ImplicitlyCopyable, Writable):
         """
         return self.value == Self.List.value
 
+    def display_name(self) -> String:
+        """Returns the type's name as it would be written in Mojo, for messages.
+
+        Returns:
+            The name, such as `Int` or `List[Int]`.
+
+        #### Notes:
+        - `name` holds the reflected spelling, which for a list reports its elements' internal
+          form: `List[SIMD[DType.int, 1]]`. This renders the element type the way it is written.
+        """
+        if self.is_list_type():
+            var element = self.name[byte = 5 : self.name.byte_length() - 1]
+            return String("List[", Self(element).display_name(), "]")
+        return String(self.name)
+
     def is_int_type(self) -> Bool:
         """Returns if the type is an integer type.
 

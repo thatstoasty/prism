@@ -379,5 +379,20 @@ def test_require_reports_an_unset_flag_without_default() raises:
         _ = flag_set.require[Int]("port")
 
 
+def test_require_names_list_types_readably() raises:
+    # Regression: list types were reported by their reflected name, `List[SIMD[DType.int, 1]]`.
+    var flags: List[Flag] = [Flag.new[List[Int]](name="nums", usage="Numbers.")]
+    var flag_set = _parsed(flags^, List[String]())
+
+    with testing.assert_raises(contains="Flag `--nums` holds List[Int], not List[String]."):
+        _ = flag_set.require[List[String]]("nums")
+
+
+def test_display_name() raises:
+    testing.assert_equal(OptType(reflect[Int].name()).display_name(), "Int")
+    testing.assert_equal(OptType(reflect[List[Float64]].name()).display_name(), "List[Float64]")
+    testing.assert_equal(OptType(reflect[List[String]].name()).display_name(), "List[String]")
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

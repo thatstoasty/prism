@@ -636,7 +636,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         ref flag = self.flags[index]
         comptime expected = OptType(reflect[T].name())
         if flag.type != expected:
-            raise Error(t"Flag `--{name}` holds {flag.type.name}, not {expected.name}.")
+            raise Error(t"Flag `--{name}` holds {flag.type.display_name()}, not {expected.display_name()}.")
 
         if flag.value:
             return T.from_value(flag.value.value())
