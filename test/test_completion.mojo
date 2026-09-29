@@ -243,7 +243,7 @@ def test_bash_basic_root_command() raises:
     # Verify root function exists
     std.testing.assert_true("__myapp()" in script)
     # Verify registration
-    std.testing.assert_true("complete -o default -F __myapp myapp" in script)
+    std.testing.assert_true("complete -o filenames -F __myapp myapp" in script)
     # Verify help flag is present
     std.testing.assert_true("--help" in script)
 
@@ -362,7 +362,7 @@ def test_bash_dispatch() raises:
     )
     var script = default_completion(cmd, "bash")
     std.testing.assert_true("#!/usr/bin/env bash" in script)
-    std.testing.assert_true("complete -o default -F __myapp myapp" in script)
+    std.testing.assert_true("complete -o filenames -F __myapp myapp" in script)
 
 
 def test_completion_valid_args_includes_bash() raises:
@@ -408,7 +408,7 @@ def test_bash_unicode_command_name() raises:
     )
     var script = generate_bash_completion(cmd)
     std.testing.assert_true("__über()" in script)
-    std.testing.assert_true("complete -o default -F __über über" in script)
+    std.testing.assert_true("complete -o filenames -F __über über" in script)
     std.testing.assert_true("__über__résumé()" in script)
     std.testing.assert_true("résumé" in script)
 
@@ -437,6 +437,25 @@ def test_bash_value_flag_falls_back_to_files() raises:
     var script = generate_bash_completion(cmd)
     std.testing.assert_true('case "${prev}" in' in script)
     std.testing.assert_true("--output|-o)" in script)
+    std.testing.assert_true('compgen -f -- "${cur}"' in script)
+
+
+def test_bash_numeric_flag_offers_nothing() raises:
+    # A number is never a file name, so after `--count` the script returns without completing
+    # anything, rather than offering files.
+    var cmd = Command(
+        name="myapp",
+        usage="My application",
+        run=dummy,
+        flags=[
+            Flag.new[String](name="output", shorthand="o", usage="Output."),
+            Flag.new[Int](name="count", shorthand="c", usage="Count."),
+        ],
+    )
+    var script = generate_bash_completion(cmd)
+    std.testing.assert_true("--output|-o)" in script, script)
+    std.testing.assert_true("--count|-c)" in script, script)
+    std.testing.assert_false("--output|-o|--count" in script, script)
 
 
 def main() raises:

@@ -2,6 +2,7 @@
 
 from prism.command import Command
 from prism.flag import Flag
+from prism.opt_type import OptType
 from prism.completion.bash import generate_bash_completion
 from prism.completion.zsh import generate_zsh_completion
 
@@ -47,3 +48,16 @@ def _arg_candidates(cmd: Command) -> List[String]:
     for arg in cmd.args:
         candidates.extend(arg.valid_values.copy())
     return candidates^
+
+
+def _completes_files(flag: Flag) -> Bool:
+    """Reports whether a flag's value should complete as a file name.
+
+    Args:
+        flag: The flag to check.
+
+    Returns:
+        True for text flags, `String` and `List[String]`, which most often name a path. False for
+        numbers, which a file name could only be wrong for, and for bools, which take no value.
+    """
+    return flag.type == OptType.String or flag.type == OptType(reflect[List[String]].name())

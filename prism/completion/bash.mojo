@@ -3,7 +3,7 @@
 from prism.command import Command
 from prism.flag import Flag
 from prism.opt_type import OptType
-from prism.completion.shared import DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates
+from prism.completion.shared import DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates, _completes_files
 
 
 def _write_opts[origin: ImmOrigin, //](flag_names: Span[String, origin], mut builder: Some[Writer]):
@@ -20,20 +20,40 @@ def _write_opts[origin: ImmOrigin, //](flag_names: Span[String, origin], mut bui
         builder.write(flag_names[i])
 
 
-def _write_value_flag_case[origin: ImmOrigin, //](
-    value_flag_names: Span[String, origin], mut builder: Some[Writer]
+comptime _COMPLETE_FILES = """        local IFS=$'\\n'
+        COMPREPLY=( $(compgen -f -- "${cur}") )
+"""
+"""Completes file names. Splitting on newlines only keeps a name with spaces in it whole.
+
+`compgen -f` is used rather than falling back to bash's own completion, which needs `compopt` to
+switch on and off per word, and macOS still ships bash 3.2, which predates it."""
+
+
+def _write_value_flag_case[file_origin: ImmOrigin, other_origin: ImmOrigin, //](
+    file_flag_names: Span[String, file_origin],
+    other_flag_names: Span[String, other_origin],
+    mut builder: Some[Writer],
 ):
-    """Writes a case that stops completion when the previous word is a flag that takes a value.
+    """Writes a case that completes the value of a flag, when the previous word is one that takes a
+    value, instead of suggesting flags where the value belongs.
 
     Args:
-        value_flag_names: The long and short names of the flags that take a value.
+        file_flag_names: The long and short names of the flags whose values complete as file names.
+        other_flag_names: The long and short names of the other flags that take a value. Nothing is
+            offered for these, since a file name could only be wrong.
         builder: A Writer to write the case to.
     """
-    if not value_flag_names:
+    if not file_flag_names and not other_flag_names:
         return
 
-    builder.write('    case "${prev}" in\n', "        ", "|".join(value_flag_names), ")\n")
-    builder.write("            return\n", "            ;;\n", "    esac\n\n")
+    builder.write('    case "${prev}" in\n')
+    if file_flag_names:
+        builder.write("        ", "|".join(file_flag_names), ")\n", _COMPLETE_FILES)
+        builder.write("            return\n", "            ;;\n")
+    if other_flag_names:
+        builder.write("        ", "|".join(other_flag_names), ")\n")
+        builder.write("            return\n", "            ;;\n")
+    builder.write("    esac\n\n")
 
 
 def _bash_command_function(
@@ -68,9 +88,9 @@ def _bash_command_function(
     var seen_flags = Dict[String, Bool]()
     var flag_names = List[String]()
 
-    # Names of the flags that take a value. Completing right after one of them offers nothing, so
-    # bash falls back to completing file names, instead of suggesting flags where a value belongs.
-    var value_flag_names = List[String]()
+    # Names of the flags that take a value, split by whether that value completes as a file name.
+    var file_flag_names = List[String]()
+    var other_flag_names = List[String]()
 
     var flags = cmd.flags.flags.copy()
     # Add inherited persistent flags from ancestors (if not root)
@@ -84,10 +104,14 @@ def _bash_command_function(
             flag_names.append(String(t"--{flag.name}"))
             if flag.shorthand:
                 flag_names.append(String(t"-{flag.shorthand}"))
-            if flag.type != OptType.Bool:
-                value_flag_names.append(String(t"--{flag.name}"))
+            if _completes_files(flag):
+                file_flag_names.append(String(t"--{flag.name}"))
                 if flag.shorthand:
-                    value_flag_names.append(String(t"-{flag.shorthand}"))
+                    file_flag_names.append(String(t"-{flag.shorthand}"))
+            elif flag.type != OptType.Bool:
+                other_flag_names.append(String(t"--{flag.name}"))
+                if flag.shorthand:
+                    other_flag_names.append(String(t"-{flag.shorthand}"))
 
     if has_children:
         # Collect subcommand names (including aliases)
@@ -135,7 +159,7 @@ def _bash_command_function(
             )
 
         builder.write("        esac\n", "    done\n\n")
-        _write_value_flag_case(value_flag_names, builder)
+        _write_value_flag_case(file_flag_names, other_flag_names, builder)
 
         # If no subcommand matched, complete commands and flags
         builder.write(
@@ -147,16 +171,19 @@ def _bash_command_function(
         )
     else:
         # Leaf command: flags when the word starts with `-`, otherwise the values its arguments
-        # accept. With neither, nothing is offered and bash falls back to completing file names.
-        _write_value_flag_case(value_flag_names, builder)
+        # accept, or file names when it names none.
+        _write_value_flag_case(file_flag_names, other_flag_names, builder)
         _write_opts(flag_names, builder)
         builder.write('"\n')
 
         var candidates = _arg_candidates(cmd)
         builder.write('    if [[ "${cur}" == -* ]]; then\n')
         builder.write('        COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )\n')
+        builder.write("    else\n")
         if candidates:
-            builder.write('    else\n', '        COMPREPLY=( $(compgen -W "', " ".join(candidates), '" -- "${cur}") )\n')
+            builder.write('        COMPREPLY=( $(compgen -W "', " ".join(candidates), '" -- "${cur}") )\n')
+        else:
+            builder.write(_COMPLETE_FILES)
         builder.write("    fi\n")
 
     builder.write("}\n")
@@ -216,8 +243,9 @@ def generate_bash_completion(cmd: Command) raises -> String:
     builder.write(_bash_functions_recursive(cmd, "", root_name, is_root=True))
 
     # Register the completion
-    # `-o default` falls back to file name completion whenever a function offers nothing, which is
-    # what positional arguments and flag values want.
-    builder.write("\ncomplete -o default -F __", root_name, " ", root_name, "\n")
+    # `-o filenames` quotes completed file names and marks directories with a trailing slash. File
+    # names are only offered where the script asks for them, so a parent command offers its
+    # subcommands and nothing else, where `-o default` fell back to file names for any word.
+    builder.write("\ncomplete -o filenames -F __", root_name, " ", root_name, "\n")
 
     return builder^

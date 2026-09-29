@@ -3,7 +3,7 @@
 from prism.command import Command
 from prism.flag import Flag
 from prism.opt_type import OptType
-from prism.completion.shared import DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates
+from prism.completion.shared import DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates, _completes_files
 
 
 def _zsh_escape(s: StringSpan, mut writer: Some[Writer]):
@@ -53,9 +53,7 @@ def _zsh_flag_spec(flag: Flag) -> String:
     var is_bool = flag.type == OptType.Bool
     # Text values complete as file names, the most common thing a string flag names. Numbers get no
     # action, since file names would only be wrong there.
-    var action = "_files" if flag.type == OptType.String or flag.type == OptType(
-        reflect[List[String]].name()
-    ) else ""
+    var action = "_files" if _completes_files(flag) else ""
     var prefix = "'*" if flag.type.is_list_type() else "'"
 
     if flag.shorthand:
