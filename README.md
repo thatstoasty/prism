@@ -239,6 +239,39 @@ def main() -> None:
     cli.execute(read_args())
 ```
 
+A missing file leaves the flag unset rather than failing, and the file's trailing newline is dropped.
+A flag with both an environment variable and a file reads the file when the variable is unset.
+
+#### List flags
+
+A value from an environment variable or file is a single element by default. Give a list flag a
+`value_separator` to split it: `","` reads `TAGS="a,b"` as two tags, and `"\n"` reads one element per
+line of a file, skipping blank lines. Values from the command line are never split, since repeating
+the flag does that.
+
+```mojo
+from prism import ArgSet, Command, Flag, FlagSet, read_args
+
+def test(args: ArgSet, flags: FlagSet) raises -> None:
+    for tag in flags.get[List[String]]("tags").or_else([]):
+        print("tag:", tag)
+
+def main() -> None:
+    var cli = Command(
+        name="tag",
+        usage="Print tags.",
+        run=test,
+        flags=[
+            Flag.new[List[String], value_separator=","](
+                name="tags",
+                usage="Tags to print.",
+                environment_variable="TAGS",
+            )
+        ],
+    )
+    cli.execute(read_args())
+```
+
 ### Reading flag values
 
 Flag values are read with `get[T]`, naming the type you expect. It returns `None` when no flag of

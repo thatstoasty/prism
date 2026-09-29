@@ -340,5 +340,60 @@ def test_unknown_shorthand_gets_a_suggestion() raises:
         testing.assert_equal(suggest_flag(flag_set.flags, name.value()), "-v")
 
 
+def test_value_separator_splits_environment_values() raises:
+    _ = os.setenv("PRISM_TEST_TAGS", "a,b,,c")
+    var flags: List[Flag] = [
+        Flag.new[List[String], value_separator=","](
+            name="tags", usage="Tags.", environment_variable=String("PRISM_TEST_TAGS")
+        )
+    ]
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(List[String]()))
+    _ = os.unsetenv("PRISM_TEST_TAGS")
+
+    var expected: List[String] = ["a", "b", "c"]
+    testing.assert_equal(flag_set.get[List[String]]("tags").value(), expected)
+
+
+def test_value_separator_splits_file_lines() raises:
+    # One element per line, with blank lines, a trailing newline and Windows line endings dropped.
+    var path = _temp_path("lines")
+    with open(path, "w") as f:
+        f.write("A: 1\r\n\nB: 2\n")
+
+    var flags: List[Flag] = [
+        Flag.new[List[String], value_separator="\n"](name="header", usage="Headers.", file_path=path)
+    ]
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(List[String]()))
+    os.remove(path)
+
+    var expected: List[String] = ["A: 1", "B: 2"]
+    testing.assert_equal(flag_set.get[List[String]]("header").value(), expected)
+
+
+def test_list_from_environment_without_separator_is_one_element() raises:
+    _ = os.setenv("PRISM_TEST_TAGS_WHOLE", "a,b")
+    var flags: List[Flag] = [
+        Flag.new[List[String]](name="tags", usage="Tags.", environment_variable=String("PRISM_TEST_TAGS_WHOLE"))
+    ]
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(List[String]()))
+    _ = os.unsetenv("PRISM_TEST_TAGS_WHOLE")
+
+    var expected: List[String] = ["a,b"]
+    testing.assert_equal(flag_set.get[List[String]]("tags").value(), expected)
+
+
+def test_value_separator_does_not_split_command_line_values() raises:
+    var flags: List[Flag] = [Flag.new[List[String], value_separator=","](name="tags", usage="Tags.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--tags", "a,b"]
+    _ = flag_set.from_args(Span(args))
+
+    var expected: List[String] = ["a,b"]
+    testing.assert_equal(flag_set.get[List[String]]("tags").value(), expected)
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

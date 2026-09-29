@@ -81,6 +81,8 @@ struct Flag(Copyable, Writable):
     """If the flag is required."""
     var persistent: Bool
     """If the flag should persist to children commands."""
+    var value_separator: Optional[String]
+    """Splits a list flag's value from its `environment_variable` or `file_path` into elements."""
     var parse_check: ParseCheckFn
     """Raises if the flag's value does not parse as its declared type."""
 
@@ -98,6 +100,7 @@ struct Flag(Copyable, Writable):
         required: Bool = False,
         persistent: Bool = False,
         parse_check: ParseCheckFn = _parse_check[String](),
+        value_separator: Optional[String] = None,
     ):
         """Initializes a new Flag.
 
@@ -114,6 +117,8 @@ struct Flag(Copyable, Writable):
             persistent: If the flag should persist to children commands.
             parse_check: Raises if the flag's value does not parse as `type`. Prefer `Flag.new`,
                 which derives this from its `T`.
+            value_separator: Splits a list flag's value from its environment variable or file into
+                elements. Prefer `Flag.new`, which checks the flag is a list.
         """
         self.name = name
         self.shorthand = shorthand
@@ -130,6 +135,7 @@ struct Flag(Copyable, Writable):
         self.required = required
         self.persistent = persistent
         self.parse_check = parse_check
+        self.value_separator = value_separator
 
     def __eq__(self, other: Self) -> Bool:
         """Compares two Flags for equality.
@@ -224,7 +230,7 @@ struct Flag(Copyable, Writable):
         return names^
 
     @staticmethod
-    def new[T: AnyType](
+    def new[T: AnyType, *, value_separator: StaticString = ""](
         name: ImmStringSpan,
         usage: ImmStringSpan,
         *,
@@ -241,6 +247,10 @@ struct Flag(Copyable, Writable):
         Parameters:
             T: The type of value the flag holds. Must conform to `ToValue`, and to `FromValue` to
                 be read back with `FlagSet.get`.
+            value_separator: Splits a value read from `environment_variable` or `file_path` into
+                elements, such as `","` for `TAGS="a,b"` or `"\\n"` for one element per line of a
+                file. Only for list flags. Without it, such a value is a single element. Values
+                from the command line are never split, since repeating the flag does that.
 
         Args:
             name: The name of the flag, matched as `--name`.
@@ -265,6 +275,9 @@ struct Flag(Copyable, Writable):
         """
         comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
         comptime opt_type = OptType(reflect[T].name())
+        comptime assert not value_separator or reflect[T].name().startswith("List"), String(
+            t"`value_separator` splits a value into list elements, but {reflect[T].name()} is not a list."
+        )
         return Self(
             name=String(name),
             shorthand=String(shorthand),
@@ -277,4 +290,5 @@ struct Flag(Copyable, Writable):
             persistent=persistent,
             default=default^.and_then(_to_opt_string[T]),
             parse_check=_parse_check[T](),
+            value_separator=Optional[String](String(value_separator)) if value_separator else None,
         )

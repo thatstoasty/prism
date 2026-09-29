@@ -50,6 +50,34 @@ def _set_flag_value(mut flag: Flag, value: StringSpan) -> None:
         # the single value "a b" rather than letting the last one win.
         flag.set(value)
 
+def _split_fallback_value(flag: Flag, text: StringSpan) -> String:
+    """Splits a value from an environment variable or file into list elements.
+
+    Args:
+        flag: The flag the value is for.
+        text: The value.
+
+    Returns:
+        The value with its elements joined by `LIST_SEPARATOR`, or unchanged when the flag has no
+        `value_separator`.
+
+    #### Notes:
+    - Empty elements are dropped, so a trailing separator or blank line adds nothing. With a
+      newline separator, a carriage return ending each line is dropped too, for files written on
+      Windows.
+    """
+    if not flag.value_separator:
+        return String(text)
+
+    ref separator = flag.value_separator.value()
+    var elements = List[String]()
+    for part in text.split(separator):
+        var element = String(part.rstrip("\r")) if separator == "\n" else String(part)
+        if element:
+            elements.append(element^)
+    return LIST_SEPARATOR.join(elements)
+
+
 def _set_flag_from_file(mut flag: Flag) raises -> None:
     """Sets a flag from its `file_path`, if that file exists.
 
@@ -71,7 +99,7 @@ def _set_flag_from_file(mut flag: Flag) raises -> None:
 
     try:
         with open(path, "r") as f:
-            flag.set(f.read().rstrip("\r\n"))
+            flag.set(_split_fallback_value(flag, f.read().rstrip("\r\n")))
         flag.from_fallback = True
     except e:
         raise Error(t"Failed to read the value for flag `--{flag.name}` from {path}: {e}")
@@ -253,7 +281,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
             if flag.environment_variable:
                 var value = os.getenv(flag.environment_variable.value())
                 if value != "":
-                    flag.set(value)
+                    flag.set(_split_fallback_value(flag, value))
                     flag.from_fallback = True
                     continue
 
