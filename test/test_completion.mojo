@@ -152,6 +152,9 @@ def test_zsh_command_with_aliases() raises:
     var script = generate_zsh_completion(cmd)
     # Verify aliases appear in case pattern
     std.testing.assert_true("connect|conn|db-connect) _myapp__connect" in script)
+    # And in the list of commands offered, pointing back at the command.
+    std.testing.assert_true("'conn:Connect to database (alias for connect)'" in script, script)
+    std.testing.assert_true("'db-connect:Connect to database (alias for connect)'" in script, script)
 
 
 def test_zsh_command_with_valid_args() raises:

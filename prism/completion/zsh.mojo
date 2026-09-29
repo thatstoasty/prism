@@ -148,9 +148,17 @@ def _zsh_command_function(
         )
 
         for i in range(len(cmd.children)):
-            builder.write(t"            '{cmd.children[i][].name}:")
-            _zsh_escape(cmd.children[i][].usage, builder)
+            ref child = cmd.children[i][]
+            builder.write(t"            '{child.name}:")
+            _zsh_escape(child.usage, builder)
             builder.write("'\n")
+
+            # List each alias too, pointing back at the command, since the dispatch below already
+            # accepts them and a user who knows only the alias should see it offered.
+            for alias in child.aliases:
+                builder.write(t"            '{alias}:")
+                _zsh_escape(child.usage, builder)
+                builder.write(t" (alias for {child.name})'\n")
 
         builder.write(
             "        )\n",
