@@ -10,6 +10,45 @@ comptime ArgParseFn = ParseCheckFn
 """Checks that an argument's text parses as its declared type."""
 
 
+def _argument_order_problem(args: List[Arg]) -> Optional[String]:
+    """Checks that arguments are declared in an order they can bind in.
+
+    Args:
+        args: The arguments in declaration order.
+
+    Returns:
+        A description of the first problem found, or `None` when the order is valid.
+
+    #### Notes:
+    - Arguments bind by position, so an optional argument ahead of a required one takes the value
+      meant for the required one. The count check then passes and the required argument silently
+      reads as `None`.
+    - A list argument takes every remaining value, so one declared before another argument would
+      leave nothing for the arguments after it.
+    - This returns the problem rather than reporting it, so `Command` can panic with it, since it
+      is a mistake in the program, while `ArgSet.bind` raises it, and so the rules can be tested.
+    """
+    var optional = Optional[String]()
+    for i in range(len(args)):
+        ref arg = args[i]
+        if arg.type.is_list_type() and i < len(args) - 1:
+            return String(
+                t"The list argument `{arg.name}` is declared before `{args[i + 1].name}`. A list "
+                t"argument takes every remaining value, so it must be declared last."
+            )
+
+        if not arg.required:
+            if not optional:
+                optional = arg.name
+        elif optional:
+            return String(
+                t"The required argument `{arg.name}` is declared after the optional argument "
+                t"`{optional.value()}`. Required arguments must come first."
+            )
+
+    return None
+
+
 @fieldwise_init
 struct Arg(Copyable, Writable):
     """A positional argument a command accepts.

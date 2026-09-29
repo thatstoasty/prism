@@ -1,7 +1,7 @@
 """The set of positional arguments a command received."""
 from std.collections.list import _ListIter
 
-from prism.arg import Arg
+from prism.arg import Arg, _argument_order_problem
 from prism.value import FromValue, LIST_SEPARATOR
 
 
@@ -128,16 +128,23 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
             values: The positional values the command received.
 
         Raises:
-            Error: If a required argument is missing, an unexpected argument was supplied, or a
-                value does not parse as its declared type.
+            Error: If the arguments are declared in an order they cannot bind in, a required
+                argument is missing, an unexpected argument was supplied, or a value does not parse
+                as its declared type.
 
         #### Notes:
         - A command that declares no arguments accepts any number of them, which is what leaves
           `arg_validator` in charge for commands that do their own checking.
         - A list argument declared last is variadic: it takes every value left over once the
-          arguments before it are bound, so `cp SOURCES... DEST` style commands read the rest as
+          arguments before it are bound, so `cp DEST SOURCES...` style commands read the rest as
           one `List`.
+        - The declaration order is checked here too, not only when a `Command` is built, since an
+          `ArgSet` can be bound on its own.
         """
+        var order_problem = _argument_order_problem(self.args)
+        if order_problem:
+            raise Error(order_problem.value())
+
         var variadic = self._is_variadic()
         var fixed = len(self.args) - 1 if variadic else len(self.args)
         for i in range(min(fixed, len(values))):

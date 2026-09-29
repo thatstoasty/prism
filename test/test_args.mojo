@@ -13,6 +13,7 @@ from prism.args import (
 from std.testing import TestSuite, assert_raises
 
 from prism import Arg, ArgSet, Command, FlagSet
+from prism.arg import _argument_order_problem
 
 import prism
 
@@ -243,6 +244,38 @@ def test_variadic_argument_checks_each_value() raises:
     var shell_values: List[String] = ["zsh", "fish"]
     with assert_raises(contains="`fish`"):
         _ = _bound(shells^, shell_values^)
+
+
+def test_argument_order_accepts_a_trailing_list() raises:
+    var args: List[Arg] = [
+        Arg.new[String](name="dest", usage="Where."),
+        Arg.new[List[String]](name="files", usage="Files.", required=False),
+    ]
+    testing.assert_false(Bool(_argument_order_problem(args)))
+
+
+def test_argument_order_rejects_a_list_before_another_argument() raises:
+    # A list argument takes every remaining value, so one declared mid-list quietly took a single
+    # value instead.
+    var args: List[Arg] = [
+        Arg.new[List[String]](name="files", usage="Files."),
+        Arg.new[String](name="dest", usage="Where."),
+    ]
+    var problem = _argument_order_problem(args)
+    testing.assert_true("The list argument `files` is declared before `dest`" in problem.value())
+
+    var values: List[String] = ["a", "b"]
+    with assert_raises(contains="must be declared last"):
+        _ = _bound(args^, values^)
+
+
+def test_argument_order_rejects_required_after_optional() raises:
+    var args: List[Arg] = [
+        Arg.new[String](name="first", usage="First.", default=String("x")),
+        Arg.new[String](name="second", usage="Second."),
+    ]
+    var problem = _argument_order_problem(args)
+    testing.assert_true("The required argument `second`" in problem.value())
 
 
 def main() raises:

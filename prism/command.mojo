@@ -6,7 +6,7 @@ from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
 from prism._arg_set import ArgSet
 from prism._flag_set import Annotation, FlagSet
 from prism._flag_parser import _codepoint_offsets, _is_flag, _longest_shorthand
-from prism.arg import Arg
+from prism.arg import Arg, _argument_order_problem
 from prism._util import panic
 from prism.args import ArgValidatorFn, arbitrary_args
 from prism.exit import ExitFn, default_exit
@@ -278,31 +278,6 @@ def _check_for_duplicate_flags(command_name: StringSpan, flags: FlagSet) -> None
                 )
 
 
-def _check_argument_order(command_name: StringSpan, args: List[Arg]) -> None:
-    """Panics if a required argument is declared after an optional one.
-
-    Args:
-        command_name: The command the arguments belong to, for the message.
-        args: The arguments in declaration order.
-
-    #### Notes:
-    - Arguments bind by position, so an optional argument ahead of a required one takes the value
-      meant for the required one. The count check then passes and the required argument silently
-      reads as `None`. This is a mistake in the program rather than in its input, so it is reported
-      as one.
-    """
-    var optional = Optional[String]()
-    for arg in args:
-        if not arg.required:
-            if not optional:
-                optional = arg.name
-        elif optional:
-            panic(
-                t"Command `{command_name}` declares the required argument `{arg.name}` after the "
-                t"optional argument `{optional.value()}`. Required arguments must come first."
-            )
-
-
 def _add_builtin_flag(command_name: StringSpan, mut flags: FlagSet, var flag: Flag) -> None:
     """Adds the help or version flag to a command's flags.
 
@@ -543,7 +518,9 @@ struct Command(Copyable, Writable):
         self.reject_unknown_subcommands = reject_unknown_subcommands
         self._generated_completion = False
 
-        _check_argument_order(name, args)
+        var order_problem = _argument_order_problem(args)
+        if order_problem:
+            panic(t"Command `{name}`: {order_problem.value()}")
         self.args = args^
         self.flags = flags^
         self.parent = []
