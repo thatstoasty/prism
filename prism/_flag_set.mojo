@@ -10,6 +10,7 @@ from prism._flag_group import (
 from prism._flag_parser import FlagParser, _is_flag
 from prism.flag import Flag, FlagActionFn, Annotation
 from prism.opt_type import OptType
+from prism.suggest import suggest_name
 from prism.value import FromValue, LIST_SEPARATOR
 
 
@@ -597,3 +598,48 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         if found.default:
             return T.from_value(found.default.value())
         return None
+
+    def require[T: AnyType](self, name: ImmStringSpan) raises -> T:
+        """Returns the value of a flag as a `T`, raising where `get` would return `None`.
+
+        ```mojo
+        var port = flags.require[Int]("port")
+        ```
+
+        Parameters:
+            T: The type to read the flag as. Must conform to `FromValue`.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The flag's value, or its default when it was not set.
+
+        Raises:
+            Error: If no flag has that name, the flag holds a different type, it has neither a
+                value nor a default, or its value cannot be read as a `T`.
+
+        #### Notes:
+        - `get` reads a misspelled name, or the wrong type, as `None`, the same as a flag that was
+          simply not passed, so the mistake surfaces far from its cause if at all. `require` names
+          it, and suggests the closest flag name for a misspelling.
+        """
+        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        var index = self._index(name)
+        if index == -1:
+            var message = String(t"No flag named `--{name}` is defined.")
+            var suggestion = suggest_name(Span(self.names()), name)
+            if suggestion:
+                message.write(t" Did you mean `--{suggestion}`?")
+            raise Error(message)
+
+        ref flag = self.flags[index]
+        comptime expected = OptType(reflect[T].name())
+        if flag.type != expected:
+            raise Error(t"Flag `--{name}` holds {flag.type.name}, not {expected.name}.")
+
+        if flag.value:
+            return T.from_value(flag.value.value())
+        if flag.default:
+            return T.from_value(flag.default.value())
+        raise Error(t"Flag `--{name}` was not set and has no default.")

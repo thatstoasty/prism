@@ -2,6 +2,7 @@
 from std.collections.list import _ListIter
 
 from prism.arg import Arg, _argument_order_problem
+from prism.suggest import suggest_name
 from prism.value import FromValue, LIST_SEPARATOR
 
 
@@ -120,6 +121,52 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
             return None
 
         return T.from_value(result.value())
+
+    def require[T: AnyType](self, name: ImmStringSpan) raises -> T:
+        """Returns the value of a declared argument as a `T`, raising where `get` would return
+        `None`.
+
+        ```mojo
+        var target = args.require[String]("target")
+        ```
+
+        Parameters:
+            T: The type to read the argument as. Must conform to `FromValue`.
+
+        Args:
+            name: The name of the argument.
+
+        Returns:
+            The argument's value, or its default when it was omitted.
+
+        Raises:
+            Error: If no argument has that name, it was omitted and has no default, or its value
+                cannot be read as a `T`.
+
+        #### Notes:
+        - `get` reads a misspelled name as `None`, the same as an omitted optional argument.
+          `require` names the mistake and suggests the closest declared name.
+        """
+        comptime assert conforms_to(T, FromValue), String(
+            reflect[T].name(),
+            " does not conform to `FromValue`.",
+        )
+
+        var arg = self.lookup(name)
+        if not arg:
+            var message = String(t"No argument named `{name}` is declared.")
+            var names = [declared.name for declared in self.args]
+            var suggestion = suggest_name(Span(names), name)
+            if suggestion:
+                message.write(t" Did you mean `{suggestion}`?")
+            raise Error(message)
+
+        ref found = arg.value()[]
+        if found.value:
+            return T.from_value(found.value.value())
+        if found.default:
+            return T.from_value(found.default.value())
+        raise Error(t"Argument `{name}` was not given and has no default.")
 
     def bind(mut self, var values: List[String]) raises -> None:
         """Binds positional values to the declared arguments and validates them.

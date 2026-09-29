@@ -343,5 +343,41 @@ def test_generic_get_type_mismatch_is_none() raises:
     testing.assert_equal(flag_set.get[String]("region").value(), "us-east")
 
 
+def test_require_returns_the_value_or_default() raises:
+    var flags: List[Flag] = [
+        Flag.new[Int](name="port", usage="Port."),
+        Flag.new[String](name="host", usage="Host.", default=String("localhost")),
+    ]
+    var args: List[String] = ["--port", "8080"]
+    var flag_set = _parsed(flags^, args^)
+
+    testing.assert_equal(flag_set.require[Int]("port"), 8080)
+    testing.assert_equal(flag_set.require[String]("host"), "localhost")
+
+
+def test_require_names_a_misspelled_flag() raises:
+    var flags: List[Flag] = [Flag.new[Int](name="port", usage="Port.")]
+    var flag_set = _parsed(flags^, List[String]())
+
+    with testing.assert_raises(contains="No flag named `--prot` is defined. Did you mean `--port`?"):
+        _ = flag_set.require[Int]("prot")
+
+
+def test_require_names_the_wrong_type() raises:
+    var flags: List[Flag] = [Flag.new[String](name="region", usage="Region.", default=String("us"))]
+    var flag_set = _parsed(flags^, List[String]())
+
+    with testing.assert_raises(contains="Flag `--region` holds String, not Int."):
+        _ = flag_set.require[Int]("region")
+
+
+def test_require_reports_an_unset_flag_without_default() raises:
+    var flags: List[Flag] = [Flag.new[Int](name="port", usage="Port.")]
+    var flag_set = _parsed(flags^, List[String]())
+
+    with testing.assert_raises(contains="Flag `--port` was not set and has no default."):
+        _ = flag_set.require[Int]("port")
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

@@ -267,9 +267,30 @@ def main() -> None:
     cli.execute(read_args())
 ```
 
-`get[T]` matches on the flag's name alone, and raises if the value cannot be read as a `T`. Asking
-for `get[Int]("region")` on a string flag reports that the value is not a number rather than quietly
-yielding nothing.
+`get[T]` matches on the flag's name and type, and raises if the value cannot be read as a `T`. A
+name that no flag has, or a flag of another type, reads as `None`, the same as a flag that was not
+passed, so `get[Int]("region")` on a string flag, or a misspelled name, quietly yields nothing.
+
+`require[T]` returns the value itself rather than an `Optional`, and raises instead of yielding
+`None`, naming the cause: a misspelled name (with the closest match), the wrong type, or a flag that
+was not set and has no default. `ArgSet` has the same pair of methods for arguments.
+
+```mojo
+from prism import ArgSet, Command, FlagSet, Flag, read_args
+
+def handler(args: ArgSet, flags: FlagSet) raises -> None:
+    var port = flags.require[Int]("port")  # Int, not Optional[Int]
+    print("binding to port", port)
+
+def main() -> None:
+    var cli = Command(
+        name="serve",
+        usage="Serve the app.",
+        run=handler,
+        flags=[Flag.new[Int](name="port", usage="Port to bind.", default=Optional[Int](8080))],
+    )
+    cli.execute(read_args())
+```
 
 `T` can be any type conforming to `FromValue`, so a type of your own works too:
 

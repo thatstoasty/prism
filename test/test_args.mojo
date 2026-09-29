@@ -298,5 +298,27 @@ def test_nested_list_valid_values_are_flattened() raises:
     _ = _bound(args^, values^)
 
 
+def test_arg_set_require() raises:
+    var args: List[Arg] = [
+        Arg.new[String](name="target", usage="Where."),
+        Arg.new[Int](name="replicas", usage="How many.", default=Optional[Int](3)),
+    ]
+    var values: List[String] = ["prod"]
+    var bound = _bound(args^, values^)
+
+    testing.assert_equal(bound.require[String]("target"), "prod")
+    testing.assert_equal(bound.require[Int]("replicas"), 3)
+    with testing.assert_raises(contains="No argument named `traget` is declared. Did you mean `target`?"):
+        _ = bound.require[String]("traget")
+
+
+def test_arg_set_require_reports_an_omitted_argument() raises:
+    var args: List[Arg] = [Arg.new[String](name="extra", usage="Extra.", required=False)]
+    var bound = _bound(args^, List[String]())
+
+    with testing.assert_raises(contains="Argument `extra` was not given and has no default."):
+        _ = bound.require[String]("extra")
+
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()
