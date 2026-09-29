@@ -254,50 +254,67 @@ def _unknown_command_error(command: Command, name: ImmStringSpan) -> Error:
     return Error(message)
 
 
-def _check_for_duplicate_flags(command_name: StringSpan, flags: FlagSet) -> None:
-    """Panics if two of a command's flags share a name or a shorthand.
+def _duplicate_flag_problem(flags: FlagSet) -> Optional[String]:
+    """Checks that no two of a command's flags share a name or a shorthand.
 
     Args:
-        command_name: The command the flags belong to, for the message.
         flags: The flags to check.
+
+    Returns:
+        A description of the first duplicate found, or `None` when there is none.
 
     #### Notes:
     - A lookup returns the first match, so a duplicate silently made the later flag unreachable.
-      This is a mistake in the program rather than in its input, so it is reported as one.
+    - This returns the problem rather than reporting it, so `Command` can panic with it, since it
+      is a mistake in the program, and so the rule can be tested.
     """
     for i in range(len(flags.flags)):
         ref flag = flags.flags[i]
         for j in range(i + 1, len(flags.flags)):
             ref other = flags.flags[j]
             if flag.name == other.name:
-                panic(t"Command `{command_name}` defines the flag `--{flag.name}` more than once.")
+                return String(t"The flag `--{flag.name}` is defined more than once.")
             if flag.shorthand and flag.shorthand == other.shorthand:
-                panic(
-                    t"Command `{command_name}` gives the shorthand `-{flag.shorthand}` to both "
-                    t"`--{flag.name}` and `--{other.name}`."
+                return String(
+                    t"The shorthand `-{flag.shorthand}` is given to both `--{flag.name}` and `--{other.name}`."
                 )
+    return None
 
 
-def _add_builtin_flag(command_name: StringSpan, mut flags: FlagSet, var flag: Flag) -> None:
-    """Adds the help or version flag to a command's flags.
+def _reserved_flag_problem(flags: FlagSet, builtin: Flag) -> Optional[String]:
+    """Checks that none of a command's own flags takes the name of a built-in flag.
 
     Args:
-        command_name: The command the flags belong to, for the message.
+        flags: The command's own flags.
+        builtin: The help or version flag about to be added.
+
+    Returns:
+        A description of the clash, or `None` when there is none.
+
+    #### Notes:
+    - The built-in could not be told apart from a flag of the same name. A clashing shorthand is
+      not a problem: the command's own flag keeps it, and `_add_builtin_flag` drops it from the
+      built-in.
+    """
+    if flags.lookup(builtin.name):
+        return String(
+            t"A flag named `--{builtin.name}` is defined, but that name is reserved. Pass a "
+            t"differently named flag to `Help` or `Version` to use the name yourself."
+        )
+    return None
+
+
+def _add_builtin_flag(mut flags: FlagSet, var flag: Flag) -> None:
+    """Adds the help or version flag to a command's flags, once `_reserved_flag_problem` passes.
+
+    Args:
         flags: The command's flags.
         flag: The built-in flag to add.
 
     #### Notes:
     - A flag of the command's own that takes the built-in's shorthand keeps it, and the built-in is
       added without one. Otherwise `Version`'s `-v` silently hid a `--verbose` declared as `-v`.
-    - A flag of the command's own with the built-in's name is an error, since the built-in could
-      not be told apart from it. Configure a different name through `Help` or `Version` instead.
     """
-    if flags.lookup(flag.name):
-        panic(
-            t"Command `{command_name}` defines a flag named `--{flag.name}`, which is reserved. "
-            t"Pass a differently named flag to `Help` or `Version` to use the name yourself."
-        )
-
     if flag.shorthand and flags.lookup_shorthand(flag.shorthand):
         flag.shorthand = ""
 
@@ -526,10 +543,18 @@ struct Command(Copyable, Writable):
         self.parent = []
         self.children = [ArcPointer(child.copy()) for child in children]
 
-        _check_for_duplicate_flags(self.name, self.flags)
-        _add_builtin_flag(self.name, self.flags, self.help.flag.copy())
+        var flag_problem = _duplicate_flag_problem(self.flags)
+        if flag_problem:
+            panic(t"Command `{self.name}`: {flag_problem.value()}")
+
+        var builtins: List[Flag] = [self.help.flag.copy()]
         if self.version:
-            _add_builtin_flag(self.name, self.flags, self.version.value().flag.copy())
+            builtins.append(self.version.value().flag.copy())
+        for var builtin in builtins^:
+            var reserved_problem = _reserved_flag_problem(self.flags, builtin)
+            if reserved_problem:
+                panic(t"Command `{self.name}`: {reserved_problem.value()}")
+            _add_builtin_flag(self.flags, builtin^)
 
         # Auto-add completion subcommand
         if enable_completion:

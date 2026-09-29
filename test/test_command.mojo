@@ -1,7 +1,7 @@
 from prism import ArgSet
 from std import testing
 from std.memory import ArcPointer
-from prism.command import Command, Flag, FlagSet, HelpContext, _command_column, _parse_command_from_args, _unknown_command_error, _with_usage_hint
+from prism.command import Command, Flag, FlagSet, HelpContext, _command_column, _duplicate_flag_problem, _reserved_flag_problem, _parse_command_from_args, _unknown_command_error, _with_usage_hint
 from std.testing import TestSuite
 from prism.help import default_help
 
@@ -275,6 +275,36 @@ def test_help_fits_long_subcommand_names() raises:
     )
     var help = _help_for(cmd)
     testing.assert_true("  a-very-long-subcommand-name, l    Long." in help, help)
+
+
+def test_duplicate_flag_names_are_reported() raises:
+    var flags = FlagSet([Flag.new[Bool](name="verbose", usage="V."), Flag.new[String](name="verbose", usage="V.")])
+    testing.assert_equal(_duplicate_flag_problem(flags).value(), "The flag `--verbose` is defined more than once.")
+
+
+def test_duplicate_shorthands_are_reported() raises:
+    var flags = FlagSet(
+        [Flag.new[Bool](name="verbose", shorthand="v", usage="V."), Flag.new[String](name="value", shorthand="v", usage="V.")]
+    )
+    testing.assert_equal(
+        _duplicate_flag_problem(flags).value(), "The shorthand `-v` is given to both `--verbose` and `--value`."
+    )
+
+
+def test_distinct_flags_have_no_problem() raises:
+    var flags = FlagSet(
+        [Flag.new[Bool](name="verbose", shorthand="v", usage="V."), Flag.new[String](name="value", shorthand="x", usage="V.")]
+    )
+    testing.assert_false(Bool(_duplicate_flag_problem(flags)))
+
+
+def test_reserved_flag_names_are_reported() raises:
+    var flags = FlagSet([Flag.new[String](name="help", usage="Mine.")])
+    var builtin = Flag.new[Bool](name="help", shorthand="h", usage="Help.")
+    testing.assert_true("`--help` is defined, but that name is reserved" in _reserved_flag_problem(flags, builtin).value())
+
+    var free = FlagSet([Flag.new[Bool](name="hello", shorthand="h", usage="Mine.")])
+    testing.assert_false(Bool(_reserved_flag_problem(free, builtin)), "a clashing shorthand is not a problem")
 
 
 def main() raises:
