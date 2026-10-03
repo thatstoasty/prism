@@ -57,7 +57,7 @@ def _completes_files(flag: Flag) -> Bool:
         flag: The flag to check.
 
     Returns:
-        True for text flags, `String` and `List[String]`, which most often name a path. False for
+        True for text flags, `String` and lists or arrays of them, which most often name a path. False for
         numbers, which a file name could only be wrong for, and for bools, which take no value.
     """
-    return flag.type == OptType.String or flag.type == OptType(reflect[List[String]].name())
+    return flag.type.element() == OptType.String

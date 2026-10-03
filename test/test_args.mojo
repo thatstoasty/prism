@@ -14,6 +14,7 @@ from std.testing import TestSuite, assert_raises
 
 from prism import Arg, ArgSet, Command, FlagSet
 from prism.arg import _argument_order_problem
+from prism.opt_type import OptType
 
 import prism
 
@@ -238,7 +239,7 @@ def test_variadic_argument_checks_each_value() raises:
     with assert_raises(contains="Invalid value for argument `nums`"):
         _ = _bound(args^, values^)
 
-    var shells: List[Arg] = [Arg.new_list[String](name="shells", usage="Shells.", valid_values=["zsh", "bash"])]
+    var shells: List[Arg] = [Arg.new[List[String]](name="shells", usage="Shells.", valid_values=["zsh", "bash"])]
     var shell_values: List[String] = ["zsh", "fish"]
     with assert_raises(contains="`fish`"):
         _ = _bound(shells^, shell_values^)
@@ -276,9 +277,13 @@ def test_argument_order_rejects_required_after_optional() raises:
     testing.assert_true("The required argument `second`" in problem.value())
 
 
-def test_new_list_takes_element_valid_values() raises:
-    var args: List[Arg] = [Arg.new_list[String](name="shells", usage="Shells.", valid_values=["zsh", "bash"])]
+def test_list_argument_takes_element_valid_values() raises:
+    # `valid_values` for a list argument may name its elements directly, rather than as a list of
+    # lists, which is what `T`'s own type would call for.
+    var args: List[Arg] = [Arg.new[List[String]](name="shells", usage="Shells.", valid_values=["zsh", "bash"])]
     testing.assert_true(args[0].type.is_list_type())
+    var expected_valid: List[String] = ["zsh", "bash"]
+    testing.assert_equal(args[0].valid_values, expected_valid)
 
     var values: List[String] = ["bash", "zsh"]
     var bound = _bound(args^, values^)
@@ -318,6 +323,20 @@ def test_arg_set_require_reports_an_omitted_argument() raises:
 
     with testing.assert_raises(contains="Argument `extra` was not given and has no default."):
         _ = bound.require[String]("extra")
+
+
+def test_valid_values_for_other_types_are_unchanged() raises:
+    # Scalars, and numeric lists given as elements, render the same as before.
+    var env = Arg.new[String](name="env", usage="Env.", valid_values=["staging", "production"])
+    var expected_env: List[String] = ["staging", "production"]
+    testing.assert_equal(env.valid_values, expected_env)
+
+    var nums = Arg.new[List[Int]](name="nums", usage="Numbers.", valid_values=[1, 2])
+    var expected_nums: List[String] = ["1", "2"]
+    testing.assert_equal(nums.valid_values, expected_nums)
+
+    var ratio = Arg.new(name="ratio", usage="Ratio.", default=Optional[Float64](1.0))
+    testing.assert_equal(ratio.type, OptType.Float64)
 
 
 def main() raises:

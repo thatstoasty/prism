@@ -107,10 +107,7 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
           argument as the wrong type reports a parse failure rather than `None`. Its declared type
           has already been checked during binding.
         """
-        comptime assert conforms_to(T, FromValue), String(
-            reflect[T].name(),
-            " does not conform to `FromValue`.",
-        )
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not conform to `FromValue`."
 
         var arg = self.lookup(name)
         if not arg:
@@ -147,10 +144,7 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
         - `get` reads a misspelled name as `None`, the same as an omitted optional argument.
           `require` names the mistake and suggests the closest declared name.
         """
-        comptime assert conforms_to(T, FromValue), String(
-            reflect[T].name(),
-            " does not conform to `FromValue`.",
-        )
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not conform to `FromValue`."
 
         var arg = self.lookup(name)
         if not arg:

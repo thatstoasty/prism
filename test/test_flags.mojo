@@ -395,5 +395,67 @@ def test_value_separator_does_not_split_command_line_values() raises:
     testing.assert_equal(flag_set.get[List[String]]("tags").value(), expected)
 
 
+def test_array_round_trips_through_its_value() raises:
+    var size: Array[Int, 2] = [800, 600]
+    var rendered = size.to_value()
+    testing.assert_equal(rendered, "800\x00600")
+
+    var back = Array[Int, 2].from_value(rendered)
+    testing.assert_equal(back[0], 800)
+    testing.assert_equal(back[1], 600)
+
+
+def test_array_flag_accumulates_repeated_values() raises:
+    var flags: List[Flag] = [Flag.new[Array[Int, 2]](name="size", shorthand="s", usage="Size.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--size", "1024", "-s768"]
+    _ = flag_set.from_args(Span(args))
+    flag_set.validate_flag_values()
+
+    var size = flag_set.require[Array[Int, 2]]("size")
+    testing.assert_equal(size[0], 1024)
+    testing.assert_equal(size[1], 768)
+
+
+def test_array_flag_needs_exactly_its_length() raises:
+    var too_few: List[Flag] = [Flag.new[Array[Int, 2]](name="size", usage="Size.")]
+    var few_set = FlagSet(too_few^)
+    var few_args: List[String] = ["--size", "1"]
+    _ = few_set.from_args(Span(few_args))
+    with assert_raises(contains="Expected 2 values, received 1."):
+        few_set.validate_flag_values()
+
+    var too_many: List[Flag] = [Flag.new[Array[Int, 2]](name="size", usage="Size.")]
+    var many_set = FlagSet(too_many^)
+    var many_args: List[String] = ["--size", "1", "--size", "2", "--size", "3"]
+    _ = many_set.from_args(Span(many_args))
+    with assert_raises(contains="Expected 2 values, received 3."):
+        many_set.validate_flag_values()
+
+
+def test_array_flag_default() raises:
+    var default: Array[String, 2] = ["a", "b"]
+    var flags: List[Flag] = [Flag.new[Array[String, 2]](name="pair", usage="Pair.", default=default^)]
+    var flag_set = FlagSet(flags^)
+    var pair = flag_set.require[Array[String, 2]]("pair")
+    testing.assert_equal(pair[0], "a")
+    testing.assert_equal(pair[1], "b")
+
+
+def test_array_value_separator_splits_environment_values() raises:
+    _ = os.setenv("PRISM_TEST_SIZE", "800,600")
+    var flags: List[Flag] = [
+        Flag.new[Array[Int, 2], value_separator=","](
+            name="size", usage="Size.", environment_variable=String("PRISM_TEST_SIZE")
+        )
+    ]
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(List[String]()))
+    _ = os.unsetenv("PRISM_TEST_SIZE")
+
+    var size = flag_set.require[Array[Int, 2]]("size")
+    testing.assert_equal(size[0], 800)
+    testing.assert_equal(size[1], 600)
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

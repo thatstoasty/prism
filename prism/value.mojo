@@ -160,6 +160,44 @@ __extension List(FromValue):
         return parsed^
 
 
+comptime _ArrayElement = Copyable & FromValue
+"""What an `Array` element must be to be parsed from a flag value."""
+
+
+__extension Array(FromValue):
+    @staticmethod
+    def from_value(value: StringSpan) raises -> Self:
+        """Constructs a fixed-size array from a flag's raw value, one element per value.
+
+        Args:
+            value: The text the flag was given, with elements separated by `LIST_SEPARATOR`.
+
+        Raises:
+            Error: If the number of values is not the array's length, or one does not parse.
+        """
+        comptime assert conforms_to(Self.T, FromValue), String(
+            t"The elements of the Array must conform to `FromValue`. {reflect[Self.T].name()} does not."
+        )
+        comptime assert conforms_to(Self.T, Copyable), String(
+            t"The elements of the Array must be `Copyable`. {reflect[Self.T].name()} is not."
+        )
+        if not value:
+            raise Error(t"Expected {Self.length} values, received 0.")
+        var parts = value.split(sep=LIST_SEPARATOR)
+        if len(parts) != Self.length:
+            raise Error(t"Expected {Self.length} values, received {len(parts)}.")
+
+        # `Array` accepts elements that cannot be destroyed implicitly, so the array is built over
+        # the element type viewed as `_ArrayElement`, which proves it can be, then rebound to `Self`.
+        # There is no constructor that leaves elements uninitialized, so it is filled from the first
+        # element and the rest are overwritten.
+        comptime E = downcast[Self.T, _ArrayElement]
+        var result = Array[E, Self.length](fill=E.from_value(parts[0]))
+        for i in range(1, Self.length):
+            result[i] = E.from_value(parts[i])
+        return rebind_var[Self](result^)
+
+
 comptime ParseCheckFn = def (ImmStringSpan) raises thin -> None
 """Checks that a flag or argument's text parses as its declared type."""
 
@@ -240,9 +278,7 @@ __extension SIMD(ToValue):
         """
         # `Int` is `SIMD[DType.int, 1]` and `UInt` is `SIMD[DType.uint, 1]`, so this one extension
         # covers every integer and float width a flag can hold.
-        comptime assert Self.length == 1, String(
-            "Values hold scalars, not vectors. ", reflect[Self].name(), " has more than one lane."
-        )
+        comptime assert Self.length == 1, t"Values hold scalars, not vectors. {reflect[Self].name()} has more than one lane."
         return String(self)
 
 
@@ -267,4 +303,22 @@ __extension List(ToValue):
                 builder.write(LIST_SEPARATOR)
             builder.write(self[i].to_value())
 
+        return builder^
+
+
+__extension Array(ToValue):
+    def to_value(self) -> String:
+        """Renders the array as a flag's raw value.
+
+        Returns:
+            The elements separated by `LIST_SEPARATOR`.
+        """
+        comptime assert conforms_to(Self.T, ToValue), String(
+            t"The elements of the Array must conform to `ToValue`. {reflect[Self.T].name()} does not."
+        )
+        var builder = String()
+        for i in range(Self.length):
+            if i > 0:
+                builder.write(LIST_SEPARATOR)
+            builder.write(self[i].to_value())
         return builder^

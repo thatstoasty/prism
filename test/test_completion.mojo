@@ -458,5 +458,12 @@ def test_bash_numeric_flag_offers_nothing() raises:
     std.testing.assert_false("--output|-o|--count" in script, script)
 
 
+def test_zsh_array_flag_is_repeatable() raises:
+    var flag = Flag.new[Array[String, 2]](name="pair", usage="Pair")
+    std.testing.assert_equal(_zsh_flag_spec(flag), "'*--pair=[Pair]:pair:_files'")
+
+    var numbers = Flag.new[Array[Int, 2]](name="size", usage="Size")
+    std.testing.assert_equal(_zsh_flag_spec(numbers), "'*--size=[Size]:size:'")
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

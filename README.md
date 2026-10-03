@@ -272,6 +272,44 @@ def main() -> None:
     cli.execute(read_args())
 ```
 
+### Array flags
+
+A flag holding an `Array[T, N]` takes exactly `N` values, one each time the flag is passed, like a
+list flag with a fixed length:
+
+```mojo
+from prism import ArgSet, Command, Flag, FlagSet, read_args
+
+def resize(args: ArgSet, flags: FlagSet) raises -> None:
+    var size = flags.require[Array[Int, 2]]("size")
+    print("resizing to", size[0], "x", size[1])
+
+def main() -> None:
+    var default: Array[Int, 2] = [800, 600]
+    var cli = Command(
+        name="resize",
+        usage="Resize the window.",
+        run=resize,
+        flags=[Flag.new[Array[Int, 2]](name="size", shorthand="s", usage="Window size.", default=default^)],
+    )
+    cli.execute(read_args())
+```
+
+```txt
+> resize --size 1024 --size 768
+resizing to 1024 x 768
+
+> resize --size 1024
+Invalid value for flag `--size`: Expected 2 values, received 1.
+
+Run 'resize --help' for usage.
+```
+
+The count is checked before the command runs, and help shows it: `-s, --size <int>...  Window size.
+(2 values) (default: 800 600)`. `value_separator` works for arrays too, so `SIZE="800,600"` can fill
+one from an environment variable. Positional arguments cannot be arrays; use a `List` argument
+instead.
+
 ### Reading flag values
 
 Flag values are read with `get[T]`, naming the type you expect. It returns `None` when no flag of
@@ -737,7 +775,7 @@ Run 'deploy --help' for usage.
 ```
 
 A list argument declared last takes every remaining value, which suits commands like `cp DEST
-FILES...`. Declare it with `Arg.new_list`, whose `valid_values` constrain each element:
+FILES...`. Its `valid_values` name the values each element may take:
 
 ```mojo
 from prism import Command, Arg, ArgSet, FlagSet, read_args
@@ -751,7 +789,7 @@ def main() -> None:
         name="setup",
         usage="Set up shell completion.",
         run=setup,
-        args=[Arg.new_list[String](name="shells", usage="Shells to set up.", valid_values=["zsh", "bash"])],
+        args=[Arg.new[List[String]](name="shells", usage="Shells to set up.", valid_values=["zsh", "bash"])],
     )
     cli.execute(read_args())
 ```

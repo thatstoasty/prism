@@ -44,7 +44,7 @@ def _render_default(default: String, type: OptType) -> String:
     Returns:
         The default as it should be displayed.
     """
-    if type.is_list_type():
+    if type.takes_multiple_values():
         return default.replace(LIST_SEPARATOR, " ")
     return default
 
@@ -99,10 +99,8 @@ def _value_hint(type: OptType) -> String:
     """
     if type == OptType.Bool:
         return ""
-    if type.is_list_type():
-        # The name is the reflected `List[...]`, so the element type sits between the brackets.
-        var element = type.name[byte = 5 : type.name.byte_length() - 1]
-        return String(_scalar_hint(OptType(element)), "...")
+    if type.takes_multiple_values():
+        return String(_scalar_hint(type.element()), "...")
     return _scalar_hint(type)
 
 
@@ -153,7 +151,10 @@ def _write_flag_section(
         # first line to the column width, which trails whitespace onto the previous line.
         builder.write("\n", column.render(_flag_column(flag, align_long_names)), flag.usage)
 
-        # Trailing annotations: what happens if the flag is omitted, or that it cannot be.
+        # Trailing annotations: how many values an array flag takes, then what happens if the flag
+        # is omitted, or that it cannot be.
+        if flag.type.is_array_type():
+            builder.write(" (", flag.type.array_length(), " values)")
         if flag.required:
             builder.write(" (required)")
         elif flag.default:

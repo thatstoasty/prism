@@ -132,17 +132,25 @@ struct Arg(Copyable, Writable):
         return None
 
     @staticmethod
-    def new[T: Movable & Deinitable](
+    def new[T: Movable & Deinitable, E: Movable & Deinitable = T](
         name: StringSpan,
         usage: StringSpan = "",
         var default: Optional[T] = None,
         required: Bool = True,
-        valid_values: List[T] = [],
+        valid_values: List[E] = [],
     ) -> Self:
         """Constructs a positional argument holding a `T`.
 
+        ```mojo
+        Arg.new[String](name="env", usage="Environment.", valid_values=["staging", "production"])
+        Arg.new[List[String]](name="shells", usage="Shells to set up.", valid_values=["zsh", "bash"])
+        ```
+
         Parameters:
             T: The type of value the argument holds. Must conform to `ToValue` and `FromValue`.
+            E: The type of `valid_values`, inferred from them, so it is never written. It is `T`, or
+                for a list argument, the list's element type, so that `valid_values` constrains
+                each element. Defaults to `T` when no `valid_values` are given.
 
         Args:
             name: The name of the argument. Used to look the value up, and shown uppercased in
@@ -150,8 +158,10 @@ struct Arg(Copyable, Writable):
             usage: What the argument is for. Shown in help output.
             default: The value to use when the argument is omitted. Supplying one makes the
                 argument optional even if `required` is True.
-            required: Whether the argument must be supplied.
-            valid_values: The values the argument accepts. Empty accepts any value.
+            required: Whether the argument must be supplied. For a list argument, whether at least
+                one value must be supplied.
+            valid_values: The values the argument accepts, or for a list argument, the values each
+                element may take. Empty accepts any value.
 
         Returns:
             The argument.
@@ -159,24 +169,50 @@ struct Arg(Copyable, Writable):
         #### Notes:
         - Arguments are bound by position in the order they are declared, and their count, types
           and `valid_values` are checked before the command's `run` function is called.
+        - A list argument takes every remaining positional value, so it must be declared last.
+        - For a list argument, `valid_values` may also be given as whole lists, such as
+          `[["zsh", "bash"]]`. Their elements are what is accepted.
         """
         comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
         comptime assert conforms_to(T, FromValue), String(
             t"`T` must conform to `FromValue`. {reflect[T].name()} does not."
         )
+        comptime assert reflect[T].base_name() != "Array", String(
+            t"Positional `Array` arguments are not supported, since each argument binds one value. "
+            t"Declare a `List` argument last to take the remaining values instead."
+        )
+
+        # A `List[E]` argument whose `valid_values` hold `E` names its elements directly. The
+        # signature cannot spell "the element type of `T`", since conformances added through an
+        # `__extension` give no access to associated types, so `E` is inferred from the values
+        # and checked here instead.
+        comptime is_element = reflect[T].base_name() == "List" and reflect[T].name() == String(
+            "List[", reflect[E].name(), "]"
+        )
+        comptime assert reflect[E].name() == reflect[T].name() or is_element, String(
+            t"`valid_values` must hold {reflect[T].name()}, or its elements when it is a list, "
+            t"not {reflect[E].name()}."
+        )
+        comptime assert conforms_to(E, ToValue), String(
+            t"The values in `valid_values` must conform to `ToValue`. {reflect[E].name()} does not."
+        )
         comptime opt_type = OptType(reflect[T].name())
 
         # `bind` checks a list argument element by element, so a list's valid values are stored as
-        # elements too. Without this, `valid_values=[["zsh", "bash"]]` stored one joined value that
-        # no single element could ever match.
+        # elements. Given as elements, each renders as one value. Given as whole lists, each is split
+        # into its elements: stored whole, `[["zsh", "bash"]]` was one joined value that no single
+        # element could ever match.
         var rendered = List[String]()
         for val in valid_values:
             var text = val.to_value()
-            if opt_type.is_list_type():
-                for element in text.split(LIST_SEPARATOR):
-                    rendered.append(String(element))
-            else:
+            comptime if is_element:
                 rendered.append(text^)
+            else:
+                if opt_type.is_list_type():
+                    for element in text.split(LIST_SEPARATOR):
+                        rendered.append(String(element))
+                else:
+                    rendered.append(text^)
 
         return Self(
             name=String(name),
@@ -187,46 +223,3 @@ struct Arg(Copyable, Writable):
             valid_values=rendered^,
             parse_check=_parse_check[T](),
         )
-
-    @staticmethod
-    def new_list[E: Copyable & Deinitable](
-        name: StringSpan,
-        usage: StringSpan = "",
-        var default: Optional[List[E]] = None,
-        required: Bool = True,
-        valid_values: List[E] = [],
-    ) -> Self:
-        """Constructs a list argument, which takes every remaining positional value.
-
-        ```mojo
-        Arg.new_list[String](name="shells", usage="Shells to set up.", valid_values=["zsh", "bash"])
-        ```
-
-        Parameters:
-            E: The type of each element. Must conform to `ToValue` and `FromValue`.
-
-        Args:
-            name: The name of the argument. Used to look the value up, and shown uppercased in
-                usage text.
-            usage: What the argument is for. Shown in help output.
-            default: The values to use when the argument is omitted. Supplying one makes the
-                argument optional even if `required` is True.
-            required: Whether at least one value must be supplied.
-            valid_values: The values each element may take. Empty accepts any value.
-
-        Returns:
-            The argument, holding a `List[E]`.
-
-        #### Notes:
-        - This is `Arg.new[List[E]]` with `valid_values` given as elements. There, `valid_values`
-          is a `List[List[E]]`, since it holds values of the argument's own type.
-        - A list argument must be declared last, since it takes every value left once the
-          arguments before it are bound.
-        """
-        comptime assert conforms_to(E, ToValue), String(t"`E` must conform to `ToValue`. {reflect[E].name()} does not.")
-        comptime assert conforms_to(E, FromValue), String(
-            t"`E` must conform to `FromValue`. {reflect[E].name()} does not."
-        )
-        var arg = Self.new[List[E]](name, usage, default=default^, required=required)
-        arg.valid_values = [val.to_value() for val in valid_values]
-        return arg^

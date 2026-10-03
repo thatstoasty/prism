@@ -394,5 +394,28 @@ def test_display_name() raises:
     testing.assert_equal(OptType(reflect[List[String]].name()).display_name(), "List[String]")
 
 
+def test_array_types_are_distinct() raises:
+    # The element type and the length are both part of an array flag's type.
+    var flags: List[Flag] = [Flag.new[Array[Int, 2]](name="size", usage="Size.")]
+    var args: List[String] = ["--size", "1", "--size", "2"]
+    var flag_set = _parsed(flags^, args^)
+
+    testing.assert_true(Bool(flag_set.get[Array[Int, 2]]("size")))
+    testing.assert_false(Bool(flag_set.get[Array[Int, 3]]("size")))
+    testing.assert_false(Bool(flag_set.get[Array[String, 2]]("size")))
+    testing.assert_false(Bool(flag_set.get[List[Int]]("size")))
+    with testing.assert_raises(contains="Flag `--size` holds Array[Int, 2], not Array[Int, 3]."):
+        _ = flag_set.require[Array[Int, 3]]("size")
+
+
+def test_array_opt_type() raises:
+    var array = OptType(reflect[Array[Int, 2]].name())
+    testing.assert_true(array.is_array_type())
+    testing.assert_true(array.takes_multiple_values())
+    testing.assert_false(array.is_list_type())
+    testing.assert_equal(array.array_length(), 2)
+    testing.assert_equal(array.element(), OptType.Int)
+    testing.assert_equal(OptType(reflect[Array[String, 3]].name()).display_name(), "Array[String, 3]")
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

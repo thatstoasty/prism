@@ -1,4 +1,39 @@
 """`OptType`, the value type shared by flags and positional arguments."""
+comptime _ARRAY_PREFIX = "std.collections.array.Array["
+"""How the reflected name of an `Array` begins."""
+
+
+def _array_parts(name: StaticString) -> Tuple[StaticString, StaticString]:
+    """Splits the reflected name of an `Array` into its element type and its length.
+
+    Args:
+        name: A reflected name, such as `std.collections.array.Array[SIMD[DType.int, 1], 2 : SIMD[DType.int, 1]]`.
+
+    Returns:
+        The element type's reflected name and the length, such as `SIMD[DType.int, 1]` and `2`.
+    """
+    var inner = name[byte = _ARRAY_PREFIX.byte_length() : name.byte_length() - 1]
+
+    # The element type may contain commas of its own, so split at the first top-level one.
+    var depth = 0
+    var comma = -1
+    for i in range(inner.byte_length()):
+        var byte = inner[byte = i : i + 1]
+        if byte == "[":
+            depth += 1
+        elif byte == "]":
+            depth -= 1
+        elif byte == "," and depth == 0:
+            comma = i
+            break
+
+    var element = inner[byte=0:comma]
+    var rest = inner[byte = comma + 1 :].lstrip(" ")
+    var end = rest.find(" ")
+    var length = rest[byte=0:end] if end != -1 else rest
+    return (element, length)
+
+
 @fieldwise_init
 struct OptType(Equatable, ImplicitlyCopyable, Writable):
     """The type of value a flag or positional argument holds."""
@@ -47,6 +82,8 @@ struct OptType(Equatable, ImplicitlyCopyable, Writable):
     """A list of values that can be converted to/from strings."""
     comptime Custom = Self(16, "Custom")
     """Custom types."""
+    comptime Array = Self(17, "Array")
+    """A fixed-size array of values that can be converted to/from strings."""
 
     def __init__(out self, type: StaticString):
         """Constructs the `OptType` matching a Mojo type's name.
@@ -91,6 +128,10 @@ struct OptType(Equatable, ImplicitlyCopyable, Writable):
             return Self.Float32
         elif type == "SIMD[DType.float64, 1]":
             return Self.Float64
+        elif type.startswith(_ARRAY_PREFIX):
+            # Keep the name: it carries the element type and the length, so arrays of different
+            # elements or lengths stay distinct.
+            return Self(Self.Array.value, type)
         elif type.startswith("List"):
             # Keep the name: `List[String]` and `List[Int]` are different types, and without it a
             # lookup for one matches a flag declared as the other.
@@ -125,19 +166,65 @@ struct OptType(Equatable, ImplicitlyCopyable, Writable):
         """
         return self.value == Self.List.value
 
+    def is_array_type(self) -> Bool:
+        """Returns if the type is a fixed-size array of values.
+
+        Returns:
+            True if the type is an array type, False otherwise.
+        """
+        return self.value == Self.Array.value
+
+    def takes_multiple_values(self) -> Bool:
+        """Returns if a flag of this type collects a value from each time it is passed.
+
+        Returns:
+            True for lists and arrays, False otherwise.
+
+        #### Notes:
+        - Such a flag accumulates when repeated, `--size 800 --size 600`, where any other flag keeps
+          only its last value.
+        """
+        return self.is_list_type() or self.is_array_type()
+
+    def element(self) -> Self:
+        """Returns the element type of a list or array type.
+
+        Returns:
+            The element type, or this type itself when it is neither.
+        """
+        if self.is_list_type():
+            return Self(self.name[byte = 5 : self.name.byte_length() - 1])
+        if self.is_array_type():
+            return Self(_array_parts(self.name)[0])
+        return self
+
+    def array_length(self) -> Int:
+        """Returns the number of elements an array type holds.
+
+        Returns:
+            The array's length, or 0 when this is not an array type.
+        """
+        if not self.is_array_type():
+            return 0
+        try:
+            return atol(_array_parts(self.name)[1])
+        except:
+            return 0
+
     def display_name(self) -> String:
         """Returns the type's name as it would be written in Mojo, for messages.
 
         Returns:
-            The name, such as `Int` or `List[Int]`.
+            The name, such as `Int`, `List[Int]` or `Array[Int, 2]`.
 
         #### Notes:
         - `name` holds the reflected spelling, which for a list reports its elements' internal
           form: `List[SIMD[DType.int, 1]]`. This renders the element type the way it is written.
         """
         if self.is_list_type():
-            var element = self.name[byte = 5 : self.name.byte_length() - 1]
-            return String("List[", Self(element).display_name(), "]")
+            return String("List[", self.element().display_name(), "]")
+        if self.is_array_type():
+            return String("Array[", self.element().display_name(), ", ", self.array_length(), "]")
         return String(self.name)
 
     def is_int_type(self) -> Bool:

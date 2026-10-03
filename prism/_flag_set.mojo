@@ -42,8 +42,8 @@ def _set_flag_value(mut flag: Flag, value: StringSpan) -> None:
     """
     if not flag.changed:
         flag.set(value)
-    elif flag.type.is_list_type():
-        # Repeating a list flag accumulates: `-H "A: 1" -H "B: 2"` is a two-element list.
+    elif flag.type.takes_multiple_values():
+        # Repeating a list or array flag accumulates: `-H "A: 1" -H "B: 2"` is a two-element list.
         flag.value.value().write(LIST_SEPARATOR, value)
     else:
         # Repeating a scalar flag replaces. Appending would turn `--name a --name b` into

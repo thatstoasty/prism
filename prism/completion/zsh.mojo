@@ -54,7 +54,7 @@ def _zsh_flag_spec(flag: Flag) -> String:
     # Text values complete as file names, the most common thing a string flag names. Numbers get no
     # action, since file names would only be wrong there.
     var action = "_files" if _completes_files(flag) else ""
-    var prefix = "'*" if flag.type.is_list_type() else "'"
+    var prefix = "'*" if flag.type.takes_multiple_values() else "'"
 
     if flag.shorthand:
         # Flag has both long and short forms

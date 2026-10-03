@@ -275,8 +275,11 @@ struct Flag(Copyable, Writable):
         """
         comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
         comptime opt_type = OptType(reflect[T].name())
-        comptime assert not value_separator or reflect[T].name().startswith("List"), String(
-            t"`value_separator` splits a value into list elements, but {reflect[T].name()} is not a list."
+        comptime assert (
+            not value_separator or reflect[T].base_name() == "List" or reflect[T].base_name() == "Array"
+        ), String(
+            t"`value_separator` splits a value into list elements, but {reflect[T].name()} is not a "
+            t"list or array."
         )
         return Self(
             name=String(name),

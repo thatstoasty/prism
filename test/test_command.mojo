@@ -307,5 +307,19 @@ def test_reserved_flag_names_are_reported() raises:
     testing.assert_false(Bool(_reserved_flag_problem(free, builtin)), "a clashing shorthand is not a problem")
 
 
+def test_help_shows_array_flags() raises:
+    def dummy(args: ArgSet, flags: FlagSet) raises -> None:
+        return None
+
+    var default: Array[Int, 2] = [800, 600]
+    var cmd = Command(
+        name="app",
+        usage="Base command.",
+        run=dummy,
+        flags=[Flag.new[Array[Int, 2]](name="size", shorthand="s", usage="Window size.", default=default^)],
+    )
+    var help = _help_for(cmd)
+    testing.assert_true("-s, --size <int>...    Window size. (2 values) (default: 800 600)" in help, help)
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()
