@@ -1,5 +1,4 @@
 from std import os, testing
-from std.tempfile import gettempdir
 from prism.flag import Flag
 from prism.opt_type import OptType
 from prism.value import FromValue, ToValue
@@ -87,7 +86,7 @@ struct _Alpha(FromValue, ToValue, ImplicitlyCopyable, Movable):
     var v: Int
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         return Self(atol(value))
 
     def to_value(self) -> String:
@@ -101,7 +100,7 @@ struct _Beta(FromValue, ToValue, ImplicitlyCopyable, Movable):
     var v: Int
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         return Self(atol(value))
 
     def to_value(self) -> String:
@@ -274,57 +273,6 @@ def test_digit_shorthand_wins_over_negative_number() raises:
     testing.assert_true(flag_set.get[Bool]("five").value())
 
 
-def _temp_path(name: StringSpan) raises -> String:
-    return os.path.join(gettempdir().value(), String("prism_test_", name))
-
-
-def test_file_value_drops_trailing_newline() raises:
-    # Regression: the file's trailing newline was kept, so a token file read as "secret\n".
-    var path = _temp_path("token")
-    with open(path, "w") as f:
-        f.write("secret\n")
-
-    var flags: List[Flag] = [Flag.new[String](name="token", usage="Token.", file_path=path)]
-    var flag_set = FlagSet(flags^)
-    _ = flag_set.from_args(Span(List[String]()))
-    os.remove(path)
-
-    testing.assert_equal(flag_set.get[String]("token").value(), "secret")
-
-
-def test_missing_file_leaves_flag_unset() raises:
-    # Regression: a missing file aborted the command, even for an optional flag.
-    var flags: List[Flag] = [
-        Flag.new[String](name="token", usage="Token.", file_path=_temp_path("does_not_exist"))
-    ]
-    var flag_set = FlagSet(flags^)
-    _ = flag_set.from_args(Span(List[String]()))
-
-    testing.assert_false(Bool(flag_set.get[String]("token")))
-
-
-def test_unset_environment_variable_falls_back_to_file() raises:
-    # Regression: a flag with an environment variable never read its file, even when the
-    # variable was unset.
-    var path = _temp_path("fallback")
-    with open(path, "w") as f:
-        f.write("from-file")
-
-    var flags: List[Flag] = [
-        Flag.new[String](
-            name="token",
-            usage="Token.",
-            environment_variable=String("PRISM_TEST_UNSET_VARIABLE"),
-            file_path=path,
-        )
-    ]
-    var flag_set = FlagSet(flags^)
-    _ = flag_set.from_args(Span(List[String]()))
-    os.remove(path)
-
-    testing.assert_equal(flag_set.get[String]("token").value(), "from-file")
-
-
 def test_unknown_shorthand_gets_a_suggestion() raises:
     # Unknown shorthands now raise the same error as unknown long flags, which is what the
     # suggestion lookup keys off.
@@ -353,23 +301,6 @@ def test_value_separator_splits_environment_values() raises:
 
     var expected: List[String] = ["a", "b", "c"]
     testing.assert_equal(flag_set.get[List[String]]("tags").value(), expected)
-
-
-def test_value_separator_splits_file_lines() raises:
-    # One element per line, with blank lines, a trailing newline and Windows line endings dropped.
-    var path = _temp_path("lines")
-    with open(path, "w") as f:
-        f.write("A: 1\r\n\nB: 2\n")
-
-    var flags: List[Flag] = [
-        Flag.new[List[String], value_separator="\n"](name="header", usage="Headers.", file_path=path)
-    ]
-    var flag_set = FlagSet(flags^)
-    _ = flag_set.from_args(Span(List[String]()))
-    os.remove(path)
-
-    var expected: List[String] = ["A: 1", "B: 2"]
-    testing.assert_equal(flag_set.get[List[String]]("header").value(), expected)
 
 
 def test_list_from_environment_without_separator_is_one_element() raises:

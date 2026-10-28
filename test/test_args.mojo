@@ -175,7 +175,7 @@ struct _Tag(FromValue, ToValue, ImplicitlyCopyable, Movable, Writable):
     var v: String
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         if not value.startswith("#"):
             raise Error(t"Tag must start with '#': {value}")
         return Self(String(value))

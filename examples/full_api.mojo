@@ -66,7 +66,6 @@ def main() -> None:
                 usage="Host",
                 persistent=True,
                 environment_variable="CONNECTOR_HOST",
-                file_path="~/.myapp/config",
                 default="localhost",
             ),
             Flag.new[String](

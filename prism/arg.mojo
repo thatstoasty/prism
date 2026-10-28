@@ -173,10 +173,8 @@ struct Arg(Copyable, Writable):
         - For a list argument, `valid_values` may also be given as whole lists, such as
           `[["zsh", "bash"]]`. Their elements are what is accepted.
         """
-        comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
-        comptime assert conforms_to(T, FromValue), String(
-            t"`T` must conform to `FromValue`. {reflect[T].name()} does not."
-        )
+        comptime assert conforms_to(T, ToValue), t"`T` must conform to `ToValue`. {reflect[T].name()} does not."
+        comptime assert conforms_to(T, FromValue), t"`T` must conform to `FromValue`. {reflect[T].name()} does not."
         comptime assert reflect[T].base_name() != "Array", String(
             t"Positional `Array` arguments are not supported, since each argument binds one value. "
             t"Declare a `List` argument last to take the remaining values instead."

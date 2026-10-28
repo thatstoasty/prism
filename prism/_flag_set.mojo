@@ -50,8 +50,8 @@ def _set_flag_value(mut flag: Flag, value: StringSpan) -> None:
         # the single value "a b" rather than letting the last one win.
         flag.set(value)
 
-def _split_fallback_value(flag: Flag, text: StringSpan) -> String:
-    """Splits a value from an environment variable or file into list elements.
+def _split_environment_value(flag: Flag, text: StringSpan) -> String:
+    """Splits a value from an environment variable into list elements.
 
     Args:
         flag: The flag the value is for.
@@ -62,9 +62,7 @@ def _split_fallback_value(flag: Flag, text: StringSpan) -> String:
         `value_separator`.
 
     #### Notes:
-    - Empty elements are dropped, so a trailing separator or blank line adds nothing. With a
-      newline separator, a carriage return ending each line is dropped too, for files written on
-      Windows.
+    - Empty elements are dropped, so a trailing or doubled separator adds nothing.
     """
     if not flag.value_separator:
         return String(text)
@@ -72,37 +70,10 @@ def _split_fallback_value(flag: Flag, text: StringSpan) -> String:
     ref separator = flag.value_separator.value()
     var elements = List[String]()
     for part in text.split(separator):
-        var element = String(part.rstrip("\r")) if separator == "\n" else String(part)
+        var element = String(part)
         if element:
             elements.append(element^)
     return LIST_SEPARATOR.join(elements)
-
-
-def _set_flag_from_file(mut flag: Flag) raises -> None:
-    """Sets a flag from its `file_path`, if that file exists.
-
-    Args:
-        flag: The flag to set. Must have a `file_path`.
-
-    Raises:
-        Error: If the file exists but cannot be read.
-
-    #### Notes:
-    - A missing file leaves the flag unset, the same as an unset environment variable. It used to
-      abort the command even when the flag was optional.
-    - Trailing newlines are dropped. Editors and `echo` add one, and it turned a token file into
-      `"secret\\n"`.
-    """
-    var path = os.path.expanduser(flag.file_path.value())
-    if not os.path.exists(path):
-        return
-
-    try:
-        with open(path, "r") as f:
-            flag.set(_split_fallback_value(flag, f.read().rstrip("\r\n")))
-        flag.from_fallback = True
-    except e:
-        raise Error(t"Failed to read the value for flag `--{flag.name}` from {path}: {e}")
 
 
 @fieldwise_init
@@ -272,21 +243,15 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 parser.index += result.increment
                 state = ParserState.FIND_FLAG
 
-        # Fill flags not passed on the command line from their environment variable, and failing
-        # that from their file. A flag with both falls back to the file when the variable is unset.
+        # Fill flags not passed on the command line from their environment variable.
         for ref flag in self:
-            if flag.value:
+            if flag.value or not flag.environment_variable:
                 continue
 
-            if flag.environment_variable:
-                var value = os.getenv(flag.environment_variable.value())
-                if value != "":
-                    flag.set(_split_fallback_value(flag, value))
-                    flag.from_fallback = True
-                    continue
-
-            if flag.file_path:
-                _set_flag_from_file(flag)
+            var value = os.getenv(flag.environment_variable.value())
+            if value != "":
+                flag.set(_split_environment_value(flag, value))
+                flag.from_environment = True
 
         return remaining_args^
 
@@ -433,7 +398,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Returns:
             Optional Pointer to the Flag.
         """
-        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not implement `FromValue`."
         comptime opt_type = OptType(reflect[T].name())
         for ref flag in self.flags:
             if flag.name == name and flag.type == opt_type:
@@ -470,7 +435,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Returns:
             Optional Pointer to the Flag.
         """
-        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not implement `FromValue`."
         comptime opt_type = OptType(reflect[T].name())
         for ref flag in self.flags:
             if flag.shorthand == name and flag.type == opt_type:
@@ -517,7 +482,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Parameters:
             annotation: The annotation to check for.
             command_line_only: Count a flag as set only when its value came from the command line,
-                not from its environment variable or file.
+                not from its environment variable.
 
         Args:
             flag: The flag to process.
@@ -541,15 +506,12 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 # Seed every member of the group as unset in one dict. Building a fresh dict per
                 # name and assigning it each time leaves only the last name seeded, so a member
                 # that carries the annotation but is never itself visited goes unaccounted for.
-                var entry: Dict[String, Bool] = {}
-                for var name in flag_names^:
-                    entry[name^] = False
-                group_status[group] = entry^
+                group_status[group] = {name^: False for var name in flag_names^}
 
             # If flag.changed = True, then it had a value set on it.
             try:
                 group_status[group][flag.name] = flag.changed and not (
-                    command_line_only and flag.from_fallback
+                    command_line_only and flag.from_environment
                 )
             except e:
                 raise Error(
@@ -580,7 +542,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         # The command line overrides the environment. When a member of a mutually exclusive group
         # was passed on the command line, only command line values count, so `--password x` is not
         # rejected because a `TOKEN` variable happens to be set. With none passed, values from the
-        # environment and files still conflict with each other.
+        # environment still conflict with each other.
         for entry in mutually_exclusive_command_line_status.items():
             for member in entry.value.values():
                 if member:
@@ -613,7 +575,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
           as `None` rather than as a parse failure. `get[Int]("region")` on a `String` flag finds
           nothing, the same as asking for a name that was never declared.
         """
-        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not implement `FromValue`."
         var flag = self.lookup[T](name)
         if not flag:
             return None
@@ -652,7 +614,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
           simply not passed, so the mistake surfaces far from its cause if at all. `require` names
           it, and suggests the closest flag name for a misspelling.
         """
-        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not implement `FromValue`."
         var index = self._index(name)
         if index == -1:
             var message = String(t"No flag named `--{name}` is defined.")

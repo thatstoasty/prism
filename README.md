@@ -209,45 +209,11 @@ def main() -> None:
     cli.execute(read_args())
 ```
 
-### Default flag values from files
-
-Likewise, flag values can also be retrieved from a file as well, if a value is not provided as an argument.
-
-```mojo
-from prism import ArgSet, Command, Flag, FlagSet, read_args
-import prism
-
-def test(args: ArgSet, flags: FlagSet) raises -> None:
-    var name = flags.get[String]("name")
-    if name:
-        print("Hello ", name[])
-
-def main() -> None:
-    var cli = Command(
-        name="greet",
-        usage="Greet a user!",
-        run=test,
-        flags=[
-            Flag.new[String](
-                name="name",
-                shorthand="n",
-                usage="The name of the person to greet.",
-                file_path="~/.myapp/config",
-            )
-        ],
-    )
-    cli.execute(read_args())
-```
-
-A missing file leaves the flag unset rather than failing, and the file's trailing newline is dropped.
-A flag with both an environment variable and a file reads the file when the variable is unset.
-
 #### List flags
 
-A value from an environment variable or file is a single element by default. Give a list flag a
-`value_separator` to split it: `","` reads `TAGS="a,b"` as two tags, and `"\n"` reads one element per
-line of a file, skipping blank lines. Values from the command line are never split, since repeating
-the flag does that.
+A value from an environment variable is a single element by default. Give a list flag a
+`value_separator` to split it: `","` reads `TAGS="a,b"` as two tags, skipping empty ones. Values from
+the command line are never split, since repeating the flag does that.
 
 ```mojo
 from prism import ArgSet, Command, Flag, FlagSet, read_args
@@ -373,7 +339,7 @@ struct Port(FromValue, Copyable, Movable):
     var value: UInt16
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         var parsed = atol(value)
         if parsed < 1 or parsed > 65535:
             raise Error(t"Port out of range: {parsed}")
@@ -389,8 +355,7 @@ The precedence for flag value sources is as follows (highest to lowest):
 
 1. Command line flag value from user
 2. Environment variable (if specified)
-3. Configuration file (if specified)
-4. Default defined on the flag
+3. Default defined on the flag
 
 ### Persistent Flags and Hooks
 

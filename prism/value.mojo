@@ -12,8 +12,8 @@ argument can hold a newline. With NUL, each occurrence of a repeated flag stays 
 and no escaping is needed.
 
 Caveats:
-- A value read from `file_path`, or a string handed to `FlagSet.from_args` directly, could contain
-  a NUL and would be split there.
+- A string handed to `FlagSet.from_args` directly, rather than read from the command line, could
+  contain a NUL and would be split there.
 - A raw list value is not printable as is. Help swaps the separator for spaces when showing a
   default, and anything else that displays one must do the same.
 - A `ToValue` element type must not emit NUL.
@@ -37,7 +37,7 @@ trait FromValue(Movable, Deinitable):
     """
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Constructs the type from a flag's raw value.
 
         Args:
@@ -54,7 +54,7 @@ trait FromValue(Movable, Deinitable):
 
 __extension String(FromValue):
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Constructs a `String` from a flag's raw value.
 
         Args:
@@ -68,7 +68,7 @@ __extension String(FromValue):
 
 __extension Bool(FromValue):
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Constructs a `Bool` from a flag's raw value.
 
         Args:
@@ -77,7 +77,6 @@ __extension Bool(FromValue):
         Raises:
             Error: If the text is not a recognized boolean spelling.
         """
-        # Same spellings as `strconv.ParseBool`, matching `_util.string_to_bool`.
         if value == "1" or value == "t" or value == "T" or value == "true" or value == "True" or value == "TRUE":
             return True
         elif value == "0" or value == "f" or value == "F" or value == "false" or value == "False" or value == "FALSE":
@@ -92,7 +91,7 @@ __extension Bool(FromValue):
 
 __extension SIMD(FromValue):
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Constructs a scalar from a flag's raw value.
 
         Args:
@@ -103,9 +102,7 @@ __extension SIMD(FromValue):
         """
         # `Int` is `SIMD[DType.int, 1]` and `UInt` is `SIMD[DType.uint, 1]`, so this one extension
         # covers every integer and float width a flag can hold.
-        comptime assert Self.length == 1, String(
-            "Flags hold scalars, not vectors. ", reflect[Self].name(), " has more than one lane."
-        )
+        comptime assert Self.length == 1, t"Flags hold scalars, not vectors. {reflect[Self].name()} has more than one lane."
         comptime if Self.dtype in (DType.float16, DType.float32, DType.float64):
             return Scalar[Self.dtype](atof(value))
         else:
@@ -135,7 +132,7 @@ __extension SIMD(FromValue):
 
 __extension List(FromValue):
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Constructs a list from a flag's raw value.
 
         Args:
@@ -166,7 +163,7 @@ comptime _ArrayElement = Copyable & FromValue
 
 __extension Array(FromValue):
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Constructs a fixed-size array from a flag's raw value, one element per value.
 
         Args:
@@ -193,7 +190,7 @@ __extension Array(FromValue):
         # element and the rest are overwritten.
         comptime E = downcast[Self.T, _ArrayElement]
         var result = Array[E, Self.length](fill=E.from_value(parts[0]))
-        for i in range(1, Self.length):
+        comptime for i in range(1, Self.length):
             result[i] = E.from_value(parts[i])
         return rebind_var[Self](result^)
 
@@ -219,9 +216,7 @@ def _parse_check[T: Movable & Deinitable]() -> ParseCheckFn:
     - `T` is bounded loosely and asserted instead, because a type conforming through an
       `__extension` does not satisfy a `FromValue` parameter bound.
     """
-    comptime assert conforms_to(T, FromValue), String(
-        t"`T` must conform to `FromValue`. {reflect[T].name()} does not."
-    )
+    comptime assert conforms_to(T, FromValue), t"`T` must conform to `FromValue`. {reflect[T].name()} does not."
 
     def check(value: ImmStringSpan) raises -> None:
         _ = T.from_value(value)
@@ -317,7 +312,7 @@ __extension Array(ToValue):
             t"The elements of the Array must conform to `ToValue`. {reflect[Self.T].name()} does not."
         )
         var builder = String()
-        for i in range(Self.length):
+        comptime for i in range(Self.length):
             if i > 0:
                 builder.write(LIST_SEPARATOR)
             builder.write(self[i].to_value())

@@ -62,8 +62,6 @@ struct Flag(Copyable, Writable):
     """The value of the flag."""
     var environment_variable: Optional[String]
     """If no value is provided, will optionally check this environment variable for a value."""
-    var file_path: Optional[String]
-    """If no value is provided, will optionally check read this file for a value. `environment_variable` takes precedence over this option."""
     var default: Optional[String]
     """The default value of the flag."""
     var type: OptType
@@ -74,15 +72,14 @@ struct Flag(Copyable, Writable):
     """Function to run after the flag has been processed."""
     var changed: Bool
     """If the flag has been changed from its default value."""
-    var from_fallback: Bool
-    """If the flag's value came from its `environment_variable` or `file_path` rather than the
-    command line."""
+    var from_environment: Bool
+    """If the flag's value came from its `environment_variable` rather than the command line."""
     var required: Bool
     """If the flag is required."""
     var persistent: Bool
     """If the flag should persist to children commands."""
     var value_separator: Optional[String]
-    """Splits a list flag's value from its `environment_variable` or `file_path` into elements."""
+    """Splits a list flag's value from its `environment_variable` into elements."""
     var parse_check: ParseCheckFn
     """Raises if the flag's value does not parse as its declared type."""
 
@@ -94,7 +91,6 @@ struct Flag(Copyable, Writable):
         shorthand: String = "",
         usage: String = "",
         environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
         default: Optional[String] = None,
         required: Bool = False,
@@ -110,28 +106,26 @@ struct Flag(Copyable, Writable):
             shorthand: The shorthand of the flag.
             usage: The usage of the flag.
             environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
             action: Function to run after the flag has been processed.
             default: The default value of the flag.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
             parse_check: Raises if the flag's value does not parse as `type`. Prefer `Flag.new`,
                 which derives this from its `T`.
-            value_separator: Splits a list flag's value from its environment variable or file into
-                elements. Prefer `Flag.new`, which checks the flag is a list.
+            value_separator: Splits a list flag's value from its environment variable into elements.
+                Prefer `Flag.new`, which checks the flag is a list.
         """
         self.name = name
         self.shorthand = shorthand
         self.usage = usage
         self.value = None
         self.environment_variable = environment_variable
-        self.file_path = file_path
         self.default = default
         self.type = type
         self.annotations = Dict[Annotation, List[String]]()
         self.action = action
         self.changed = False
-        self.from_fallback = False
+        self.from_environment = False
         self.required = required
         self.persistent = persistent
         self.parse_check = parse_check
@@ -237,7 +231,6 @@ struct Flag(Copyable, Writable):
         shorthand: ImmStringSpan = "",
         var default: Optional[T] = None,
         environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
         required: Bool = False,
         persistent: Bool = False,
@@ -247,10 +240,10 @@ struct Flag(Copyable, Writable):
         Parameters:
             T: The type of value the flag holds. Must conform to `ToValue`, and to `FromValue` to
                 be read back with `FlagSet.get`.
-            value_separator: Splits a value read from `environment_variable` or `file_path` into
-                elements, such as `","` for `TAGS="a,b"` or `"\\n"` for one element per line of a
-                file. Only for list flags. Without it, such a value is a single element. Values
-                from the command line are never split, since repeating the flag does that.
+            value_separator: Splits a value read from `environment_variable` into elements, such
+                as `","` for `TAGS="a,b"`. Only for list and array flags. Without it, such a value
+                is a single element. Values from the command line are never split, since repeating
+                the flag does that.
 
         Args:
             name: The name of the flag, matched as `--name`.
@@ -260,8 +253,6 @@ struct Flag(Copyable, Writable):
                 optional even if `required` is True.
             environment_variable: An environment variable to read the value from when the flag is
                 not passed.
-            file_path: A file to read the value from when the flag is not passed and the
-                environment variable is unset.
             action: A function to run once the flag has been parsed.
             required: Whether the flag must be passed.
             persistent: Whether child commands inherit the flag.
@@ -273,21 +264,21 @@ struct Flag(Copyable, Writable):
         - `T` determines the flag's `OptType`, which is what tells the parser whether the flag takes
           a following value. A `Bool` flag consumes nothing, so `--verbose` stands alone.
         """
-        comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
-        comptime opt_type = OptType(reflect[T].name())
+        comptime base_type = reflect[T].base_name()
+        comptime assert conforms_to(T, ToValue), t"`T` must conform to `ToValue`. {reflect[T].name()} does not."
         comptime assert (
-            not value_separator or reflect[T].base_name() == "List" or reflect[T].base_name() == "Array"
+            not value_separator or base_type == "List" or base_type == "Array"
         ), String(
             t"`value_separator` splits a value into list elements, but {reflect[T].name()} is not a "
             t"list or array."
         )
+        comptime opt_type = OptType(reflect[T].name())
         return Self(
             name=String(name),
             shorthand=String(shorthand),
             usage=String(usage),
             type=opt_type,
             environment_variable=environment_variable,
-            file_path=file_path,
             action=action,
             required=required and not default,
             persistent=persistent,
