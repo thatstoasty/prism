@@ -1,10 +1,12 @@
-from std import testing
+from std import os, testing
 from prism.flag import Flag
 from prism.opt_type import OptType
 from prism.value import FromValue, ToValue
 from std.testing import TestSuite, assert_raises
 
 from prism import ArgSet, Command, FlagSet, Version
+
+from prism.suggest import flag_from_error, suggest_flag
 
 
 def dummy(args: ArgSet, flags: FlagSet) -> None:
@@ -84,7 +86,7 @@ struct _Alpha(FromValue, ToValue, ImplicitlyCopyable, Movable):
     var v: Int
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         return Self(atol(value))
 
     def to_value(self) -> String:
@@ -98,7 +100,7 @@ struct _Beta(FromValue, ToValue, ImplicitlyCopyable, Movable):
     var v: Int
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         return Self(atol(value))
 
     def to_value(self) -> String:
@@ -190,6 +192,201 @@ def test_list_element_types_do_not_collide() raises:
         Bool(flag_set.get[List[Int]]("tags")), "a list of a different element type should not match"
     )
 
+
+def test_repeated_list_flag_keeps_each_value_whole() raises:
+    # Regression: repeated values were joined and split on spaces, so curl-style headers
+    # `-H "A: 1" -H "B: 2"` read back as ["A:", "1", "B:", "2"].
+    var flags: List[Flag] = [Flag.new[List[String]](name="header", shorthand="H", usage="Headers.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["-H", "A: 1", "--header", "B: 2", "-H=C: 3"]
+    _ = flag_set.from_args(Span(args))
+
+    var expected: List[String] = ["A: 1", "B: 2", "C: 3"]
+    testing.assert_equal(flag_set.get[List[String]]("header").value(), expected)
+
+
+def test_flag_values_are_checked_against_their_type() raises:
+    # Regression: `--port abc` parsed cleanly and only failed inside `run`, when the handler read
+    # it, after the pre-run hooks had already run, and without naming the flag.
+    var flags: List[Flag] = [
+        Flag.new[Int](name="port", usage="Port."),
+        Flag.new[List[Int]](name="nums", usage="Numbers."),
+    ]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--port", "abc"]
+    _ = flag_set.from_args(Span(args))
+    with assert_raises(contains="--port"):
+        flag_set.validate_flag_values()
+
+    var list_flags: List[Flag] = [Flag.new[List[Int]](name="nums", usage="Numbers.")]
+    var list_set = FlagSet(list_flags^)
+    var list_args: List[String] = ["--nums", "1", "--nums", "x"]
+    _ = list_set.from_args(Span(list_args))
+    with assert_raises(contains="--nums"):
+        list_set.validate_flag_values()
+
+
+def test_valid_flag_values_pass_the_check() raises:
+    var flags: List[Flag] = [Flag.new[Int](name="port", usage="Port."), Flag.new[String](name="name", usage="Name.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--port", "8080", "--name", "x"]
+    _ = flag_set.from_args(Span(args))
+    flag_set.validate_flag_values()
+
+
+def test_empty_list_default_reads_as_an_empty_list() raises:
+    # Regression: an empty list rendered as "", which split back into one empty element, so the
+    # default read as `[""]`, or failed to parse for a list of numbers.
+    var flags: List[Flag] = [
+        Flag.new[List[String]](name="tags", usage="Tags.", default=List[String]()),
+        Flag.new[List[Int]](name="nums", usage="Numbers.", default=List[Int]()),
+    ]
+    var flag_set = FlagSet(flags^)
+    testing.assert_equal(len(flag_set.get[List[String]]("tags").value()), 0)
+    testing.assert_equal(len(flag_set.get[List[Int]]("nums").value()), 0)
+
+
+def test_dash_and_negative_numbers_are_values() raises:
+    # Regression: anything starting with `-` went to the shorthand parser, so `-` (stdin) and `-5`
+    # could not be positional arguments, and `--out -` was rejected as a missing value.
+    var flags: List[Flag] = [
+        Flag.new[String](name="out", shorthand="o", usage="Output."),
+        Flag.new[Int](name="num", shorthand="n", usage="Number."),
+    ]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["-", "-5", "--out", "-", "-n", "-3"]
+    var remaining = flag_set.from_args(Span(args))
+
+    var expected: List[String] = ["-", "-5"]
+    testing.assert_equal(remaining, expected)
+    testing.assert_equal(flag_set.get[String]("out").value(), "-")
+    testing.assert_equal(flag_set.get[Int]("num").value(), -3)
+
+
+def test_digit_shorthand_wins_over_negative_number() raises:
+    var flags: List[Flag] = [Flag.new[Bool](name="five", shorthand="5", usage="Five.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["-5"]
+    var remaining = flag_set.from_args(Span(args))
+
+    testing.assert_equal(len(remaining), 0)
+    testing.assert_true(flag_set.get[Bool]("five").value())
+
+
+def test_unknown_shorthand_gets_a_suggestion() raises:
+    # Unknown shorthands now raise the same error as unknown long flags, which is what the
+    # suggestion lookup keys off.
+    var flags: List[Flag] = [Flag.new[Bool](name="verbose", shorthand="v", usage="Verbose.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["-V"]
+    try:
+        _ = flag_set.from_args(Span(args))
+        testing.assert_true(False, "expected an unknown flag error")
+    except e:
+        var name = flag_from_error(e)
+        testing.assert_equal(name.value(), "V")
+        testing.assert_equal(suggest_flag(flag_set.flags, name.value()), "-v")
+
+
+def test_value_separator_splits_environment_values() raises:
+    _ = os.setenv("PRISM_TEST_TAGS", "a,b,,c")
+    var flags: List[Flag] = [
+        Flag.new[List[String], value_separator=","](
+            name="tags", usage="Tags.", environment_variable=String("PRISM_TEST_TAGS")
+        )
+    ]
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(List[String]()))
+    _ = os.unsetenv("PRISM_TEST_TAGS")
+
+    var expected: List[String] = ["a", "b", "c"]
+    testing.assert_equal(flag_set.get[List[String]]("tags").value(), expected)
+
+
+def test_list_from_environment_without_separator_is_one_element() raises:
+    _ = os.setenv("PRISM_TEST_TAGS_WHOLE", "a,b")
+    var flags: List[Flag] = [
+        Flag.new[List[String]](name="tags", usage="Tags.", environment_variable=String("PRISM_TEST_TAGS_WHOLE"))
+    ]
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(List[String]()))
+    _ = os.unsetenv("PRISM_TEST_TAGS_WHOLE")
+
+    var expected: List[String] = ["a,b"]
+    testing.assert_equal(flag_set.get[List[String]]("tags").value(), expected)
+
+
+def test_value_separator_does_not_split_command_line_values() raises:
+    var flags: List[Flag] = [Flag.new[List[String], value_separator=","](name="tags", usage="Tags.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--tags", "a,b"]
+    _ = flag_set.from_args(Span(args))
+
+    var expected: List[String] = ["a,b"]
+    testing.assert_equal(flag_set.get[List[String]]("tags").value(), expected)
+
+
+def test_array_round_trips_through_its_value() raises:
+    var size: Array[Int, 2] = [800, 600]
+    var rendered = size.to_value()
+    testing.assert_equal(rendered, "800\x00600")
+
+    var back = Array[Int, 2].from_value(rendered)
+    testing.assert_equal(back[0], 800)
+    testing.assert_equal(back[1], 600)
+
+
+def test_array_flag_accumulates_repeated_values() raises:
+    var flags: List[Flag] = [Flag.new[Array[Int, 2]](name="size", shorthand="s", usage="Size.")]
+    var flag_set = FlagSet(flags^)
+    var args: List[String] = ["--size", "1024", "-s768"]
+    _ = flag_set.from_args(Span(args))
+    flag_set.validate_flag_values()
+
+    var size = flag_set.require[Array[Int, 2]]("size")
+    testing.assert_equal(size[0], 1024)
+    testing.assert_equal(size[1], 768)
+
+
+def test_array_flag_needs_exactly_its_length() raises:
+    var too_few: List[Flag] = [Flag.new[Array[Int, 2]](name="size", usage="Size.")]
+    var few_set = FlagSet(too_few^)
+    var few_args: List[String] = ["--size", "1"]
+    _ = few_set.from_args(Span(few_args))
+    with assert_raises(contains="Expected 2 values, received 1."):
+        few_set.validate_flag_values()
+
+    var too_many: List[Flag] = [Flag.new[Array[Int, 2]](name="size", usage="Size.")]
+    var many_set = FlagSet(too_many^)
+    var many_args: List[String] = ["--size", "1", "--size", "2", "--size", "3"]
+    _ = many_set.from_args(Span(many_args))
+    with assert_raises(contains="Expected 2 values, received 3."):
+        many_set.validate_flag_values()
+
+
+def test_array_flag_default() raises:
+    var default: Array[String, 2] = ["a", "b"]
+    var flags: List[Flag] = [Flag.new[Array[String, 2]](name="pair", usage="Pair.", default=default^)]
+    var flag_set = FlagSet(flags^)
+    var pair = flag_set.require[Array[String, 2]]("pair")
+    testing.assert_equal(pair[0], "a")
+    testing.assert_equal(pair[1], "b")
+
+
+def test_array_value_separator_splits_environment_values() raises:
+    _ = os.setenv("PRISM_TEST_SIZE", "800,600")
+    var flags: List[Flag] = [
+        Flag.new[Array[Int, 2], value_separator=","](
+            name="size", usage="Size.", environment_variable=String("PRISM_TEST_SIZE")
+        )
+    ]
+    var flag_set = FlagSet(flags^)
+    _ = flag_set.from_args(Span(List[String]()))
+    _ = os.unsetenv("PRISM_TEST_SIZE")
+
+    var size = flag_set.require[Array[Int, 2]]("size")
+    testing.assert_equal(size[0], 800)
+    testing.assert_equal(size[1], 600)
 
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

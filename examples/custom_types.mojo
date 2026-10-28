@@ -8,7 +8,7 @@ struct Duration(FromValue, ToValue, ImplicitlyCopyable, Movable, Writable):
     var seconds: Int
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Parses `30s`, `5m` or `2h` into a number of seconds."""
         if value.byte_length() < 2:
             raise Error(t"Expected a duration like `30s`, `5m` or `2h`. Received: `{value}`")
@@ -42,7 +42,7 @@ struct Endpoint(FromValue, ToValue, ImplicitlyCopyable, Movable, Writable):
     var port: UInt16
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Parses `host:port`, rejecting a port outside the valid range."""
         var separator = value.find(":")
         if separator == -1:

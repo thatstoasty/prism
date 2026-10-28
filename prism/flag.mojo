@@ -1,30 +1,52 @@
 """Flags, their types, and the annotations used to group them."""
+from std.hash import Hasher
+
 from prism.opt_type import OptType
 from prism._util import _to_opt_string
-from prism.value import FromValue, ToValue, String, Bool, SIMD, List
+from prism.value import FromValue, ParseCheckFn, ToValue, String, Bool, SIMD, List, _parse_check
 
 comptime FlagActionFn = def (String) raises thin -> None
 """The type of a function that runs after a flag has been processed."""
 
 
 # Flag Group annotations
-@fieldwise_init
-struct Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
+__enum Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
     """An annotation for a flag or a group of flags."""
-    var value: UInt8
-    """The value of the annotation."""
 
     # Individual flag annotations
-    comptime REQUIRED = Self(0)
+    case required
     """Annotation to mark a flag as required."""
 
     # Flag Group annotations
-    comptime REQUIRED_AS_GROUP = Self(1)
+    case required_as_group
     """Annotation to mark a group of flags as required as a group. All flags in the group must be set for it to be valid."""
-    comptime ONE_REQUIRED = Self(2)
+    case one_required
     """Annotation to mark a group of flags as required. At least one flag in the group must be set for it to be valid."""
-    comptime MUTUALLY_EXCLUSIVE = Self(3)
+    case mutually_exclusive
     """Annotation to mark a group of flags as mutually exclusive. Only one flag in the group can be set for it to be valid."""
+
+    # Enums do not derive `__eq__` or `__hash__` yet.
+    def __eq__(self, other: Self) -> Bool:
+        """Compares two annotations for equality.
+
+        Args:
+            other: The annotation to compare against.
+
+        Returns:
+            True if both are the same annotation.
+        """
+        return self._get_enum_discriminant() == other._get_enum_discriminant()
+
+    def __hash__[H: Hasher](self, mut hasher: H) -> None:
+        """Hashes the annotation.
+
+        Parameters:
+            H: The type of the hasher.
+
+        Args:
+            hasher: The hasher to update.
+        """
+        self._get_enum_discriminant().__hash__(hasher)
 
     def write_to(self, mut writer: Some[Writer]) -> None:
         """Writes the annotation to a writer.
@@ -32,16 +54,15 @@ struct Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
         Args:
             writer: The writer to write the annotation to.
         """
-        if self == Self.REQUIRED:
-            writer.write("REQUIRED")
-        elif self == Self.REQUIRED_AS_GROUP:
-            writer.write("REQUIRED_AS_GROUP")
-        elif self == Self.ONE_REQUIRED:
-            writer.write("ONE_REQUIRED")
-        elif self == Self.MUTUALLY_EXCLUSIVE:
-            writer.write("MUTUALLY_EXCLUSIVE")
-        else:
-            writer.write("unknown_annotation")
+        match self:
+            case .required:
+                writer.write("required")
+            case .required_as_group:
+                writer.write("required_as_group")
+            case .one_required:
+                writer.write("one_required")
+            case .mutually_exclusive:
+                writer.write("mutually_exclusive")
 
 
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of
@@ -62,8 +83,6 @@ struct Flag(Copyable, Writable):
     """The value of the flag."""
     var environment_variable: Optional[String]
     """If no value is provided, will optionally check this environment variable for a value."""
-    var file_path: Optional[String]
-    """If no value is provided, will optionally check read this file for a value. `environment_variable` takes precedence over this option."""
     var default: Optional[String]
     """The default value of the flag."""
     var type: OptType
@@ -74,10 +93,16 @@ struct Flag(Copyable, Writable):
     """Function to run after the flag has been processed."""
     var changed: Bool
     """If the flag has been changed from its default value."""
+    var from_environment: Bool
+    """If the flag's value came from its `environment_variable` rather than the command line."""
     var required: Bool
     """If the flag is required."""
     var persistent: Bool
     """If the flag should persist to children commands."""
+    var value_separator: Optional[String]
+    """Splits a list flag's value from its `environment_variable` into elements."""
+    var parse_check: ParseCheckFn
+    """Raises if the flag's value does not parse as its declared type."""
 
     def __init__(
         out self,
@@ -87,11 +112,12 @@ struct Flag(Copyable, Writable):
         shorthand: String = "",
         usage: String = "",
         environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
         default: Optional[String] = None,
         required: Bool = False,
         persistent: Bool = False,
+        parse_check: ParseCheckFn = _parse_check[String](),
+        value_separator: Optional[String] = None,
     ):
         """Initializes a new Flag.
 
@@ -101,25 +127,30 @@ struct Flag(Copyable, Writable):
             shorthand: The shorthand of the flag.
             usage: The usage of the flag.
             environment_variable: The environment variable to check for a value.
-            file_path: The file to check for a value.
             action: Function to run after the flag has been processed.
             default: The default value of the flag.
             required: If the flag is required.
             persistent: If the flag should persist to children commands.
+            parse_check: Raises if the flag's value does not parse as `type`. Prefer `Flag.new`,
+                which derives this from its `T`.
+            value_separator: Splits a list flag's value from its environment variable into elements.
+                Prefer `Flag.new`, which checks the flag is a list.
         """
         self.name = name
         self.shorthand = shorthand
         self.usage = usage
         self.value = None
         self.environment_variable = environment_variable
-        self.file_path = file_path
         self.default = default
         self.type = type
         self.annotations = Dict[Annotation, List[String]]()
         self.action = action
         self.changed = False
+        self.from_environment = False
         self.required = required
         self.persistent = persistent
+        self.parse_check = parse_check
+        self.value_separator = value_separator
 
     def __eq__(self, other: Self) -> Bool:
         """Compares two Flags for equality.
@@ -214,14 +245,13 @@ struct Flag(Copyable, Writable):
         return names^
 
     @staticmethod
-    def new[T: AnyType](
+    def new[T: AnyType, *, value_separator: StaticString = ""](
         name: ImmStringSpan,
         usage: ImmStringSpan,
         *,
         shorthand: ImmStringSpan = "",
         var default: Optional[T] = None,
         environment_variable: Optional[String] = None,
-        file_path: Optional[String] = None,
         action: Optional[FlagActionFn] = None,
         required: Bool = False,
         persistent: Bool = False,
@@ -231,6 +261,10 @@ struct Flag(Copyable, Writable):
         Parameters:
             T: The type of value the flag holds. Must conform to `ToValue`, and to `FromValue` to
                 be read back with `FlagSet.get`.
+            value_separator: Splits a value read from `environment_variable` into elements, such
+                as `","` for `TAGS="a,b"`. Only for list and array flags. Without it, such a value
+                is a single element. Values from the command line are never split, since repeating
+                the flag does that.
 
         Args:
             name: The name of the flag, matched as `--name`.
@@ -240,8 +274,6 @@ struct Flag(Copyable, Writable):
                 optional even if `required` is True.
             environment_variable: An environment variable to read the value from when the flag is
                 not passed.
-            file_path: A file to read the value from when the flag is not passed and the
-                environment variable is unset.
             action: A function to run once the flag has been parsed.
             required: Whether the flag must be passed.
             persistent: Whether child commands inherit the flag.
@@ -253,7 +285,14 @@ struct Flag(Copyable, Writable):
         - `T` determines the flag's `OptType`, which is what tells the parser whether the flag takes
           a following value. A `Bool` flag consumes nothing, so `--verbose` stands alone.
         """
-        comptime assert conforms_to(T, ToValue), String(t"`T` must conform to `ToValue`. {reflect[T].name()} does not.")
+        comptime base_type = reflect[T].base_name()
+        comptime assert conforms_to(T, ToValue), t"`T` must conform to `ToValue`. {reflect[T].name()} does not."
+        comptime assert (
+            not value_separator or base_type == "List" or base_type == "Array"
+        ), String(
+            t"`value_separator` splits a value into list elements, but {reflect[T].name()} is not a "
+            t"list or array."
+        )
         comptime opt_type = OptType(reflect[T].name())
         return Self(
             name=String(name),
@@ -261,9 +300,10 @@ struct Flag(Copyable, Writable):
             usage=String(usage),
             type=opt_type,
             environment_variable=environment_variable,
-            file_path=file_path,
             action=action,
             required=required and not default,
             persistent=persistent,
             default=default^.and_then(_to_opt_string[T]),
+            parse_check=_parse_check[T](),
+            value_separator=Optional[String](String(value_separator)) if value_separator else None,
         )

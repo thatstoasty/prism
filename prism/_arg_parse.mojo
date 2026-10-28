@@ -11,64 +11,56 @@ def parse_args_from_command_line(args: Span[StaticString, ImmStaticOrigin]) -> L
     return [ String(arg) for arg in args[1:] ]
 
 
-@fieldwise_init
-struct STDINParserState(ImplicitlyCopyable, Equatable, TrivialRegisterPassable):
-    """State of the parser when reading from stdin."""
-
-    var value: UInt8
-    """Internal value representing the state of the parser."""
-    comptime FIND_TOKEN = Self(0)
-    """State when the parser is looking for the start of a token."""
-    comptime FIND_ARG = Self(1)
-    """State when the parser is looking for the end of a token."""
-
-
 comptime DOUBLE_QUOTE = '"'
 """A constant representing a double quote character."""
-comptime DOUBLE_DASH = "--"
-"""A constant representing a double dash string."""
+
 
 def parse_args_from_stdin(str: StringSpan) -> List[String]:
-    """Reads arguments from stdin and returns them as a list of strings.
+    """Splits a line of input into arguments, the way a shell splits a command line.
+
+    Arguments are separated by whitespace. Double quotes group text, spaces included, into one
+    argument, and can appear mid-argument: `--name="a b"` is the single argument `--name=a b`.
 
     Args:
         str: The input string to parse.
 
     Returns:
         The arguments read from stdin as a list of strings.
+
+    #### Notes:
+    - `--` is kept as an argument. It used to stop parsing and drop everything after it, when
+      `--` is what marks the rest as positional, so `--weird` could not be passed through.
+    - `""` is an empty argument rather than nothing, and quoted whitespace is kept.
+    - A quote left open at the end of the input closes there.
     """
-    var state = STDINParserState.FIND_TOKEN
-    var token = ""
     var args = List[String]()
+    var token = String()
+    # Whether an argument has started, which `""` does without adding any text to it.
+    var in_token = False
+    var quoted = False
 
     for char in str.codepoint_slices():
-        if state == STDINParserState.FIND_TOKEN:
-            if char.isspace() or char == DOUBLE_QUOTE:
-                if token != "":
-                    if token == DOUBLE_DASH:
-                        break
-                    args.append(token^)
-                    token = ""
-                if char == DOUBLE_QUOTE:
-                    state = STDINParserState.FIND_ARG
-                continue
-            token.write(char)
-        else:
-            if DOUBLE_QUOTE != char:
-                token.write(char)
+        if quoted:
+            if char == DOUBLE_QUOTE:
+                quoted = False
             else:
-                if token != "":
-                    args.append(token^)
-                    token = ""
-                state = STDINParserState.FIND_TOKEN
+                token.write(char)
+            continue
 
-    if state == STDINParserState.FIND_TOKEN:
-        if token and token != DOUBLE_DASH:
-            args.append(token)
-    else:
-        # Not an empty string and not a space
-        if token and not token.isspace():
-            args.append(token)
+        if char == DOUBLE_QUOTE:
+            quoted = True
+            in_token = True
+        elif char.is_ascii_whitespace():
+            if in_token:
+                args.append(token^)
+                token = String()
+                in_token = False
+        else:
+            token.write(char)
+            in_token = True
+
+    if in_token:
+        args.append(token^)
 
     return args^
 

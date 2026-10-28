@@ -6,7 +6,7 @@ Prism is a Mojo library designed to help you build command-line interfaces (CLI)
 
 Inspired by: `Cobra` and `urfave/cli`!
 
-![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-1.1.0-orange)
+![Mojo Version](https://img.shields.io/badge/Mojo%F0%9F%94%A5-1.2.0-orange)
 ![Build Status](https://github.com/thatstoasty/prism/actions/workflows/build.yml/badge.svg)
 ![Test Status](https://github.com/thatstoasty/prism/actions/workflows/test.yml/badge.svg)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -28,7 +28,7 @@ There's two ways to build `prism` from source: directly from the Git repository 
 Run the following commands in your terminal:
 
 ```bash
-pixi add prism --git "https://github.com/thatstoasty/prism.git" --tag "v0.4.2" && pixi install
+pixi add prism --git "https://github.com/thatstoasty/prism.git" --tag "v0.5.0" && pixi install
 ```
 
 #### Building from source: Local
@@ -209,35 +209,72 @@ def main() -> None:
     cli.execute(read_args())
 ```
 
-### Default flag values from files
+#### List flags
 
-Likewise, flag values can also be retrieved from a file as well, if a value is not provided as an argument.
+A value from an environment variable is a single element by default. Give a list flag a
+`value_separator` to split it: `","` reads `TAGS="a,b"` as two tags, skipping empty ones. Values from
+the command line are never split, since repeating the flag does that.
 
 ```mojo
 from prism import ArgSet, Command, Flag, FlagSet, read_args
-import prism
 
 def test(args: ArgSet, flags: FlagSet) raises -> None:
-    var name = flags.get[String]("name")
-    if name:
-        print("Hello ", name[])
+    for tag in flags.get[List[String]]("tags").or_else([]):
+        print("tag:", tag)
 
 def main() -> None:
     var cli = Command(
-        name="greet",
-        usage="Greet a user!",
+        name="tag",
+        usage="Print tags.",
         run=test,
         flags=[
-            Flag.new[String](
-                name="name",
-                shorthand="n",
-                usage="The name of the person to greet.",
-                file_path="~/.myapp/config",
+            Flag.new[List[String], value_separator=","](
+                name="tags",
+                usage="Tags to print.",
+                environment_variable="TAGS",
             )
         ],
     )
     cli.execute(read_args())
 ```
+
+### Array flags
+
+A flag holding an `Array[T, N]` takes exactly `N` values, one each time the flag is passed, like a
+list flag with a fixed length:
+
+```mojo
+from prism import ArgSet, Command, Flag, FlagSet, read_args
+
+def resize(args: ArgSet, flags: FlagSet) raises -> None:
+    var size = flags.require[Array[Int, 2]]("size")
+    print("resizing to", size[0], "x", size[1])
+
+def main() -> None:
+    var default: Array[Int, 2] = [800, 600]
+    var cli = Command(
+        name="resize",
+        usage="Resize the window.",
+        run=resize,
+        flags=[Flag.new[Array[Int, 2]](name="size", shorthand="s", usage="Window size.", default=default^)],
+    )
+    cli.execute(read_args())
+```
+
+```txt
+> resize --size 1024 --size 768
+resizing to 1024 x 768
+
+> resize --size 1024
+Invalid value for flag `--size`: Expected 2 values, received 1.
+
+Run 'resize --help' for usage.
+```
+
+The count is checked before the command runs, and help shows it: `-s, --size <int>...  Window size.
+(2 values) (default: 800 600)`. `value_separator` works for arrays too, so `SIZE="800,600"` can fill
+one from an environment variable. Positional arguments cannot be arrays; use a `List` argument
+instead.
 
 ### Reading flag values
 
@@ -251,7 +288,7 @@ def handler(args: ArgSet, flags: FlagSet) raises -> None:
     var region = flags.get[String]("region")
     var port = flags.get[Int]("port")
     var tags = flags.get[List[String]]("tags")
-    print("region:", region.or_else(String("none")), "port:", port.or_else(0))
+    print("region:", region.or_else("none"), "port:", port.or_else(0))
 
 def main() -> None:
     var cli = Command(
@@ -267,9 +304,30 @@ def main() -> None:
     cli.execute(read_args())
 ```
 
-`get[T]` matches on the flag's name alone, and raises if the value cannot be read as a `T`. Asking
-for `get[Int]("region")` on a string flag reports that the value is not a number rather than quietly
-yielding nothing.
+`get[T]` matches on the flag's name and type, and raises if the value cannot be read as a `T`. A
+name that no flag has, or a flag of another type, reads as `None`, the same as a flag that was not
+passed, so `get[Int]("region")` on a string flag, or a misspelled name, quietly yields nothing.
+
+`require[T]` returns the value itself rather than an `Optional`, and raises instead of yielding
+`None`, naming the cause: a misspelled name (with the closest match), the wrong type, or a flag that
+was not set and has no default. `ArgSet` has the same pair of methods for arguments.
+
+```mojo
+from prism import ArgSet, Command, FlagSet, Flag, read_args
+
+def handler(args: ArgSet, flags: FlagSet) raises -> None:
+    var port = flags.require[Int]("port")  # Int, not Optional[Int]
+    print("binding to port", port)
+
+def main() -> None:
+    var cli = Command(
+        name="serve",
+        usage="Serve the app.",
+        run=handler,
+        flags=[Flag.new[Int](name="port", usage="Port to bind.", default=Optional[Int](8080))],
+    )
+    cli.execute(read_args())
+```
 
 `T` can be any type conforming to `FromValue`, so a type of your own works too:
 
@@ -281,7 +339,7 @@ struct Port(FromValue, Copyable, Movable):
     var value: UInt16
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         var parsed = atol(value)
         if parsed < 1 or parsed > 65535:
             raise Error(t"Port out of range: {parsed}")
@@ -297,8 +355,7 @@ The precedence for flag value sources is as follows (highest to lowest):
 
 1. Command line flag value from user
 2. Environment variable (if specified)
-3. Configuration file (if specified)
-4. Default defined on the flag
+3. Default defined on the flag
 
 ### Persistent Flags and Hooks
 
@@ -487,7 +544,7 @@ In these cases:
 
 ### Suggesting alternative flags
 
-If a flag is not provided, you can suggest an alternative flag to the user. This can be useful for providing hints to the user about what they may have meant to type.
+When a user mistypes a flag or subcommand, prism suggests the closest match. This is on by default; pass `suggest=False` to turn it off.
 
 ```mojo
 from prism import ArgSet, Command, Flag, FlagSet, read_args
@@ -681,6 +738,33 @@ deploy: Invalid value for argument `env`: `dev`. Valid values are: staging, prod
 
 Run 'deploy --help' for usage.
 ```
+
+A list argument declared last takes every remaining value, which suits commands like `cp DEST
+FILES...`. Its `valid_values` name the values each element may take:
+
+```mojo
+from prism import Command, Arg, ArgSet, FlagSet, read_args
+
+def setup(args: ArgSet, flags: FlagSet) raises -> None:
+    for shell in args.get[List[String]]("shells").value():
+        print("setting up", shell)
+
+def main() -> None:
+    var cli = Command(
+        name="setup",
+        usage="Set up shell completion.",
+        run=setup,
+        args=[Arg.new[List[String]](name="shells", usage="Shells to set up.", valid_values=["zsh", "bash"])],
+    )
+    cli.execute(read_args())
+```
+
+```txt
+Usage: setup [OPTIONS] SHELLS...
+```
+
+A list argument must be declared last, since it leaves no values for anything after it; declaring
+one earlier is reported when the command is built.
 
 An argument is required unless it is given a `default`. `ArgSet` still exposes the raw values, so
 `len(args)`, `args[0]` and iteration all work as before, and a command that declares no arguments

@@ -2,6 +2,27 @@
 from std.builtin.rebind import downcast
 
 
+comptime LIST_SEPARATOR = "\0"
+"""Separates the elements of a list flag's raw value.
+
+Why NUL: argv entries and environment variables are C strings, which end at the first NUL byte, so
+no value from the command line can contain one. Every printable separator collides with some real
+value: spaces split `-H "A: 1"`, commas split `Accept: text/html, application/json`, and a quoted
+argument can hold a newline. With NUL, each occurrence of a repeated flag stays exactly one element
+and no escaping is needed.
+
+Caveats:
+- A string handed to `FlagSet.from_args` directly, rather than read from the command line, could
+  contain a NUL and would be split there.
+- A raw list value is not printable as is. Help swaps the separator for spaces when showing a
+  default, and anything else that displays one must do the same.
+- A `ToValue` element type must not emit NUL.
+
+Storing list values as `List[String]` on `Flag` would remove the in-band separator entirely, but
+`Flag.value` and `FromValue.from_value` are string based, so that is a breaking API change.
+"""
+
+
 trait FromValue(Movable, Deinitable):
     """A type that can be constructed from the text a flag was given on the command line.
 
@@ -16,7 +37,7 @@ trait FromValue(Movable, Deinitable):
     """
 
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Constructs the type from a flag's raw value.
 
         Args:
@@ -33,7 +54,7 @@ trait FromValue(Movable, Deinitable):
 
 __extension String(FromValue):
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Constructs a `String` from a flag's raw value.
 
         Args:
@@ -47,7 +68,7 @@ __extension String(FromValue):
 
 __extension Bool(FromValue):
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Constructs a `Bool` from a flag's raw value.
 
         Args:
@@ -56,7 +77,6 @@ __extension Bool(FromValue):
         Raises:
             Error: If the text is not a recognized boolean spelling.
         """
-        # Same spellings as `strconv.ParseBool`, matching `_util.string_to_bool`.
         if value == "1" or value == "t" or value == "T" or value == "true" or value == "True" or value == "TRUE":
             return True
         elif value == "0" or value == "f" or value == "F" or value == "false" or value == "False" or value == "FALSE":
@@ -71,7 +91,7 @@ __extension Bool(FromValue):
 
 __extension SIMD(FromValue):
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
+    def from_value(value: ImmStringSpan) raises -> Self:
         """Constructs a scalar from a flag's raw value.
 
         Args:
@@ -82,9 +102,7 @@ __extension SIMD(FromValue):
         """
         # `Int` is `SIMD[DType.int, 1]` and `UInt` is `SIMD[DType.uint, 1]`, so this one extension
         # covers every integer and float width a flag can hold.
-        comptime assert Self.length == 1, String(
-            "Flags hold scalars, not vectors. ", reflect[Self].name(), " has more than one lane."
-        )
+        comptime assert Self.length == 1, t"Flags hold scalars, not vectors. {reflect[Self].name()} has more than one lane."
         comptime if Self.dtype in (DType.float16, DType.float32, DType.float64):
             return Scalar[Self.dtype](atof(value))
         else:
@@ -114,22 +132,96 @@ __extension SIMD(FromValue):
 
 __extension List(FromValue):
     @staticmethod
-    def from_value(value: StringSpan) raises -> Self:
-        """Constructs a list from a flag's space separated raw value.
+    def from_value(value: ImmStringSpan) raises -> Self:
+        """Constructs a list from a flag's raw value.
 
         Args:
-            value: The text the flag was given, with elements separated by spaces.
+            value: The text the flag was given, with elements separated by `LIST_SEPARATOR`.
 
         Raises:
             Error: If an element does not parse as the list's element type.
+
+        #### Notes:
+        - An empty value is an empty list. `to_value` renders an empty list as `""`, and splitting
+          that yields one empty element, so an empty default read back as `[""]`, or failed to
+          parse for a `List[Int]`. The cost is that a lone `--tags ""` also reads as empty.
         """
         comptime assert conforms_to(Self.T, FromValue), String(t"The type of the list elements must conform to `FromValue`. {reflect[Self.T].name()} does not.")
 
         # We checked if it conforms to FromValue, so we can downcast here.
         var parsed = List[downcast[Self.T, FromValue]]()
-        for item in value.split(sep=" "):
+        if not value:
+            return parsed^
+        for item in value.split(sep=LIST_SEPARATOR):
             parsed.append(Self.T.from_value(item))
         return parsed^
+
+
+comptime _ArrayElement = Copyable & FromValue
+"""What an `Array` element must be to be parsed from a flag value."""
+
+
+__extension Array(FromValue):
+    @staticmethod
+    def from_value(value: ImmStringSpan) raises -> Self:
+        """Constructs a fixed-size array from a flag's raw value, one element per value.
+
+        Args:
+            value: The text the flag was given, with elements separated by `LIST_SEPARATOR`.
+
+        Raises:
+            Error: If the number of values is not the array's length, or one does not parse.
+        """
+        comptime assert conforms_to(Self.T, FromValue), String(
+            t"The elements of the Array must conform to `FromValue`. {reflect[Self.T].name()} does not."
+        )
+        comptime assert conforms_to(Self.T, Copyable), String(
+            t"The elements of the Array must be `Copyable`. {reflect[Self.T].name()} is not."
+        )
+        if not value:
+            raise Error(t"Expected {Self.length} values, received 0.")
+        var parts = value.split(sep=LIST_SEPARATOR)
+        if len(parts) != Self.length:
+            raise Error(t"Expected {Self.length} values, received {len(parts)}.")
+
+        # `Array` accepts elements that cannot be destroyed implicitly, so the array is built over
+        # the element type viewed as `_ArrayElement`, which proves it can be, then rebound to `Self`.
+        # There is no constructor that leaves elements uninitialized, so it is filled from the first
+        # element and the rest are overwritten.
+        comptime E = downcast[Self.T, _ArrayElement]
+        var result = Array[E, Self.length](fill=E.from_value(parts[0]))
+        comptime for i in range(1, Self.length):
+            result[i] = E.from_value(parts[i])
+        return rebind_var[Self](result^)
+
+
+comptime ParseCheckFn = def (ImmStringSpan) raises thin -> None
+"""Checks that a flag or argument's text parses as its declared type."""
+
+
+def _parse_check[T: Movable & Deinitable]() -> ParseCheckFn:
+    """Builds the parse check for a flag or argument declared as `T`.
+
+    Parameters:
+        T: The type the flag or argument holds.
+
+    Returns:
+        A function that raises if its input does not parse as a `T`.
+
+    #### Notes:
+    - Parsing only has the runtime `OptType`, which cannot name a user-defined type, so it could
+      never dispatch to the right `from_value`. Capturing it here, where `T` is still known, is
+      what lets every type be checked the same way instead of a switch that silently skipped
+      lists and custom types.
+    - `T` is bounded loosely and asserted instead, because a type conforming through an
+      `__extension` does not satisfy a `FromValue` parameter bound.
+    """
+    comptime assert conforms_to(T, FromValue), t"`T` must conform to `FromValue`. {reflect[T].name()} does not."
+
+    def check(value: ImmStringSpan) raises -> None:
+        _ = T.from_value(value)
+
+    return check
 
 
 trait ToValue(Movable, Deinitable):
@@ -181,23 +273,21 @@ __extension SIMD(ToValue):
         """
         # `Int` is `SIMD[DType.int, 1]` and `UInt` is `SIMD[DType.uint, 1]`, so this one extension
         # covers every integer and float width a flag can hold.
-        comptime assert Self.length == 1, String(
-            "Values hold scalars, not vectors. ", reflect[Self].name(), " has more than one lane."
-        )
+        comptime assert Self.length == 1, t"Values hold scalars, not vectors. {reflect[Self].name()} has more than one lane."
         return String(self)
 
 
 __extension List(ToValue):
     def to_value(self) -> String:
-        """Renders the list as a flag's space separated raw value.
+        """Renders the list as a flag's raw value.
 
         Returns:
-            The elements separated by spaces.
+            The elements separated by `LIST_SEPARATOR`.
 
         #### Notes:
-        - This has to be the inverse of `List.from_value`, which splits on spaces. `String(self)`
-          renders a list as `[a, b]`, which that split reads back as `["[a,", "b]"]`, so a list
-          flag's default never survived the round trip.
+        - This has to be the inverse of `List.from_value`, which splits on `LIST_SEPARATOR`.
+          `String(self)` renders a list as `[a, b]`, which does not split back into its elements,
+          so a list flag's default would not survive the round trip.
         """
         comptime assert conforms_to(Self.T, ToValue), String(
             t"The elements of the List must conform to `ToValue`. {reflect[Self.T].name()} does not."
@@ -205,7 +295,25 @@ __extension List(ToValue):
         var builder = String()
         for i in range(len(self)):
             if i > 0:
-                builder.write(" ")
+                builder.write(LIST_SEPARATOR)
             builder.write(self[i].to_value())
 
+        return builder^
+
+
+__extension Array(ToValue):
+    def to_value(self) -> String:
+        """Renders the array as a flag's raw value.
+
+        Returns:
+            The elements separated by `LIST_SEPARATOR`.
+        """
+        comptime assert conforms_to(Self.T, ToValue), String(
+            t"The elements of the Array must conform to `ToValue`. {reflect[Self.T].name()} does not."
+        )
+        var builder = String()
+        comptime for i in range(Self.length):
+            if i > 0:
+                builder.write(LIST_SEPARATOR)
+            builder.write(self[i].to_value())
         return builder^

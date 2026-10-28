@@ -7,10 +7,11 @@ from prism._flag_group import (
     validate_one_required_flag_group,
     validate_required_flag_group,
 )
-from prism._flag_parser import FlagParser
+from prism._flag_parser import FlagParser, _is_flag
 from prism.flag import Flag, FlagActionFn, Annotation
 from prism.opt_type import OptType
-from prism.value import FromValue
+from prism.suggest import suggest_name
+from prism.value import FromValue, LIST_SEPARATOR
 
 
 comptime FlagVisitorFn = def (Flag) thin -> None
@@ -19,35 +20,59 @@ comptime FlagVisitorRaisingFn = def (Flag) raises thin -> None
 """Function perform some action while visiting all flags. Can raise."""
 
 
-@fieldwise_init
-struct ParserState(TrivialRegisterPassable, Writable, Equatable):
+__enum ParserState(ImplicitlyCopyable):
     """State of the parser when parsing flags from the command line."""
-    var value: UInt8
-    """Internal value representing the state of the parser."""
-    comptime FIND_FLAG = Self(0)
+
+    case FIND_FLAG
     """State when the parser is trying to find the next flag in the arguments."""
-    comptime PARSE_FLAG = Self(1)
+    case PARSE_FLAG
     """State when the parser is trying to parse a flag that starts with '--' and is in the format of either '--flag=value' or '--flag value'."""
-    comptime PARSE_SHORTHAND_FLAG = Self(2)
+    case PARSE_SHORTHAND_FLAG
     """State when the parser is trying to parse a shorthand flag that starts with '-' and can be in the format of either '-f=value', '-f value', or a combination of multiple bool shorthand flags like '-abc' which is equivalent to '-a -b -c'."""
 
 
-def _set_flag_value(mut flags: FlagSet, name: ImmStringSpan, value: StringSpan) raises -> None:
-    # Set the value of the flag.
-    var flag = flags.lookup(name)
-    if not flag:
-        raise Error(
-            t"FlagSet.from_args: Failed to set flag, {name}, with value: {value}. Flag could not be found."
-        )
-    if not flag.value()[].changed:
-        flag.value()[].set(value)
-    elif flag.value()[].type.is_list_type():
-        # Repeating a list flag accumulates: `--tags a --tags b` is a two-element list.
-        flag.value()[].value.value().write(" ", value)
+def _set_flag_value(mut flag: Flag, value: StringSpan) -> None:
+    """Sets a flag parsed from the command line.
+
+    Args:
+        flag: The flag to set. The parser returns its index, so it is reached without a lookup.
+        value: The value to set.
+    """
+    if not flag.changed:
+        flag.set(value)
+    elif flag.type.takes_multiple_values():
+        # Repeating a list or array flag accumulates: `-H "A: 1" -H "B: 2"` is a two-element list.
+        flag.value.value().write(LIST_SEPARATOR, value)
     else:
         # Repeating a scalar flag replaces. Appending would turn `--name a --name b` into
         # the single value "a b" rather than letting the last one win.
-        flag.value()[].set(value)
+        flag.set(value)
+
+def _split_environment_value(flag: Flag, text: StringSpan) -> String:
+    """Splits a value from an environment variable into list elements.
+
+    Args:
+        flag: The flag the value is for.
+        text: The value.
+
+    Returns:
+        The value with its elements joined by `LIST_SEPARATOR`, or unchanged when the flag has no
+        `value_separator`.
+
+    #### Notes:
+    - Empty elements are dropped, so a trailing or doubled separator adds nothing.
+    """
+    if not flag.value_separator:
+        return String(text)
+
+    ref separator = flag.value_separator.value()
+    var elements = List[String]()
+    for part in text.split(separator):
+        var element = String(part)
+        if element:
+            elements.append(element^)
+    return LIST_SEPARATOR.join(elements)
+
 
 @fieldwise_init
 struct _FlagSetIter[mut: Bool, //, origin: Origin[mut=mut]](Copyable, Iterator):
@@ -153,7 +178,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         var flag = self.lookup(name)
         if not flag:
             raise Error(
-                t"FlagSet.set_annotation: Failed to set flag, {name}, with the following annotation: {annotation}, because the flag could not be found."
+                t"Cannot mark `--{name}` as {annotation}: the flag is not defined."
             )
 
         try:
@@ -179,54 +204,53 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         while parser.index < len(arguments):
             ref argument = arguments[parser.index]
 
-            # Find the next flag in the set of arguments.
-            if state == ParserState.FIND_FLAG:
-                # A bare `--` ends flag parsing. Everything after it is positional, even when it
-                # looks like a flag, which is how a value such as `--weird` is passed through.
-                if argument == "--":
-                    parser.index += 1
-                    while parser.index < len(arguments):
-                        remaining_args.append(arguments[parser.index])
+            match state:
+                # Find the next flag in the set of arguments.
+                case .FIND_FLAG:
+                    # A bare `--` ends flag parsing. Everything after it is positional, even when it
+                    # looks like a flag, which is how a value such as `--weird` is passed through.
+                    if argument == "--":
                         parser.index += 1
-                    break
+                        while parser.index < len(arguments):
+                            remaining_args.append(arguments[parser.index])
+                            parser.index += 1
+                        break
 
-                # Positional argument
-                if not argument.startswith("-", 0, 1):
-                    parser.index += 1
-                    remaining_args.append(argument)
-                    continue
+                    # Positional argument, including a bare `-` and negative numbers.
+                    if not _is_flag(argument, self):
+                        parser.index += 1
+                        remaining_args.append(argument)
+                        continue
 
-                if argument.startswith("--", 0, 2):
-                    state = ParserState.PARSE_FLAG
-                else:
-                    state = ParserState.PARSE_SHORTHAND_FLAG
+                    if argument.startswith("--", 0, 2):
+                        state = ParserState.PARSE_FLAG
+                    else:
+                        state = ParserState.PARSE_SHORTHAND_FLAG
 
-            # Parse out a flag and set the value on the flag.
-            elif state == ParserState.PARSE_FLAG:
-                var result = parser.parse_flag(argument, self)
-                _set_flag_value(self, result.name, result.value)
-                parser.index += result.increment
-                state = ParserState.FIND_FLAG
+                # Parse out a flag and set the value on the flag.
+                case .PARSE_FLAG:
+                    var result = parser.parse_flag(argument, self)
+                    _set_flag_value(self.flags[result.index], result.value)
+                    parser.index += result.increment
+                    state = ParserState.FIND_FLAG
 
-            # Parse out shorthand flag(s) and set the value on the flag(s).
-            elif state == ParserState.PARSE_SHORTHAND_FLAG:
-                var result = parser.parse_shorthand_flag(argument, self)
-                for name in result.names:
-                    _set_flag_value(self, name, result.value)
-                parser.index += result.increment
-                state = ParserState.FIND_FLAG
+                # Parse out shorthand flag(s) and set the value on the flag(s).
+                case .PARSE_SHORTHAND_FLAG:
+                    var result = parser.parse_shorthand_flag(argument, self)
+                    for i in range(len(result.indices)):
+                        _set_flag_value(self.flags[result.indices[i]], result.values[i])
+                    parser.index += result.increment
+                    state = ParserState.FIND_FLAG
 
-        # If flags are not set, check if they can be set from an environment variable or from a file.
-        # Set it from that value if there is one available.
+        # Fill flags not passed on the command line from their environment variable.
         for ref flag in self:
-            if not flag.value:
-                if flag.environment_variable:
-                    var value = os.getenv(flag.environment_variable.value())
-                    if value != "":
-                        flag.set(value)
-                elif flag.file_path:
-                    with open(os.path.expanduser(flag.file_path.value()), "r") as f:
-                        flag.set(f.read())
+            if flag.value or not flag.environment_variable:
+                continue
+
+            var value = os.getenv(flag.environment_variable.value())
+            if value != "":
+                flag.set(_split_environment_value(flag, value))
+                flag.from_environment = True
 
         return remaining_args^
 
@@ -273,13 +297,76 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Raises:
             Error: If a required flag is not set.
         """
-        var missing_flag_names = List[String]()
+        var missing = List[String]()
         for flag in self:
             if flag.required and not flag.changed:
-                missing_flag_names.append(flag.name)
+                missing.append(String(t"--{flag.name}"))
 
-        if len(missing_flag_names) > 0:
-            raise Error(t"Required flag(s): {missing_flag_names} not set.")
+        if missing:
+            raise Error(t"Missing required flag(s): {', '.join(missing)}.")
+
+    def validate_flag_values(self) raises -> None:
+        """Validates that every flag given a value can be read as its declared type.
+
+        Raises:
+            Error: Naming the first flag whose value does not parse.
+
+        #### Notes:
+        - Without this, `--port abc` parsed cleanly and only failed when `run` called `get`, after
+          the pre-run hooks had already had their side effects, and without naming the flag.
+        - Defaults are not checked. `Flag.new` renders them from a typed value, so they parse.
+        """
+        for flag in self.flags:
+            if not flag.value:
+                continue
+
+            try:
+                flag.parse_check(flag.value.value())
+            except e:
+                raise Error(t"Invalid value for flag `--{flag.name}`: {e}")
+
+    def _index(self, name: ImmStringSpan) -> Int:
+        """Returns the index of the flag with the given name.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The flag's index in `flags`, or -1 if no flag has that name.
+
+        #### Notes:
+        - The parser hands this index back so the value can be set without scanning again.
+        """
+        for i in range(len(self.flags)):
+            if self.flags[i].name == name:
+                return i
+        return -1
+
+    def _shorthand_index(self, shorthand: ImmStringSpan) -> Int:
+        """Returns the index of the flag with the given shorthand.
+
+        Args:
+            shorthand: The shorthand of the flag.
+
+        Returns:
+            The flag's index in `flags`, or -1 if no flag has that shorthand.
+        """
+        for i in range(len(self.flags)):
+            if self.flags[i].shorthand == shorthand:
+                return i
+        return -1
+
+    def _longest_shorthand_length(self) -> Int:
+        """Returns the length of the longest shorthand defined, in codepoints.
+
+        Returns:
+            The length, or 0 when no flag has a shorthand.
+        """
+        var longest = 0
+        for flag in self.flags:
+            if flag.shorthand:
+                longest = max(longest, flag.shorthand.count_codepoints())
+        return longest
 
     def lookup(ref self, name: ImmStringSpan) -> Optional[Pointer[Flag, origin_of(self.flags)]]:
         """Returns an mutable or immutable Pointer to a Flag with the given name.
@@ -310,7 +397,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Returns:
             Optional Pointer to the Flag.
         """
-        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not implement `FromValue`."
         comptime opt_type = OptType(reflect[T].name())
         for ref flag in self.flags:
             if flag.name == name and flag.type == opt_type:
@@ -347,7 +434,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         Returns:
             Optional Pointer to the Flag.
         """
-        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not implement `FromValue`."
         comptime opt_type = OptType(reflect[T].name())
         for ref flag in self.flags:
             if flag.shorthand == name and flag.type == opt_type:
@@ -387,12 +474,14 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         return True
 
     def process_group_annotations[
-        annotation: Annotation
+        annotation: Annotation, *, command_line_only: Bool = False
     ](self, flag: Flag, mut group_status: Dict[String, Dict[String, Bool]]) raises -> None:
         """Processes a flag for a group annotation.
 
         Parameters:
             annotation: The annotation to check for.
+            command_line_only: Count a flag as set only when its value came from the command line,
+                not from its environment variable.
 
         Args:
             flag: The flag to process.
@@ -416,22 +505,21 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
                 # Seed every member of the group as unset in one dict. Building a fresh dict per
                 # name and assigning it each time leaves only the last name seeded, so a member
                 # that carries the annotation but is never itself visited goes unaccounted for.
-                var entry: Dict[String, Bool] = {}
-                for var name in flag_names^:
-                    entry[name^] = False
-                group_status[group] = entry^
+                group_status[group] = {name^: False for var name in flag_names^}
 
             # If flag.changed = True, then it had a value set on it.
             try:
-                group_status[group][flag.name] = flag.changed
+                group_status[group][flag.name] = flag.changed and not (
+                    command_line_only and flag.from_environment
+                )
             except e:
                 raise Error(
-                    t"process_group_annotations: Failed to set group status for annotation {annotation.value}: ", e
+                    t"Failed to check the {annotation} group containing `--{flag.name}`: ", e
                 )
 
     def validate_flag_groups(self) raises -> None:
         """Validates the status of flag groups.
-        Checks for flags annotated with the `REQUIRED_AS_GROUP`, `ONE_REQUIRED`, or `MUTUALLY_EXCLUSIVE` annotations.
+        Checks for flags annotated with the `required_as_group`, `one_required`, or `mutually_exclusive` annotations.
         Then validates if the flags in the group are set correctly to satisfy the annotation.
 
         Raises:
@@ -440,11 +528,25 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         var group_status = Dict[String, Dict[String, Bool]]()
         var one_required_group_status = Dict[String, Dict[String, Bool]]()
         var mutually_exclusive_group_status = Dict[String, Dict[String, Bool]]()
+        var mutually_exclusive_command_line_status = Dict[String, Dict[String, Bool]]()
 
         for flag in self.flags:
-            self.process_group_annotations[Annotation.REQUIRED_AS_GROUP](flag, group_status)
-            self.process_group_annotations[Annotation.ONE_REQUIRED](flag, one_required_group_status)
-            self.process_group_annotations[Annotation.MUTUALLY_EXCLUSIVE](flag, mutually_exclusive_group_status)
+            self.process_group_annotations[Annotation.required_as_group](flag, group_status)
+            self.process_group_annotations[Annotation.one_required](flag, one_required_group_status)
+            self.process_group_annotations[Annotation.mutually_exclusive](flag, mutually_exclusive_group_status)
+            self.process_group_annotations[Annotation.mutually_exclusive, command_line_only=True](
+                flag, mutually_exclusive_command_line_status
+            )
+
+        # The command line overrides the environment. When a member of a mutually exclusive group
+        # was passed on the command line, only command line values count, so `--password x` is not
+        # rejected because a `TOKEN` variable happens to be set. With none passed, values from the
+        # environment still conflict with each other.
+        for entry in mutually_exclusive_command_line_status.items():
+            for member in entry.value.values():
+                if member:
+                    mutually_exclusive_group_status[entry.key] = entry.value.copy()
+                    break
 
         # Validate required flag groups
         validate_required_flag_group(group_status)
@@ -472,13 +574,61 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
           as `None` rather than as a parse failure. `get[Int]("region")` on a `String` flag finds
           nothing, the same as asking for a name that was never declared.
         """
-        comptime assert conforms_to(T, FromValue), String(t"{reflect[T].name()} does not implement `FromValue`.")
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not implement `FromValue`."
         var flag = self.lookup[T](name)
         if not flag:
             return None
 
-        var result = flag.value()[].value_or_default()
-        if not result:
-            return None
+        # Parse straight from the stored text. `value_or_default` returns a copy of it, which cost an
+        # allocation on every call.
+        ref found = flag.value()[]
+        if found.value:
+            return T.from_value(found.value.value())
+        if found.default:
+            return T.from_value(found.default.value())
+        return None
 
-        return T.from_value(result.value())
+    def require[T: AnyType](self, name: ImmStringSpan) raises -> T:
+        """Returns the value of a flag as a `T`, raising where `get` would return `None`.
+
+        ```mojo
+        var port = flags.require[Int]("port")
+        ```
+
+        Parameters:
+            T: The type to read the flag as. Must conform to `FromValue`.
+
+        Args:
+            name: The name of the flag.
+
+        Returns:
+            The flag's value, or its default when it was not set.
+
+        Raises:
+            Error: If no flag has that name, the flag holds a different type, it has neither a
+                value nor a default, or its value cannot be read as a `T`.
+
+        #### Notes:
+        - `get` reads a misspelled name, or the wrong type, as `None`, the same as a flag that was
+          simply not passed, so the mistake surfaces far from its cause if at all. `require` names
+          it, and suggests the closest flag name for a misspelling.
+        """
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not implement `FromValue`."
+        var index = self._index(name)
+        if index == -1:
+            var message = String(t"No flag named `--{name}` is defined.")
+            var suggestion = suggest_name(Span(self.names()), name)
+            if suggestion:
+                message.write(t" Did you mean `--{suggestion}`?")
+            raise Error(message)
+
+        ref flag = self.flags[index]
+        comptime expected = OptType(reflect[T].name())
+        if flag.type != expected:
+            raise Error(t"Flag `--{name}` holds {flag.type.display_name()}, not {expected.display_name()}.")
+
+        if flag.value:
+            return T.from_value(flag.value.value())
+        if flag.default:
+            return T.from_value(flag.default.value())
+        raise Error(t"Flag `--{name}` was not set and has no default.")

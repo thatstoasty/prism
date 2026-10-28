@@ -3,7 +3,7 @@
 from prism.command import Command
 from prism.flag import Flag
 from prism.opt_type import OptType
-from prism.completion.shared import SMALL_BUFFER_SIZE, DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates
+from prism.completion.shared import DEFAULT_BUFFER_SIZE, SCRIPT_HEADER, _arg_candidates, _completes_files
 
 
 def _zsh_escape(s: StringSpan, mut writer: Some[Writer]):
@@ -51,7 +51,10 @@ def _zsh_flag_spec(flag: Flag) -> String:
     var escaped_usage = String(capacity_bytes=DEFAULT_BUFFER_SIZE)
     _zsh_escape(flag.usage, escaped_usage)
     var is_bool = flag.type == OptType.Bool
-    var prefix = "'*" if flag.type.is_list_type() else "'"
+    # Text values complete as file names, the most common thing a string flag names. Numbers get no
+    # action, since file names would only be wrong there.
+    var action = "_files" if _completes_files(flag) else ""
+    var prefix = "'*" if flag.type.takes_multiple_values() else "'"
 
     if flag.shorthand:
         # Flag has both long and short forms
@@ -60,14 +63,14 @@ def _zsh_flag_spec(flag: Flag) -> String:
             return String(t"'{exclusion}'", "{", t"-{flag.shorthand},--{flag.name}", "}", t"'[{escaped_usage}]'")
 
         return String(
-            t"{prefix}{exclusion}'", "{", t"-{flag.shorthand},--{flag.name}", "}", t"'=[{escaped_usage}]:{flag.name}:'"
+            t"{prefix}{exclusion}'", "{", t"-{flag.shorthand},--{flag.name}", "}", t"'=[{escaped_usage}]:{flag.name}:{action}'"
         )
 
     # Flag has only long form
     if is_bool:
         return String(t"'--{flag.name}[{escaped_usage}]'")
 
-    return String(t"{prefix}--{flag.name}=[{escaped_usage}]:{flag.name}:'")
+    return String(t"{prefix}--{flag.name}=[{escaped_usage}]:{flag.name}:{action}'")
 
 
 def _zsh_command_function(
@@ -121,20 +124,12 @@ def _zsh_command_function(
             "    _arguments -C \\\n"
         )
     else:
-        var candidates = _arg_candidates(cmd)
-        var has_specs = Bool(flag_specs) or Bool(candidates)
-        if has_specs:
-            builder.write("    _arguments \\\n")
-        else:
-            builder.write("    _arguments\n")
-
-    var last_flag_continues = has_children or Bool(_arg_candidates(cmd))
+        # A leaf always ends with a positional spec, below.
+        builder.write("    _arguments \\\n")
     for i in range(len(flag_specs)):
         builder.write(t"        {flag_specs[i]}")
-        if i < len(flag_specs) - 1 or last_flag_continues:
-            builder.write(" \\\n")
-        else:
-            builder.write("\n")
+        # Every command ends with a positional spec after its flags, so the flags always continue.
+        builder.write(" \\\n")
 
     if has_children:
         builder.write(
@@ -151,9 +146,17 @@ def _zsh_command_function(
         )
 
         for i in range(len(cmd.children)):
-            builder.write(t"            '{cmd.children[i][].name}:")
-            _zsh_escape(cmd.children[i][].usage, builder)
+            ref child = cmd.children[i][]
+            builder.write(t"            '{child.name}:")
+            _zsh_escape(child.usage, builder)
             builder.write("'\n")
+
+            # List each alias too, pointing back at the command, since the dispatch below already
+            # accepts them and a user who knows only the alias should see it offered.
+            for alias in child.aliases:
+                builder.write(t"            '{alias}:")
+                _zsh_escape(child.usage, builder)
+                builder.write(t" (alias for {child.name})'\n")
 
         builder.write(
             "        )\n",
@@ -178,15 +181,12 @@ def _zsh_command_function(
             "    esac\n"
         )
     else:
-        # Leaf command - complete the values its arguments accept, if any
+        # Leaf command: the values its arguments accept, or file names when it names none.
         var leaf_candidates = _arg_candidates(cmd)
         if leaf_candidates:
-            var args_list = String(capacity_bytes=SMALL_BUFFER_SIZE)
-            for i in range(len(leaf_candidates)):
-                if i > 0:
-                    args_list.write(" ")
-                args_list.write(leaf_candidates[i])
-            builder.write("        '1:arg:(", args_list, ")'\n")
+            builder.write("        '1:arg:(", " ".join(leaf_candidates), ")'\n")
+        else:
+            builder.write("        '*:file:_files'\n")
 
     builder.write("}\n")
     return builder^

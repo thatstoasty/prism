@@ -1,8 +1,9 @@
 """The set of positional arguments a command received."""
 from std.collections.list import _ListIter
 
-from prism.arg import Arg
-from prism.value import FromValue
+from prism.arg import Arg, _argument_order_problem
+from prism.suggest import suggest_name
+from prism.value import FromValue, LIST_SEPARATOR
 
 
 struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
@@ -106,10 +107,7 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
           argument as the wrong type reports a parse failure rather than `None`. Its declared type
           has already been checked during binding.
         """
-        comptime assert conforms_to(T, FromValue), String(
-            reflect[T].name(),
-            " does not conform to `FromValue`.",
-        )
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not conform to `FromValue`."
 
         var arg = self.lookup(name)
         if not arg:
@@ -121,6 +119,49 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
 
         return T.from_value(result.value())
 
+    def require[T: AnyType](self, name: ImmStringSpan) raises -> T:
+        """Returns the value of a declared argument as a `T`, raising where `get` would return
+        `None`.
+
+        ```mojo
+        var target = args.require[String]("target")
+        ```
+
+        Parameters:
+            T: The type to read the argument as. Must conform to `FromValue`.
+
+        Args:
+            name: The name of the argument.
+
+        Returns:
+            The argument's value, or its default when it was omitted.
+
+        Raises:
+            Error: If no argument has that name, it was omitted and has no default, or its value
+                cannot be read as a `T`.
+
+        #### Notes:
+        - `get` reads a misspelled name as `None`, the same as an omitted optional argument.
+          `require` names the mistake and suggests the closest declared name.
+        """
+        comptime assert conforms_to(T, FromValue), t"{reflect[T].name()} does not conform to `FromValue`."
+
+        var arg = self.lookup(name)
+        if not arg:
+            var message = String(t"No argument named `{name}` is declared.")
+            var names = [declared.name for declared in self.args]
+            var suggestion = suggest_name(Span(names), name)
+            if suggestion:
+                message.write(t" Did you mean `{suggestion}`?")
+            raise Error(message)
+
+        ref found = arg.value()[]
+        if found.value:
+            return T.from_value(found.value.value())
+        if found.default:
+            return T.from_value(found.default.value())
+        raise Error(t"Argument `{name}` was not given and has no default.")
+
     def bind(mut self, var values: List[String]) raises -> None:
         """Binds positional values to the declared arguments and validates them.
 
@@ -128,16 +169,30 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
             values: The positional values the command received.
 
         Raises:
-            Error: If a required argument is missing, an unexpected argument was supplied, or a
-                value does not parse as its declared type.
+            Error: If the arguments are declared in an order they cannot bind in, a required
+                argument is missing, an unexpected argument was supplied, or a value does not parse
+                as its declared type.
 
         #### Notes:
         - A command that declares no arguments accepts any number of them, which is what leaves
           `arg_validator` in charge for commands that do their own checking.
+        - A list argument declared last is variadic: it takes every value left over once the
+          arguments before it are bound, so `cp DEST SOURCES...` style commands read the rest as
+          one `List`.
+        - The declaration order is checked here too, not only when a `Command` is built, since an
+          `ArgSet` can be bound on its own.
         """
-        for i in range(len(self.args)):
-            if i < len(values):
-                self.args[i].value = values[i]
+        var order_problem = _argument_order_problem(self.args)
+        if order_problem:
+            raise Error(order_problem.value())
+
+        var variadic = self._is_variadic()
+        var fixed = len(self.args) - 1 if variadic else len(self.args)
+        for i in range(min(fixed, len(values))):
+            self.args[i].value = values[i]
+
+        if variadic and len(values) > fixed:
+            self.args[fixed].value = LIST_SEPARATOR.join(values[fixed:])
 
         self.values = values^
         if not self.args:
@@ -154,7 +209,7 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
                 t"Expected {required} argument(s), received {len(self.values)}."
             )
 
-        if len(self.values) > len(self.args):
+        if not variadic and len(self.values) > len(self.args):
             raise Error(
                 t"Unexpected argument: `{self.values[len(self.args)]}`. "
                 t"This command accepts at most {len(self.args)} argument(s), received {len(self.values)}."
@@ -170,12 +225,28 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
                 raise Error(t"Invalid value for argument `{arg.name}`: {e}")
 
             # An argument that names the values it accepts rejects anything else, and says what it
-            # would have taken instead.
-            if arg.valid_values and arg.value.value() not in arg.valid_values:
-                raise Error(
-                    t"Invalid value for argument `{arg.name}`: `{arg.value.value()}`. "
-                    t"Valid values are: {', '.join(arg.valid_values)}."
-                )
+            # would have taken instead. A list argument checks each of its elements.
+            if not arg.valid_values:
+                continue
+
+            var elements: List[String] = [arg.value.value()]
+            if arg.type.is_list_type():
+                elements = [String(element) for element in arg.value.value().split(LIST_SEPARATOR)]
+
+            for element in elements:
+                if element not in arg.valid_values:
+                    raise Error(
+                        t"Invalid value for argument `{arg.name}`: `{element}`. "
+                        t"Valid values are: {', '.join(arg.valid_values)}."
+                    )
+
+    def _is_variadic(self) -> Bool:
+        """Reports whether the last declared argument is a list, which takes every remaining value.
+
+        Returns:
+            True if the last argument is variadic.
+        """
+        return Bool(self.args) and self.args[len(self.args) - 1].type.is_list_type()
 
     def usage(self) -> String:
         """Renders the declared arguments for a usage line, such as `TARGET [REPLICAS]`.
@@ -193,5 +264,7 @@ struct ArgSet(Boolable, Copyable, Sized, Writable, Iterable):
                 builder.write(name)
             else:
                 builder.write("[", name, "]")
+            if i == len(self.args) - 1 and self._is_variadic():
+                builder.write("...")
 
         return builder^

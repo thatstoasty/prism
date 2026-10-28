@@ -50,13 +50,13 @@ def test_zsh_flag_spec_bool_no_shorthand() raises:
 def test_zsh_flag_spec_string_with_shorthand() raises:
     var flag = Flag.new[String](name="env", shorthand="e", usage="Environment")
     var spec = _zsh_flag_spec(flag)
-    std.testing.assert_equal(spec, "'(-e --env)'{-e,--env}'=[Environment]:env:'")
+    std.testing.assert_equal(spec, "'(-e --env)'{-e,--env}'=[Environment]:env:_files'")
 
 
 def test_zsh_flag_spec_string_no_shorthand() raises:
     var flag = Flag.new[String](name="host", usage="Host name")
     var spec = _zsh_flag_spec(flag)
-    std.testing.assert_equal(spec, "'--host=[Host name]:host:'")
+    std.testing.assert_equal(spec, "'--host=[Host name]:host:_files'")
 
 
 def test_zsh_flag_spec_int() raises:
@@ -68,7 +68,7 @@ def test_zsh_flag_spec_int() raises:
 def test_zsh_flag_spec_string_list() raises:
     var flag = Flag.new[List[String]](name="hosts", usage="Host list")
     var spec = _zsh_flag_spec(flag)
-    std.testing.assert_equal(spec, "'*--hosts=[Host list]:hosts:'")
+    std.testing.assert_equal(spec, "'*--hosts=[Host list]:hosts:_files'")
 
 
 def test_zsh_basic_root_command() raises:
@@ -152,6 +152,9 @@ def test_zsh_command_with_aliases() raises:
     var script = generate_zsh_completion(cmd)
     # Verify aliases appear in case pattern
     std.testing.assert_true("connect|conn|db-connect) _myapp__connect" in script)
+    # And in the list of commands offered, pointing back at the command.
+    std.testing.assert_true("'conn:Connect to database (alias for connect)'" in script, script)
+    std.testing.assert_true("'db-connect:Connect to database (alias for connect)'" in script, script)
 
 
 def test_zsh_command_with_valid_args() raises:
@@ -240,7 +243,7 @@ def test_bash_basic_root_command() raises:
     # Verify root function exists
     std.testing.assert_true("__myapp()" in script)
     # Verify registration
-    std.testing.assert_true("complete -F __myapp myapp" in script)
+    std.testing.assert_true("complete -o filenames -F __myapp myapp" in script)
     # Verify help flag is present
     std.testing.assert_true("--help" in script)
 
@@ -359,7 +362,7 @@ def test_bash_dispatch() raises:
     )
     var script = default_completion(cmd, "bash")
     std.testing.assert_true("#!/usr/bin/env bash" in script)
-    std.testing.assert_true("complete -F __myapp myapp" in script)
+    std.testing.assert_true("complete -o filenames -F __myapp myapp" in script)
 
 
 def test_completion_valid_args_includes_bash() raises:
@@ -405,10 +408,62 @@ def test_bash_unicode_command_name() raises:
     )
     var script = generate_bash_completion(cmd)
     std.testing.assert_true("__über()" in script)
-    std.testing.assert_true("complete -F __über über" in script)
+    std.testing.assert_true("complete -o filenames -F __über über" in script)
     std.testing.assert_true("__über__résumé()" in script)
     std.testing.assert_true("résumé" in script)
 
+
+def test_zsh_numeric_flag_spec_has_no_file_action() raises:
+    var flag = Flag.new[Int](name="port", usage="Port")
+    std.testing.assert_equal(_zsh_flag_spec(flag), "'--port=[Port]:port:'")
+
+
+def test_zsh_leaf_completes_files() raises:
+    # A leaf with no argument values to offer completes file names for its positional arguments.
+    var cmd = Command(name="myapp", usage="My application", run=dummy)
+    var script = generate_zsh_completion(cmd)
+    std.testing.assert_true("'*:file:_files'" in script)
+
+
+def test_bash_value_flag_falls_back_to_files() raises:
+    # After a flag that takes a value, bash offers nothing and `-o default` completes file names,
+    # rather than suggesting flags where the value belongs.
+    var cmd = Command(
+        name="myapp",
+        usage="My application",
+        run=dummy,
+        flags=[Flag.new[String](name="output", shorthand="o", usage="Output.")],
+    )
+    var script = generate_bash_completion(cmd)
+    std.testing.assert_true('case "${prev}" in' in script)
+    std.testing.assert_true("--output|-o)" in script)
+    std.testing.assert_true('compgen -f -- "${cur}"' in script)
+
+
+def test_bash_numeric_flag_offers_nothing() raises:
+    # A number is never a file name, so after `--count` the script returns without completing
+    # anything, rather than offering files.
+    var cmd = Command(
+        name="myapp",
+        usage="My application",
+        run=dummy,
+        flags=[
+            Flag.new[String](name="output", shorthand="o", usage="Output."),
+            Flag.new[Int](name="count", shorthand="c", usage="Count."),
+        ],
+    )
+    var script = generate_bash_completion(cmd)
+    std.testing.assert_true("--output|-o)" in script, script)
+    std.testing.assert_true("--count|-c)" in script, script)
+    std.testing.assert_false("--output|-o|--count" in script, script)
+
+
+def test_zsh_array_flag_is_repeatable() raises:
+    var flag = Flag.new[Array[String, 2]](name="pair", usage="Pair")
+    std.testing.assert_equal(_zsh_flag_spec(flag), "'*--pair=[Pair]:pair:_files'")
+
+    var numbers = Flag.new[Array[Int, 2]](name="size", usage="Size")
+    std.testing.assert_equal(_zsh_flag_spec(numbers), "'*--size=[Size]:size:'")
 
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

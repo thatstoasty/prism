@@ -5,7 +5,8 @@ from std.sys import get_defined_bool
 from prism._arg_parse import parse_args_from_command_line, parse_args_from_stdin
 from prism._arg_set import ArgSet
 from prism._flag_set import Annotation, FlagSet
-from prism.arg import Arg
+from prism._flag_parser import _codepoint_offsets, _is_flag, _longest_shorthand
+from prism.arg import Arg, _argument_order_problem
 from prism._util import panic
 from prism.args import ArgValidatorFn, arbitrary_args
 from prism.exit import ExitFn, default_exit
@@ -64,17 +65,39 @@ def _parse_command(command: Command, arg: ImmStringSpan) -> Optional[ArcPointer[
     return None
 
 
-def _visible_flags(command: Command) -> FlagSet:
-    """Returns the flags a command can accept: its own, plus persistent flags from its ancestors.
+def _inherited_from_path(path: List[ArcPointer[Command]]) -> List[Flag]:
+    """Returns the persistent flags a command inherits from its ancestors along a path.
 
     Args:
-        command: The command to collect flags for.
+        path: The commands from the root down to the command, inclusive.
+
+    Returns:
+        The persistent flags of every ancestor, nearest ancestor first, which is the order
+        `Command.inherited_flags` returns them in.
+
+    #### Notes:
+    - This reads the flags from the path rather than through parent links, so it works on the
+      caller's tree without first copying and linking all of it.
+    """
+    var flags = List[Flag]()
+    for i in range(len(path) - 2, -1, -1):
+        for flag in path[i][].flags:
+            if flag.persistent:
+                flags.append(flag.copy())
+    return flags^
+
+
+def _visible_flags(path: List[ArcPointer[Command]]) -> FlagSet:
+    """Returns the flags the last command on a path accepts: its own, plus the ones it inherits.
+
+    Args:
+        path: The commands from the root down to the command, inclusive.
 
     Returns:
         The command's own flags followed by the persistent flags it inherits.
     """
-    var flags = command.flags.copy()
-    flags.extend(command.inherited_flags())
+    var flags = path[len(path) - 1][].flags.copy()
+    flags.extend(FlagSet(_inherited_from_path(path)))
     return flags^
 
 
@@ -98,33 +121,42 @@ def _flag_consumes_next(flags: FlagSet, arg: ImmStringSpan) -> Bool:
         var flag = flags.lookup(arg[byte=2:])
         return Bool(flag) and flag.value()[].type != OptType.Bool
 
-    # A shorthand argument may be a cluster of bool flags like `-abc`. Only the final shorthand in
-    # such a cluster can take a value, so that is the one that decides.
-    var shorthands = arg[byte=1:]
-    if not shorthands:
-        return False
+    # A shorthand argument may be a cluster like `-abc`. The first shorthand that takes a value
+    # ends it, taking the rest of the argument as its value, or the next argument when it is last.
+    # Mirrors `FlagParser.parse_shorthand_flag`.
+    var body = arg[byte=1:]
+    var offsets = _codepoint_offsets(body)
+    var max_length = flags._longest_shorthand_length()
+    var i = 0
+    while i < len(offsets) - 1:
+        var index = -1
+        var j = _longest_shorthand(body, offsets, i, flags, max_length, index)
+        if j == -1:
+            return False
+        if flags.flags[index].type != OptType.Bool:
+            return j == len(offsets) - 1
+        i = j
 
-    var flag = flags.lookup_shorthand(shorthands[byte = shorthands.byte_length() - 1 :])
-    return Bool(flag) and flag.value()[].type != OptType.Bool
+    return False
 
 
-def _parse_command_from_args(command: ArcPointer[Command], mut args: List[String]) -> Optional[ArcPointer[Command]]:
+def _parse_command_from_args(root: ArcPointer[Command], mut args: List[String]) -> List[ArcPointer[Command]]:
     """Traverses the command tree to find the command that matches the given arguments.
 
-    On a match, `args` is rewritten with the matched command names removed and everything else
-    left in its original order, ready to be handed to `FlagSet.from_args`.
+    `args` is rewritten with the matched command names removed and everything else left in its
+    original order, ready to be handed to `FlagSet.from_args`.
 
     Args:
-        command: The root command to start traversing from.
+        root: The root command to start traversing from.
         args: The arguments to traverse the command tree with. Rewritten in place on a match.
 
     Returns:
-        The command that matches the arguments.
+        The commands from the root down to the matched one, inclusive. Just the root when no
+        subcommand matched.
     """
     # Descend one level per matched argument. Each lookup searches the children of the command
     # matched so far, not the children of the root, so deeply nested subcommands resolve.
-    var current = command
-    var matched = False
+    var path: List[ArcPointer[Command]] = [root]
     var passthrough = List[String](capacity=len(args))
 
     # Collecting the visible flags copies every flag the command can see, including the persistent
@@ -144,33 +176,34 @@ def _parse_command_from_args(command: ArcPointer[Command], mut args: List[String
         # Step over flags rather than stopping at them, so that a subcommand written after a flag
         # is still found. A flag that takes a value swallows the argument after it too, which is
         # what keeps `--output foo sub` from mistaking `foo` for a subcommand.
+        # A bare `-` or a negative number is positional, the same as `FlagSet.from_args` treats it.
         if arg.startswith("-", 0, 1):
+            if not visible_flags_ready:
+                visible_flags = _visible_flags(path)
+                visible_flags_ready = True
+
+        if arg.startswith("-", 0, 1) and _is_flag(arg, visible_flags):
             var width = 1
-            if "=" not in arg:
-                if not visible_flags_ready:
-                    visible_flags = _visible_flags(current[])
-                    visible_flags_ready = True
-                if _flag_consumes_next(visible_flags, arg):
-                    width = 2
+            if "=" not in arg and _flag_consumes_next(visible_flags, arg):
+                width = 2
 
             for j in range(i, min(i + width, len(args))):
                 passthrough.append(args[j])
             i += width
             continue
 
-        var result = _parse_command(current[], arg)
+        var result = _parse_command(path[len(path) - 1][], arg)
         if not result:
             break
 
         # The command name is consumed by the match rather than passed through.
-        current = result.value()
+        path.append(result.value())
         visible_flags_ready = False
-        matched = True
         i += 1
 
     # No subcommands matched, this is a root command execution.
-    if not matched:
-        return None
+    if len(path) == 1:
+        return path^
 
     # The first argument that is not a flag or a subcommand name is positional, and so is
     # everything after it. Pass the remainder through untouched.
@@ -179,7 +212,7 @@ def _parse_command_from_args(command: ArcPointer[Command], mut args: List[String
         i += 1
 
     args = passthrough^
-    return current^
+    return path^
 
 
 def _with_usage_hint(command: Command, error: Error) -> Error:
@@ -219,6 +252,87 @@ def _unknown_command_error(command: Command, name: ImmStringSpan) -> Error:
             message.write(t"\n\nDid you mean this?\n\t{suggestion}")
 
     return Error(message)
+
+
+def _duplicate_flag_problem(flags: FlagSet) -> Optional[String]:
+    """Checks that no two of a command's flags share a name or a shorthand.
+
+    Args:
+        flags: The flags to check.
+
+    Returns:
+        A description of the first duplicate found, or `None` when there is none.
+
+    #### Notes:
+    - A lookup returns the first match, so a duplicate silently made the later flag unreachable.
+    - This returns the problem rather than reporting it, so `Command` can panic with it, since it
+      is a mistake in the program, and so the rule can be tested.
+    """
+    for i in range(len(flags.flags)):
+        ref flag = flags.flags[i]
+        for j in range(i + 1, len(flags.flags)):
+            ref other = flags.flags[j]
+            if flag.name == other.name:
+                return String(t"The flag `--{flag.name}` is defined more than once.")
+            if flag.shorthand and flag.shorthand == other.shorthand:
+                return String(
+                    t"The shorthand `-{flag.shorthand}` is given to both `--{flag.name}` and `--{other.name}`."
+                )
+    return None
+
+
+def _reserved_flag_problem(flags: FlagSet, builtin: Flag) -> Optional[String]:
+    """Checks that none of a command's own flags takes the name of a built-in flag.
+
+    Args:
+        flags: The command's own flags.
+        builtin: The help or version flag about to be added.
+
+    Returns:
+        A description of the clash, or `None` when there is none.
+
+    #### Notes:
+    - The built-in could not be told apart from a flag of the same name. A clashing shorthand is
+      not a problem: the command's own flag keeps it, and `_add_builtin_flag` drops it from the
+      built-in.
+    """
+    if flags.lookup(builtin.name):
+        return String(
+            t"A flag named `--{builtin.name}` is defined, but that name is reserved. Pass a "
+            t"differently named flag to `Help` or `Version` to use the name yourself."
+        )
+    return None
+
+
+def _add_builtin_flag(mut flags: FlagSet, var flag: Flag) -> None:
+    """Adds the help or version flag to a command's flags, once `_reserved_flag_problem` passes.
+
+    Args:
+        flags: The command's flags.
+        flag: The built-in flag to add.
+
+    #### Notes:
+    - A flag of the command's own that takes the built-in's shorthand keeps it, and the built-in is
+      added without one. Otherwise `Version`'s `-v` silently hid a `--verbose` declared as `-v`.
+    """
+    if flag.shorthand and flags.lookup_shorthand(flag.shorthand):
+        flag.shorthand = ""
+
+    flags.append(flag^)
+
+
+def _command_column(command: Command) -> String:
+    """Renders a subcommand's name for its parent's help, with its aliases, such as `deploy, d`.
+
+    Args:
+        command: The subcommand.
+
+    Returns:
+        The name followed by any aliases.
+    """
+    if not command.aliases:
+        return command.name
+    return String(command.name, ", ", ", ".join(command.aliases))
 
 
 # Run flag actions if they have any
@@ -321,7 +435,9 @@ struct Command(Copyable, Writable):
     """
 
     var suggest: Bool
-    """If True, the command will suggest flags when an unknown flag is passed."""
+    """If True, the command will suggest flags and subcommands when an unknown one is passed.
+
+    On by default."""
 
     var reject_unknown_subcommands: Bool
     """If True, a leftover positional argument on a command that has subcommands is an error.
@@ -361,7 +477,7 @@ struct Command(Copyable, Writable):
         mutually_exclusive_flags: List[String] = [],
         one_required_flags: List[String] = [],
         arg_validator: ArgValidatorFn = arbitrary_args,
-        suggest: Bool = False,
+        suggest: Bool = True,
         enable_completion: Bool = False,
         reject_unknown_subcommands: Bool = True,
     ):
@@ -419,14 +535,26 @@ struct Command(Copyable, Writable):
         self.reject_unknown_subcommands = reject_unknown_subcommands
         self._generated_completion = False
 
+        var order_problem = _argument_order_problem(args)
+        if order_problem:
+            panic(t"Command `{name}`: {order_problem.value()}")
         self.args = args^
         self.flags = flags^
         self.parent = []
         self.children = [ArcPointer(child.copy()) for child in children]
 
-        self.flags.append(self.help.flag.copy())
+        var flag_problem = _duplicate_flag_problem(self.flags)
+        if flag_problem:
+            panic(t"Command `{self.name}`: {flag_problem.value()}")
+
+        var builtins: List[Flag] = [self.help.flag.copy()]
         if self.version:
-            self.flags.append(self.version.value().flag.copy())
+            builtins.append(self.version.value().flag.copy())
+        for var builtin in builtins^:
+            var reserved_problem = _reserved_flag_problem(self.flags, builtin)
+            if reserved_problem:
+                panic(t"Command `{self.name}`: {reserved_problem.value()}")
+            _add_builtin_flag(self.flags, builtin^)
 
         # Auto-add completion subcommand
         if enable_completion:
@@ -455,13 +583,12 @@ struct Command(Copyable, Writable):
 
             # TODO: Children are created before the parent, so inherited flags aren't working for
             # these flag groups. Will revisit this at some point.
-            # self._merge_flags()
             if flags_required_together:
-                self._mark_flag_group_as[Annotation.REQUIRED_AS_GROUP](flags_required_together)
+                self._mark_flag_group_as[Annotation.required_as_group](flags_required_together)
             if mutually_exclusive_flags:
-                self._mark_flag_group_as[Annotation.MUTUALLY_EXCLUSIVE](mutually_exclusive_flags)
+                self._mark_flag_group_as[Annotation.mutually_exclusive](mutually_exclusive_flags)
             if one_required_flags:
-                self._mark_flag_group_as[Annotation.ONE_REQUIRED](one_required_flags)
+                self._mark_flag_group_as[Annotation.one_required](one_required_flags)
         except e:
             panic(t"Failed to set flag annotations due to following reason: {e}")
 
@@ -525,6 +652,29 @@ struct Command(Copyable, Writable):
         self.children = children^
         return ArcPointer(link^)
 
+    def _deep_copy(self) -> Self:
+        """Copies this command and every command below it.
+
+        Returns:
+            A copy of this subtree that shares no children with the original.
+        """
+        # Walked with a queue rather than recursion, which the compiler flags as an infinite loop.
+        # Each node is enqueued once its own fresh copy is in place, so the copies it receives are
+        # never shared with the original tree.
+        var root = self.copy()
+        var queue = List[ArcPointer[Self]]()
+        for i in range(len(root.children)):
+            root.children[i] = ArcPointer(root.children[i][].copy())
+            queue.append(root.children[i])
+
+        while queue:
+            var node = queue.pop()
+            for i in range(len(node[].children)):
+                node[].children[i] = ArcPointer(node[].children[i][].copy())
+                queue.append(node[].children[i])
+
+        return root^
+
     def _wire_parents(mut self) -> None:
         """Links every command in this subtree to its parent, top-down.
 
@@ -552,10 +702,6 @@ struct Command(Copyable, Writable):
                 command[].parent = [node_link.copy()]
                 queue.append(command)
 
-    def _merge_flags(mut self) -> None:
-        """Returns all flags for the command and inherited flags from its parent."""
-        self.flags.extend(self.inherited_flags())
-
     def _mark_flag_group_as[annotation: Annotation](mut self, flag_names: List[String]) raises -> None:
         """Marks the given flags with annotations so that `Prism` errors.
 
@@ -566,9 +712,9 @@ struct Command(Copyable, Writable):
             flag_names: The names of the flags to mark as required together.
 
         #### Notes:
-        - If the annotation is `REQUIRED_AS_GROUP`, then all the flags in the group must be set.
-        - If the annotation is `ONE_REQUIRED`, then at least one flag in the group must be set.
-        - If the annotation is `MUTUALLY_EXCLUSIVE`, then only one flag in the group can be set.
+        - If the annotation is `required_as_group`, then all the flags in the group must be set.
+        - If the annotation is `one_required`, then at least one flag in the group must be set.
+        - If the annotation is `mutually_exclusive`, then only one flag in the group can be set.
         """
         for name in flag_names:
             self.flags.set_annotation[annotation](name, " ".join(flag_names))
@@ -651,8 +797,9 @@ struct Command(Copyable, Writable):
             if cmd.pre_run:
                 cmd.pre_run.value()(args, cmd.flags)
         except e:
-            self.error_writer(String(t"Failed to run pre-run hooks for command: {cmd.name}"))
-            raise e^
+            # One message, through `exit`. Writing a line here and re-raising reported the failure
+            # twice.
+            raise Error(t"Failed to run pre-run hooks for command `{cmd.full_name()}`: {e}")
 
     def _execute_post_run_hooks(self, cmd: Self, args: ArgSet) raises -> None:
         """Runs the post-run hooks for the command.
@@ -678,8 +825,9 @@ struct Command(Copyable, Writable):
             if cmd.post_run:
                 cmd.post_run.value()(args, cmd.flags)
         except e:
-            self.error_writer(String(t"Failed to run post-run hooks for command: {cmd.name}"))
-            raise e^
+            # One message, through `exit`. Writing a line here and re-raising reported the failure
+            # twice.
+            raise Error(t"Failed to run post-run hooks for command `{cmd.full_name()}`: {e}")
 
     def execute(mut self, var args: List[String]) -> None:
         """Traverses the arguments passed to the executable and executes the last command in the branch.
@@ -712,31 +860,37 @@ struct Command(Copyable, Writable):
             self.exit(Error("Cannot execute from a non-root command. Please execute from the root command."))
             return
 
-        var cmd = ArcPointer(self.copy())
-
-        # Link the tree's parent pointers once, from the root, before anything reads them.
-        cmd[]._wire_parents()
-
-        # `cmd` moves down the tree during traversal, so hold on to the wired root separately.
-        # Completion generation walks the whole tree and needs the linked copy, not `self`.
-        var root = cmd
-
-        # If there's no children, then the root command is used.
-        # Otherwise, we traverse the command tree to find the command that matches the arguments.
-        # `input_args` comes back with the matched command names stripped and everything else,
-        # flags included, still in place.
+        # Find the command to run by walking the caller's tree, without copying it. Only the root is
+        # copied up front, since the walk reads it through an `ArcPointer`. `input_args` comes back
+        # with the matched command names stripped and everything else, flags included, in place.
+        var root = ArcPointer(self.copy())
+        var path: List[ArcPointer[Command]] = [root]
         if self.children and input_args:
-            var result = _parse_command_from_args(cmd, input_args)
-            if result:
-                cmd = result.value()
-            else:
-                # No subcommand matched, use the root command.
-                pass
+            path = _parse_command_from_args(root, input_args)
+
+        # Run a private copy of the matched command, so parsing values onto it and merging in
+        # inherited flags never touches the caller's tree, and a second `execute` starts clean.
+        # Copying the whole tree for that cost every run time proportional to every flag of every
+        # command. Only the path to the matched command is copied: the command itself, and a
+        # childless link per ancestor for `full_name`, `inherited_flags` and the persistent hooks.
+        var parent_link = List[ArcPointer[Command]]()
+        for i in range(len(path) - 1):
+            var link = path[i][].copy()
+            link.children = []
+            link.parent = parent_link^
+            parent_link = [ArcPointer(link^)]
+
+        var cmd = path[0]
+        if len(path) > 1:
+            var target = path[len(path) - 1][].copy()
+            target.parent = parent_link^
+            cmd = ArcPointer(target^)
 
         var args = Span(input_args)
 
         # Merge persistent flags from ancestors.
-        cmd[]._merge_flags()
+        var inherited = _inherited_from_path(path)
+        cmd[].flags.extend(FlagSet(inherited.copy()))
 
         var remaining_args: List[String]
         try:
@@ -773,14 +927,13 @@ struct Command(Copyable, Writable):
             # Read the help flag from the command being executed, and render with that command's own
             # `Help`, so a subcommand configured with a custom help flag or renderer gets its own.
             if cmd[].flags.get[Bool](cmd[].help.flag.name).or_else(False):
-                var inherited = cmd[].inherited_flags()
                 var help_context = HelpContext(
                     full_name=cmd[].full_name(),
                     usage=cmd[].usage,
                     args=cmd[].args.copy(),
                     flags=cmd[].flags.flags.copy(),
-                    inherited_flags=inherited.flags.copy(),
-                    children=[(child[].name, child[].usage) for child in cmd[].children],
+                    inherited_flags=inherited^,
+                    children=[(_command_column(child[]), child[].usage) for child in cmd[].children],
                     aliases=cmd[].aliases.copy(),
                 )
                 self.output_writer(cmd[].help.action(help_context))
@@ -800,10 +953,15 @@ struct Command(Copyable, Writable):
             if cmd[]._generated_completion:
                 if not remaining_args:
                     self.exit(
-                        Error(t"Usage: {root[].name} completion <shell>\nSupported shells: zsh, bash")
+                        Error(t"Usage: {self.name} completion <shell>\nSupported shells: zsh, bash")
                     )
                     return
-                self.output_writer(default_completion(root[], remaining_args[0]))
+
+                # Completion walks the whole tree and reads inherited flags at every level, so this
+                # is the one path that needs every command copied and linked to its parent.
+                var tree = self._deep_copy()
+                tree._wire_parents()
+                self.output_writer(default_completion(tree, remaining_args[0]))
                 return
 
             # A command with subcommands of its own is a dispatcher, so a leftover positional
@@ -814,6 +972,10 @@ struct Command(Copyable, Writable):
                 for child in cmd[].children:
                     if not child[]._generated_completion:
                         raise _unknown_command_error(cmd[], remaining_args[0])
+
+            # Check every flag value parses as its declared type before anything runs, so a
+            # mistyped value is reported by name rather than surfacing inside `run`.
+            cmd[].flags.validate_flag_values()
 
             # Validate individual required flags (eg: flag is required)
             cmd[].flags.validate_required_flags()

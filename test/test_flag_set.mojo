@@ -343,5 +343,79 @@ def test_generic_get_type_mismatch_is_none() raises:
     testing.assert_equal(flag_set.get[String]("region").value(), "us-east")
 
 
+def test_require_returns_the_value_or_default() raises:
+    var flags: List[Flag] = [
+        Flag.new[Int](name="port", usage="Port."),
+        Flag.new[String](name="host", usage="Host.", default=String("localhost")),
+    ]
+    var args: List[String] = ["--port", "8080"]
+    var flag_set = _parsed(flags^, args^)
+
+    testing.assert_equal(flag_set.require[Int]("port"), 8080)
+    testing.assert_equal(flag_set.require[String]("host"), "localhost")
+
+
+def test_require_names_a_misspelled_flag() raises:
+    var flags: List[Flag] = [Flag.new[Int](name="port", usage="Port.")]
+    var flag_set = _parsed(flags^, List[String]())
+
+    with testing.assert_raises(contains="No flag named `--prot` is defined. Did you mean `--port`?"):
+        _ = flag_set.require[Int]("prot")
+
+
+def test_require_names_the_wrong_type() raises:
+    var flags: List[Flag] = [Flag.new[String](name="region", usage="Region.", default=String("us"))]
+    var flag_set = _parsed(flags^, List[String]())
+
+    with testing.assert_raises(contains="Flag `--region` holds String, not Int."):
+        _ = flag_set.require[Int]("region")
+
+
+def test_require_reports_an_unset_flag_without_default() raises:
+    var flags: List[Flag] = [Flag.new[Int](name="port", usage="Port.")]
+    var flag_set = _parsed(flags^, List[String]())
+
+    with testing.assert_raises(contains="Flag `--port` was not set and has no default."):
+        _ = flag_set.require[Int]("port")
+
+
+def test_require_names_list_types_readably() raises:
+    # Regression: list types were reported by their reflected name, `List[SIMD[DType.int, 1]]`.
+    var flags: List[Flag] = [Flag.new[List[Int]](name="nums", usage="Numbers.")]
+    var flag_set = _parsed(flags^, List[String]())
+
+    with testing.assert_raises(contains="Flag `--nums` holds List[Int], not List[String]."):
+        _ = flag_set.require[List[String]]("nums")
+
+
+def test_display_name() raises:
+    testing.assert_equal(OptType(reflect[Int].name()).display_name(), "Int")
+    testing.assert_equal(OptType(reflect[List[Float64]].name()).display_name(), "List[Float64]")
+    testing.assert_equal(OptType(reflect[List[String]].name()).display_name(), "List[String]")
+
+
+def test_array_types_are_distinct() raises:
+    # The element type and the length are both part of an array flag's type.
+    var flags: List[Flag] = [Flag.new[Array[Int, 2]](name="size", usage="Size.")]
+    var args: List[String] = ["--size", "1", "--size", "2"]
+    var flag_set = _parsed(flags^, args^)
+
+    testing.assert_true(Bool(flag_set.get[Array[Int, 2]]("size")))
+    testing.assert_false(Bool(flag_set.get[Array[Int, 3]]("size")))
+    testing.assert_false(Bool(flag_set.get[Array[String, 2]]("size")))
+    testing.assert_false(Bool(flag_set.get[List[Int]]("size")))
+    with testing.assert_raises(contains="Flag `--size` holds Array[Int, 2], not Array[Int, 3]."):
+        _ = flag_set.require[Array[Int, 3]]("size")
+
+
+def test_array_opt_type() raises:
+    var array = OptType(reflect[Array[Int, 2]].name())
+    testing.assert_true(array.is_array_type())
+    testing.assert_true(array.takes_multiple_values())
+    testing.assert_false(array.is_list_type())
+    testing.assert_equal(array.array_length(), 2)
+    testing.assert_equal(array.element(), OptType.Int)
+    testing.assert_equal(OptType(reflect[Array[String, 3]].name()).display_name(), "Array[String, 3]")
+
 def main() raises:
     TestSuite.discover_tests[__functions_in_module()]().run()

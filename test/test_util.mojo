@@ -1,5 +1,6 @@
 from std import testing
 from prism._util import string_to_bool
+from prism._arg_parse import parse_args_from_stdin
 from std.testing import TestSuite, assert_raises
 
 
@@ -22,6 +23,29 @@ def test_string_to_bool_rejects_unrecognized() raises:
     for value in invalid:
         with assert_raises():
             _ = string_to_bool(value)
+
+
+def test_stdin_splits_on_whitespace_and_quotes() raises:
+    var expected: List[String] = ["run", "--name", "a b", "last"]
+    testing.assert_equal(parse_args_from_stdin('run --name "a b"  last\n'), expected)
+
+
+def test_stdin_keeps_double_dash_and_what_follows() raises:
+    # Regression: `--` stopped parsing and dropped the rest, when it is what marks the rest as
+    # positional.
+    var expected: List[String] = ["run", "--", "--weird", "x"]
+    testing.assert_equal(parse_args_from_stdin("run -- --weird x"), expected)
+
+
+def test_stdin_keeps_empty_and_whitespace_arguments() raises:
+    # Regression: `""` and quoted whitespace were dropped rather than passed as arguments.
+    var expected: List[String] = ["a", "", "  ", "b"]
+    testing.assert_equal(parse_args_from_stdin('a "" "  " b'), expected)
+
+
+def test_stdin_joins_quotes_within_an_argument() raises:
+    var expected: List[String] = ["--name=a b", "x"]
+    testing.assert_equal(parse_args_from_stdin('--name="a b" x'), expected)
 
 
 def main() raises:
