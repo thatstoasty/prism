@@ -288,7 +288,7 @@ def handler(args: ArgSet, flags: FlagSet) raises -> None:
     var region = flags.get[String]("region")
     var port = flags.get[Int]("port")
     var tags = flags.get[List[String]]("tags")
-    print("region:", region.or_else(String("none")), "port:", port.or_else(0))
+    print("region:", region.or_else("none"), "port:", port.or_else(0))
 
 def main() -> None:
     var cli = Command(

@@ -519,7 +519,7 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
 
     def validate_flag_groups(self) raises -> None:
         """Validates the status of flag groups.
-        Checks for flags annotated with the `REQUIRED_AS_GROUP`, `ONE_REQUIRED`, or `MUTUALLY_EXCLUSIVE` annotations.
+        Checks for flags annotated with the `required_as_group`, `one_required`, or `mutually_exclusive` annotations.
         Then validates if the flags in the group are set correctly to satisfy the annotation.
 
         Raises:
@@ -531,10 +531,10 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         var mutually_exclusive_command_line_status = Dict[String, Dict[String, Bool]]()
 
         for flag in self.flags:
-            self.process_group_annotations[Annotation.REQUIRED_AS_GROUP](flag, group_status)
-            self.process_group_annotations[Annotation.ONE_REQUIRED](flag, one_required_group_status)
-            self.process_group_annotations[Annotation.MUTUALLY_EXCLUSIVE](flag, mutually_exclusive_group_status)
-            self.process_group_annotations[Annotation.MUTUALLY_EXCLUSIVE, command_line_only=True](
+            self.process_group_annotations[Annotation.required_as_group](flag, group_status)
+            self.process_group_annotations[Annotation.one_required](flag, one_required_group_status)
+            self.process_group_annotations[Annotation.mutually_exclusive](flag, mutually_exclusive_group_status)
+            self.process_group_annotations[Annotation.mutually_exclusive, command_line_only=True](
                 flag, mutually_exclusive_command_line_status
             )
 

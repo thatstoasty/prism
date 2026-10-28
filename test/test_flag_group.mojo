@@ -87,8 +87,8 @@ def _exclusive_pair() raises -> FlagSet:
         ),
     ]
     var flag_set = FlagSet(flags^)
-    flag_set.set_annotation[Annotation.MUTUALLY_EXCLUSIVE]("token", "token password")
-    flag_set.set_annotation[Annotation.MUTUALLY_EXCLUSIVE]("password", "token password")
+    flag_set.set_annotation[Annotation.mutually_exclusive]("token", "token password")
+    flag_set.set_annotation[Annotation.mutually_exclusive]("password", "token password")
     return flag_set^
 
 

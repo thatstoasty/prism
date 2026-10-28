@@ -295,7 +295,7 @@ def test_nested_list_valid_values_are_flattened() raises:
     # Regression: `Arg.new[List[String]]` stored each valid value as one joined list, which no
     # element could match, so `valid_values=[["zsh", "bash"]]` rejected both shells.
     var nested: List[List[String]] = [["zsh", "bash"]]
-    var args: List[Arg] = [Arg.new[List[String]](name="shells", usage="Shells.", valid_values=nested^)]
+    var args: List[Arg] = [Arg.new[List[String]](name="shells", usage="Shells.", valid_values=nested)]
     var expected: List[String] = ["zsh", "bash"]
     testing.assert_equal(args[0].valid_values, expected)
 

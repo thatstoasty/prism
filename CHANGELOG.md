@@ -24,7 +24,7 @@ Requires Mojo 1.2.0.
   - a required argument declared after an optional one,
   - a list argument declared before another argument,
   - duplicate flag names or shorthands, or a flag named like a built-in `help` or `version` flag.
-- `Annotation` is now an enum with cases `REQUIRED`, `REQUIRED_AS_GROUP`, `ONE_REQUIRED` and `MUTUALLY_EXCLUSIVE`.
+- `Annotation` is now an enum with cases `required`, `required_as_group`, `one_required` and `mutually_exclusive`.
   It no longer has a `value` field or a fieldwise constructor.
 
 ### Added

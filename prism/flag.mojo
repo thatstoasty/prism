@@ -14,15 +14,15 @@ __enum Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
     """An annotation for a flag or a group of flags."""
 
     # Individual flag annotations
-    case REQUIRED
+    case required
     """Annotation to mark a flag as required."""
 
     # Flag Group annotations
-    case REQUIRED_AS_GROUP
+    case required_as_group
     """Annotation to mark a group of flags as required as a group. All flags in the group must be set for it to be valid."""
-    case ONE_REQUIRED
+    case one_required
     """Annotation to mark a group of flags as required. At least one flag in the group must be set for it to be valid."""
-    case MUTUALLY_EXCLUSIVE
+    case mutually_exclusive
     """Annotation to mark a group of flags as mutually exclusive. Only one flag in the group can be set for it to be valid."""
 
     # Enums do not derive `__eq__` or `__hash__` yet.
@@ -55,14 +55,14 @@ __enum Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
             writer: The writer to write the annotation to.
         """
         match self:
-            case .REQUIRED:
-                writer.write("REQUIRED")
-            case .REQUIRED_AS_GROUP:
-                writer.write("REQUIRED_AS_GROUP")
-            case .ONE_REQUIRED:
-                writer.write("ONE_REQUIRED")
-            case .MUTUALLY_EXCLUSIVE:
-                writer.write("MUTUALLY_EXCLUSIVE")
+            case .required:
+                writer.write("required")
+            case .required_as_group:
+                writer.write("required_as_group")
+            case .one_required:
+                writer.write("one_required")
+            case .mutually_exclusive:
+                writer.write("mutually_exclusive")
 
 
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of

@@ -584,11 +584,11 @@ struct Command(Copyable, Writable):
             # TODO: Children are created before the parent, so inherited flags aren't working for
             # these flag groups. Will revisit this at some point.
             if flags_required_together:
-                self._mark_flag_group_as[Annotation.REQUIRED_AS_GROUP](flags_required_together)
+                self._mark_flag_group_as[Annotation.required_as_group](flags_required_together)
             if mutually_exclusive_flags:
-                self._mark_flag_group_as[Annotation.MUTUALLY_EXCLUSIVE](mutually_exclusive_flags)
+                self._mark_flag_group_as[Annotation.mutually_exclusive](mutually_exclusive_flags)
             if one_required_flags:
-                self._mark_flag_group_as[Annotation.ONE_REQUIRED](one_required_flags)
+                self._mark_flag_group_as[Annotation.one_required](one_required_flags)
         except e:
             panic(t"Failed to set flag annotations due to following reason: {e}")
 
@@ -712,9 +712,9 @@ struct Command(Copyable, Writable):
             flag_names: The names of the flags to mark as required together.
 
         #### Notes:
-        - If the annotation is `REQUIRED_AS_GROUP`, then all the flags in the group must be set.
-        - If the annotation is `ONE_REQUIRED`, then at least one flag in the group must be set.
-        - If the annotation is `MUTUALLY_EXCLUSIVE`, then only one flag in the group can be set.
+        - If the annotation is `required_as_group`, then all the flags in the group must be set.
+        - If the annotation is `one_required`, then at least one flag in the group must be set.
+        - If the annotation is `mutually_exclusive`, then only one flag in the group can be set.
         """
         for name in flag_names:
             self.flags.set_annotation[annotation](name, " ".join(flag_names))

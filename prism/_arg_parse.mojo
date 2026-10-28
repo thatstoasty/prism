@@ -50,7 +50,7 @@ def parse_args_from_stdin(str: StringSpan) -> List[String]:
         if char == DOUBLE_QUOTE:
             quoted = True
             in_token = True
-        elif char.isspace():
+        elif char.is_ascii_whitespace():
             if in_token:
                 args.append(token^)
                 token = String()
