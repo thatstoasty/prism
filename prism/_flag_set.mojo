@@ -20,16 +20,14 @@ comptime FlagVisitorRaisingFn = def (Flag) raises thin -> None
 """Function perform some action while visiting all flags. Can raise."""
 
 
-@fieldwise_init
-struct ParserState(TrivialRegisterPassable, Writable, Equatable):
+__enum ParserState(ImplicitlyCopyable):
     """State of the parser when parsing flags from the command line."""
-    var value: UInt8
-    """Internal value representing the state of the parser."""
-    comptime FIND_FLAG = Self(0)
+
+    case FIND_FLAG
     """State when the parser is trying to find the next flag in the arguments."""
-    comptime PARSE_FLAG = Self(1)
+    case PARSE_FLAG
     """State when the parser is trying to parse a flag that starts with '--' and is in the format of either '--flag=value' or '--flag value'."""
-    comptime PARSE_SHORTHAND_FLAG = Self(2)
+    case PARSE_SHORTHAND_FLAG
     """State when the parser is trying to parse a shorthand flag that starts with '-' and can be in the format of either '-f=value', '-f value', or a combination of multiple bool shorthand flags like '-abc' which is equivalent to '-a -b -c'."""
 
 
@@ -206,42 +204,43 @@ struct FlagSet(Boolable, Copyable, Sized, Writable, Iterable):
         while parser.index < len(arguments):
             ref argument = arguments[parser.index]
 
-            # Find the next flag in the set of arguments.
-            if state == ParserState.FIND_FLAG:
-                # A bare `--` ends flag parsing. Everything after it is positional, even when it
-                # looks like a flag, which is how a value such as `--weird` is passed through.
-                if argument == "--":
-                    parser.index += 1
-                    while parser.index < len(arguments):
-                        remaining_args.append(arguments[parser.index])
+            match state:
+                # Find the next flag in the set of arguments.
+                case .FIND_FLAG:
+                    # A bare `--` ends flag parsing. Everything after it is positional, even when it
+                    # looks like a flag, which is how a value such as `--weird` is passed through.
+                    if argument == "--":
                         parser.index += 1
-                    break
+                        while parser.index < len(arguments):
+                            remaining_args.append(arguments[parser.index])
+                            parser.index += 1
+                        break
 
-                # Positional argument, including a bare `-` and negative numbers.
-                if not _is_flag(argument, self):
-                    parser.index += 1
-                    remaining_args.append(argument)
-                    continue
+                    # Positional argument, including a bare `-` and negative numbers.
+                    if not _is_flag(argument, self):
+                        parser.index += 1
+                        remaining_args.append(argument)
+                        continue
 
-                if argument.startswith("--", 0, 2):
-                    state = ParserState.PARSE_FLAG
-                else:
-                    state = ParserState.PARSE_SHORTHAND_FLAG
+                    if argument.startswith("--", 0, 2):
+                        state = ParserState.PARSE_FLAG
+                    else:
+                        state = ParserState.PARSE_SHORTHAND_FLAG
 
-            # Parse out a flag and set the value on the flag.
-            elif state == ParserState.PARSE_FLAG:
-                var result = parser.parse_flag(argument, self)
-                _set_flag_value(self.flags[result.index], result.value)
-                parser.index += result.increment
-                state = ParserState.FIND_FLAG
+                # Parse out a flag and set the value on the flag.
+                case .PARSE_FLAG:
+                    var result = parser.parse_flag(argument, self)
+                    _set_flag_value(self.flags[result.index], result.value)
+                    parser.index += result.increment
+                    state = ParserState.FIND_FLAG
 
-            # Parse out shorthand flag(s) and set the value on the flag(s).
-            elif state == ParserState.PARSE_SHORTHAND_FLAG:
-                var result = parser.parse_shorthand_flag(argument, self)
-                for i in range(len(result.indices)):
-                    _set_flag_value(self.flags[result.indices[i]], result.values[i])
-                parser.index += result.increment
-                state = ParserState.FIND_FLAG
+                # Parse out shorthand flag(s) and set the value on the flag(s).
+                case .PARSE_SHORTHAND_FLAG:
+                    var result = parser.parse_shorthand_flag(argument, self)
+                    for i in range(len(result.indices)):
+                        _set_flag_value(self.flags[result.indices[i]], result.values[i])
+                    parser.index += result.increment
+                    state = ParserState.FIND_FLAG
 
         # Fill flags not passed on the command line from their environment variable.
         for ref flag in self:

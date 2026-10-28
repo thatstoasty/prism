@@ -22,22 +22,22 @@ format = [{ task = "mojo_format" }]
 
 [package]
 name = "prism"
-version = "0.4.2"
+version = "0.5.0"
 
 [package.build]
 backend = { name = "pixi-build-mojo", version = "0.*" }
 
 [dependencies]
-mojo = ">=1.1.0,<1.2.0"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.3.3" }
+mojo = "=1.2.0"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.4.0" }
 
 [package.build-dependencies]
-mojo-compiler = ">=1.1.0,<1.2.0"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.3.3" }
+mojo-compiler = "=1.2.0"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.4.0" }
 
 [package.host-dependencies]
-mojo-compiler = ">=1.1.0,<1.2.0"
+mojo-compiler = "=1.2.0"
 
 [package.run-dependencies]
-mojo-compiler = ">=1.1.0,<1.2.0"
-mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.3.3" }
+mojo-compiler = "=1.2.0"
+mog = { git = "https://github.com/thatstoasty/mog.git", tag = "v0.4.0" }

@@ -1,4 +1,6 @@
 """Flags, their types, and the annotations used to group them."""
+from std.hash import Hasher
+
 from prism.opt_type import OptType
 from prism._util import _to_opt_string
 from prism.value import FromValue, ParseCheckFn, ToValue, String, Bool, SIMD, List, _parse_check
@@ -8,23 +10,43 @@ comptime FlagActionFn = def (String) raises thin -> None
 
 
 # Flag Group annotations
-@fieldwise_init
-struct Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
+__enum Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
     """An annotation for a flag or a group of flags."""
-    var value: UInt8
-    """The value of the annotation."""
 
     # Individual flag annotations
-    comptime REQUIRED = Self(0)
+    case REQUIRED
     """Annotation to mark a flag as required."""
 
     # Flag Group annotations
-    comptime REQUIRED_AS_GROUP = Self(1)
+    case REQUIRED_AS_GROUP
     """Annotation to mark a group of flags as required as a group. All flags in the group must be set for it to be valid."""
-    comptime ONE_REQUIRED = Self(2)
+    case ONE_REQUIRED
     """Annotation to mark a group of flags as required. At least one flag in the group must be set for it to be valid."""
-    comptime MUTUALLY_EXCLUSIVE = Self(3)
+    case MUTUALLY_EXCLUSIVE
     """Annotation to mark a group of flags as mutually exclusive. Only one flag in the group can be set for it to be valid."""
+
+    # Enums do not derive `__eq__` or `__hash__` yet.
+    def __eq__(self, other: Self) -> Bool:
+        """Compares two annotations for equality.
+
+        Args:
+            other: The annotation to compare against.
+
+        Returns:
+            True if both are the same annotation.
+        """
+        return self._get_enum_discriminant() == other._get_enum_discriminant()
+
+    def __hash__[H: Hasher](self, mut hasher: H) -> None:
+        """Hashes the annotation.
+
+        Parameters:
+            H: The type of the hasher.
+
+        Args:
+            hasher: The hasher to update.
+        """
+        self._get_enum_discriminant().__hash__(hasher)
 
     def write_to(self, mut writer: Some[Writer]) -> None:
         """Writes the annotation to a writer.
@@ -32,16 +54,15 @@ struct Annotation(ImplicitlyCopyable, Writable, Equatable, Hashable):
         Args:
             writer: The writer to write the annotation to.
         """
-        if self == Self.REQUIRED:
-            writer.write("REQUIRED")
-        elif self == Self.REQUIRED_AS_GROUP:
-            writer.write("REQUIRED_AS_GROUP")
-        elif self == Self.ONE_REQUIRED:
-            writer.write("ONE_REQUIRED")
-        elif self == Self.MUTUALLY_EXCLUSIVE:
-            writer.write("MUTUALLY_EXCLUSIVE")
-        else:
-            writer.write("unknown_annotation")
+        match self:
+            case .REQUIRED:
+                writer.write("REQUIRED")
+            case .REQUIRED_AS_GROUP:
+                writer.write("REQUIRED_AS_GROUP")
+            case .ONE_REQUIRED:
+                writer.write("ONE_REQUIRED")
+            case .MUTUALLY_EXCLUSIVE:
+                writer.write("MUTUALLY_EXCLUSIVE")
 
 
 # TODO: When we have trait objects, switch to using actual flag structs per type instead of

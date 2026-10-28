@@ -194,7 +194,7 @@ def default_help(cmd: HelpContext) raises -> String:
     Raises:
         Any error that occurs while generating the help information.
     """
-    comptime style = mog.Style(mog.Profile.ASCII)
+    comptime style = mog.Style(mog.Profile.ascii)
     comptime COLUMN_GAP = 4
 
     # Split the command's own flags from the ones it inherits, so the reader can tell which are
@@ -240,7 +240,7 @@ def default_help(cmd: HelpContext) raises -> String:
         widest = max(widest, _arg_column(cmd.args[i], i == len(cmd.args) - 1).count_graphemes())
     for child in cmd.children:
         widest = max(widest, child[0].count_graphemes() + 2)
-    var column = style.width(UInt16(widest + COLUMN_GAP))
+    var column = style.width(UInt(widest + COLUMN_GAP))
 
     if cmd.args:
         builder.write("\nArguments:")
